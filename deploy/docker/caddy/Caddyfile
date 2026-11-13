@@ -1,0 +1,16 @@
+# Optional: add a global email block for ACME expiry notices.
+# {
+#     email ops@example.com
+# }
+
+{$HRIS_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy web:80
+}
+
+# Employee portal host. Uncomment and replace with the portal DNS name when
+# APP_PORTAL_URL uses a separate host.
+# portal.example.com {
+#     encode zstd gzip
+#     reverse_proxy web:80
+# }

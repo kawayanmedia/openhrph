@@ -1,0 +1,16 @@
+[Unit]
+Description=Mount the HRIS MySQL data disk
+Before=mysql.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/hris-mount-data
+RemainAfterExit=yes
+TimeoutStartSec=1800
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

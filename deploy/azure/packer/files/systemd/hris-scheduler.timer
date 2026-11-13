@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the HRIS scheduler every minute
+
+[Timer]
+OnCalendar=*:0/1
+AccuracySec=1s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

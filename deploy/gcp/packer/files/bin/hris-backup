@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR=/var/www/hris
+ENV_FILE="$APP_DIR/.env"
+CONF_FILE=/etc/hris/bootstrap.conf
+STAMP="$(date +%Y%m%d%H%M%S)"
+TMP_DUMP="$(mktemp --suffix=.sql.gz)"
+
+trap 'rm -f "$TMP_DUMP"' EXIT
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "No $ENV_FILE; nothing to back up."
+    exit 0
+fi
+
+# shellcheck source=/dev/null
+. "$CONF_FILE"
+
+export CLOUDSDK_CORE_PROJECT="${HRIS_PROJECT:-}"
+
+if [ -z "${HRIS_BACKUP_BUCKET:-}" ]; then
+    echo "HRIS_BACKUP_BUCKET is not configured; skipping backup."
+    exit 0
+fi
+
+read_env() {
+    local key="$1"
+    grep -E "^${key}=" "$ENV_FILE" | head -n 1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'
+}
+
+DB_HOST="$(read_env DB_HOST)"
+DB_PORT="$(read_env DB_PORT)"
+DB_DATABASE="$(read_env DB_DATABASE)"
+DB_USERNAME="$(read_env DB_USERNAME)"
+DB_PASSWORD="$(read_env DB_PASSWORD)"
+export MYSQL_PWD="$DB_PASSWORD"
+
+echo "Uploading a database dump to gs://$HRIS_BACKUP_BUCKET/database"
+mysqldump \
+    --host="$DB_HOST" \
+    --port="${DB_PORT:-3306}" \
+    --user="$DB_USERNAME" \
+    --single-transaction \
+    --quick \
+    --routines \
+    --triggers \
+    "$DB_DATABASE" \
+    | gzip > "$TMP_DUMP"
+
+gcloud storage cp "$TMP_DUMP" "gs://$HRIS_BACKUP_BUCKET/database/hris-$STAMP.sql.gz"
+
+unset MYSQL_PWD
+
+echo "Syncing uploaded files to gs://$HRIS_BACKUP_BUCKET/storage/public"
+gcloud storage rsync --recursive \
+    "$APP_DIR/storage/app/public" \
+    "gs://$HRIS_BACKUP_BUCKET/storage/public" \
+    --delete-unmatched-destination-objects

@@ -1,0 +1,871 @@
+{
+  "name": "regular_deductions_exceed_earnings",
+  "run_type": "regular",
+  "config": {
+    "frequency": "semi-monthly",
+    "cutoff": "last_pay",
+    "run_type": "regular",
+    "meta": {},
+    "days_per_year": 261,
+    "hours_per_day": 8,
+    "sss_schedule": "every_pay",
+    "philhealth_schedule": "every_pay",
+    "pagibig_schedule": "every_pay",
+    "tax_schedule": "every_pay",
+    "sss_brackets": [
+      {
+        "msc_from": 0,
+        "msc_to": 524999,
+        "msc": 500000,
+        "ee": 25000,
+        "er": 50000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 525000,
+        "msc_to": 574999,
+        "msc": 550000,
+        "ee": 27500,
+        "er": 55000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 575000,
+        "msc_to": 624999,
+        "msc": 600000,
+        "ee": 30000,
+        "er": 60000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 625000,
+        "msc_to": 674999,
+        "msc": 650000,
+        "ee": 32500,
+        "er": 65000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 675000,
+        "msc_to": 724999,
+        "msc": 700000,
+        "ee": 35000,
+        "er": 70000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 725000,
+        "msc_to": 774999,
+        "msc": 750000,
+        "ee": 37500,
+        "er": 75000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 775000,
+        "msc_to": 824999,
+        "msc": 800000,
+        "ee": 40000,
+        "er": 80000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 825000,
+        "msc_to": 874999,
+        "msc": 850000,
+        "ee": 42500,
+        "er": 85000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 875000,
+        "msc_to": 924999,
+        "msc": 900000,
+        "ee": 45000,
+        "er": 90000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 925000,
+        "msc_to": 974999,
+        "msc": 950000,
+        "ee": 47500,
+        "er": 95000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 975000,
+        "msc_to": 1024999,
+        "msc": 1000000,
+        "ee": 50000,
+        "er": 100000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1025000,
+        "msc_to": 1074999,
+        "msc": 1050000,
+        "ee": 52500,
+        "er": 105000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1075000,
+        "msc_to": 1124999,
+        "msc": 1100000,
+        "ee": 55000,
+        "er": 110000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1125000,
+        "msc_to": 1174999,
+        "msc": 1150000,
+        "ee": 57500,
+        "er": 115000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1175000,
+        "msc_to": 1224999,
+        "msc": 1200000,
+        "ee": 60000,
+        "er": 120000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1225000,
+        "msc_to": 1274999,
+        "msc": 1250000,
+        "ee": 62500,
+        "er": 125000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1275000,
+        "msc_to": 1324999,
+        "msc": 1300000,
+        "ee": 65000,
+        "er": 130000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1325000,
+        "msc_to": 1374999,
+        "msc": 1350000,
+        "ee": 67500,
+        "er": 135000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1375000,
+        "msc_to": 1424999,
+        "msc": 1400000,
+        "ee": 70000,
+        "er": 140000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1425000,
+        "msc_to": 1474999,
+        "msc": 1450000,
+        "ee": 72500,
+        "er": 145000,
+        "ec": 1000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1475000,
+        "msc_to": 1524999,
+        "msc": 1500000,
+        "ee": 75000,
+        "er": 150000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1525000,
+        "msc_to": 1574999,
+        "msc": 1550000,
+        "ee": 77500,
+        "er": 155000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1575000,
+        "msc_to": 1624999,
+        "msc": 1600000,
+        "ee": 80000,
+        "er": 160000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1625000,
+        "msc_to": 1674999,
+        "msc": 1650000,
+        "ee": 82500,
+        "er": 165000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1675000,
+        "msc_to": 1724999,
+        "msc": 1700000,
+        "ee": 85000,
+        "er": 170000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1725000,
+        "msc_to": 1774999,
+        "msc": 1750000,
+        "ee": 87500,
+        "er": 175000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1775000,
+        "msc_to": 1824999,
+        "msc": 1800000,
+        "ee": 90000,
+        "er": 180000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1825000,
+        "msc_to": 1874999,
+        "msc": 1850000,
+        "ee": 92500,
+        "er": 185000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1875000,
+        "msc_to": 1924999,
+        "msc": 1900000,
+        "ee": 95000,
+        "er": 190000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1925000,
+        "msc_to": 1974999,
+        "msc": 1950000,
+        "ee": 97500,
+        "er": 195000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 1975000,
+        "msc_to": 2024999,
+        "msc": 2000000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 0,
+        "wisp_er": 0
+      },
+      {
+        "msc_from": 2025000,
+        "msc_to": 2074999,
+        "msc": 2050000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 2500,
+        "wisp_er": 5000
+      },
+      {
+        "msc_from": 2075000,
+        "msc_to": 2124999,
+        "msc": 2100000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 5000,
+        "wisp_er": 10000
+      },
+      {
+        "msc_from": 2125000,
+        "msc_to": 2174999,
+        "msc": 2150000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 7500,
+        "wisp_er": 15000
+      },
+      {
+        "msc_from": 2175000,
+        "msc_to": 2224999,
+        "msc": 2200000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 10000,
+        "wisp_er": 20000
+      },
+      {
+        "msc_from": 2225000,
+        "msc_to": 2274999,
+        "msc": 2250000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 12500,
+        "wisp_er": 25000
+      },
+      {
+        "msc_from": 2275000,
+        "msc_to": 2324999,
+        "msc": 2300000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 15000,
+        "wisp_er": 30000
+      },
+      {
+        "msc_from": 2325000,
+        "msc_to": 2374999,
+        "msc": 2350000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 17500,
+        "wisp_er": 35000
+      },
+      {
+        "msc_from": 2375000,
+        "msc_to": 2424999,
+        "msc": 2400000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 20000,
+        "wisp_er": 40000
+      },
+      {
+        "msc_from": 2425000,
+        "msc_to": 2474999,
+        "msc": 2450000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 22500,
+        "wisp_er": 45000
+      },
+      {
+        "msc_from": 2475000,
+        "msc_to": 2524999,
+        "msc": 2500000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 25000,
+        "wisp_er": 50000
+      },
+      {
+        "msc_from": 2525000,
+        "msc_to": 2574999,
+        "msc": 2550000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 27500,
+        "wisp_er": 55000
+      },
+      {
+        "msc_from": 2575000,
+        "msc_to": 2624999,
+        "msc": 2600000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 30000,
+        "wisp_er": 60000
+      },
+      {
+        "msc_from": 2625000,
+        "msc_to": 2674999,
+        "msc": 2650000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 32500,
+        "wisp_er": 65000
+      },
+      {
+        "msc_from": 2675000,
+        "msc_to": 2724999,
+        "msc": 2700000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 35000,
+        "wisp_er": 70000
+      },
+      {
+        "msc_from": 2725000,
+        "msc_to": 2774999,
+        "msc": 2750000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 37500,
+        "wisp_er": 75000
+      },
+      {
+        "msc_from": 2775000,
+        "msc_to": 2824999,
+        "msc": 2800000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 40000,
+        "wisp_er": 80000
+      },
+      {
+        "msc_from": 2825000,
+        "msc_to": 2874999,
+        "msc": 2850000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 42500,
+        "wisp_er": 85000
+      },
+      {
+        "msc_from": 2875000,
+        "msc_to": 2924999,
+        "msc": 2900000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 45000,
+        "wisp_er": 90000
+      },
+      {
+        "msc_from": 2925000,
+        "msc_to": 2974999,
+        "msc": 2950000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 47500,
+        "wisp_er": 95000
+      },
+      {
+        "msc_from": 2975000,
+        "msc_to": 3024999,
+        "msc": 3000000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 50000,
+        "wisp_er": 100000
+      },
+      {
+        "msc_from": 3025000,
+        "msc_to": 3074999,
+        "msc": 3050000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 52500,
+        "wisp_er": 105000
+      },
+      {
+        "msc_from": 3075000,
+        "msc_to": 3124999,
+        "msc": 3100000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 55000,
+        "wisp_er": 110000
+      },
+      {
+        "msc_from": 3125000,
+        "msc_to": 3174999,
+        "msc": 3150000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 57500,
+        "wisp_er": 115000
+      },
+      {
+        "msc_from": 3175000,
+        "msc_to": 3224999,
+        "msc": 3200000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 60000,
+        "wisp_er": 120000
+      },
+      {
+        "msc_from": 3225000,
+        "msc_to": 3274999,
+        "msc": 3250000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 62500,
+        "wisp_er": 125000
+      },
+      {
+        "msc_from": 3275000,
+        "msc_to": 3324999,
+        "msc": 3300000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 65000,
+        "wisp_er": 130000
+      },
+      {
+        "msc_from": 3325000,
+        "msc_to": 3374999,
+        "msc": 3350000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 67500,
+        "wisp_er": 135000
+      },
+      {
+        "msc_from": 3375000,
+        "msc_to": 3424999,
+        "msc": 3400000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 70000,
+        "wisp_er": 140000
+      },
+      {
+        "msc_from": 3425000,
+        "msc_to": 3474999,
+        "msc": 3450000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 72500,
+        "wisp_er": 145000
+      },
+      {
+        "msc_from": 3475000,
+        "msc_to": 0,
+        "msc": 3500000,
+        "ee": 100000,
+        "er": 200000,
+        "ec": 3000,
+        "wisp_ee": 75000,
+        "wisp_er": 150000
+      }
+    ],
+    "philhealth": {
+      "rate": 0.05,
+      "floor": 1000000,
+      "ceiling": 10000000
+    },
+    "pagibig": {
+      "rate": 0.02,
+      "low_rate": 0.01,
+      "low_threshold": 150000,
+      "max_fund_salary": 1000000
+    },
+    "tax_brackets": [
+      {
+        "from": 0,
+        "to": 1041699,
+        "base_tax": 0,
+        "rate": 0
+      },
+      {
+        "from": 1041700,
+        "to": 1666699,
+        "base_tax": 0,
+        "rate": 0.15
+      },
+      {
+        "from": 1666700,
+        "to": 3333299,
+        "base_tax": 93750,
+        "rate": 0.2
+      },
+      {
+        "from": 3333300,
+        "to": 8333299,
+        "base_tax": 427070,
+        "rate": 0.25
+      },
+      {
+        "from": 8333300,
+        "to": 33333299,
+        "base_tax": 1677070,
+        "rate": 0.3
+      },
+      {
+        "from": 33333300,
+        "to": 0,
+        "base_tax": 9177070,
+        "rate": 0.35
+      }
+    ],
+    "annual_tax_brackets": [
+      {
+        "from": 0,
+        "to": 2083299,
+        "base_tax": 0,
+        "rate": 0
+      },
+      {
+        "from": 2083300,
+        "to": 3333299,
+        "base_tax": 0,
+        "rate": 0.15
+      },
+      {
+        "from": 3333300,
+        "to": 6666699,
+        "base_tax": 187500,
+        "rate": 0.2
+      },
+      {
+        "from": 6666700,
+        "to": 16666699,
+        "base_tax": 854180,
+        "rate": 0.25
+      },
+      {
+        "from": 16666700,
+        "to": 66666699,
+        "base_tax": 3354180,
+        "rate": 0.3
+      },
+      {
+        "from": 66666700,
+        "to": 0,
+        "base_tax": 18354180,
+        "rate": 0.35
+      }
+    ],
+    "minimum_wage": 0,
+    "minimum_wages": [],
+    "default_region": "NCR",
+    "default_industry": "NON-AGRICULTURE",
+    "sss_base": "basic",
+    "philhealth_base": "basic",
+    "pagibig_base": "basic",
+    "de_minimis": [],
+    "holidays": [],
+    "pay_without_timesheet": true,
+    "pay_unworked_regular_holidays": true
+  },
+  "employee": {
+    "id": 502,
+    "region": "",
+    "industry": "",
+    "number": "E-0502",
+    "name": "DAILY EMPLOYEE",
+    "monthly_basic": 2200000,
+    "daily_rate": 100000,
+    "tax_status": "",
+    "dependents": 0,
+    "payment_type": "daily",
+    "is_monday_friday": false,
+    "is_minimum_wage": false,
+    "minimum_wage": 0,
+    "benefits": {
+      "rest_day_pay": true,
+      "regular_holiday_pay": true,
+      "special_holiday_pay": true,
+      "premium_holiday_pay": true,
+      "regular_holiday_special_holiday_pay": true,
+      "overtime_pay": true,
+      "night_differential": true,
+      "deminimis": true
+    },
+    "hired_on": "",
+    "separated_on": "",
+    "leave_balance_days": 0,
+    "ytd": {
+      "year": 0,
+      "basic_earned": 0,
+      "gross_earned": 0,
+      "taxable_income": 0,
+      "tax_withheld": 0,
+      "contributions": 0,
+      "thirteenth_month_paid": 0,
+      "other_benefits": 0
+    },
+    "timesheets": [
+      {
+        "date": "2026-06-01",
+        "day_type": "regular",
+        "hours": 8,
+        "overtime": 0,
+        "night": 0,
+        "night_ot": 0,
+        "absent": false,
+        "leave": false,
+        "paid_leave": false,
+        "legacy_hours": false
+      },
+      {
+        "date": "2026-06-02",
+        "day_type": "regular",
+        "hours": 8,
+        "overtime": 0,
+        "night": 0,
+        "night_ot": 0,
+        "absent": false,
+        "leave": false,
+        "paid_leave": false,
+        "legacy_hours": false
+      }
+    ],
+    "allowances": [],
+    "compensations": [],
+    "bonuses": [],
+    "commissions": [],
+    "deductions": [
+      {
+        "code": "union",
+        "name": "Union Dues",
+        "kind": "deduction",
+        "amount": 5000000,
+        "taxable": false,
+        "non_taxable_ceiling": 0,
+        "prorated": false,
+        "prorated_by": ""
+      }
+    ],
+    "loans": [
+      {
+        "code": "sssloan",
+        "name": "SSS Loan",
+        "kind": "loan",
+        "amount": 1500000,
+        "taxable": false,
+        "non_taxable_ceiling": 0,
+        "prorated": false,
+        "prorated_by": ""
+      }
+    ]
+  },
+  "expected": {
+    "employee_id": 502,
+    "employee_no": "E-0502",
+    "employee_name": "DAILY EMPLOYEE",
+    "basic_monthly": 2200000,
+    "daily_rate": 100000,
+    "period_basic": 1100000,
+    "basic_earned": 202304,
+    "regular_hours": 16,
+    "regular_pay": 202304,
+    "overtime_hours": 0,
+    "overtime_pay": 0,
+    "night_hours": 0,
+    "night_pay": 0,
+    "night_ot_pay": 0,
+    "holiday_pay": 0,
+    "rest_day_pay": 0,
+    "absent_days": 0,
+    "absent_amount": 0,
+    "allowances": 0,
+    "incentives": 0,
+    "compensations": [],
+    "bonus": 0,
+    "commission": 0,
+    "thirteenth_month": 0,
+    "leave_conversion": 0,
+    "separation_pay": 0,
+    "annual_adjustment": 0,
+    "gross": 202304,
+    "sss_employee": 50000,
+    "sss_provident": 5000,
+    "sss_employer": 100000,
+    "sss_provident_er": 10000,
+    "sss_ec": 1500,
+    "sss_total": 166500,
+    "philhealth_employee": 27500,
+    "philhealth_employer": 27500,
+    "pagibig_employee": 10000,
+    "pagibig_employer": 10000,
+    "taxable_income": 109804,
+    "non_taxable": 0,
+    "benefit_exempt": 0,
+    "minimum_wage_exemption": 0,
+    "withholding_tax": 0,
+    "other_deductions": 6500000,
+    "loans": 1500000,
+    "total_deductions": 6592500,
+    "total_employer_cost": 149000,
+    "net_pay": 0,
+    "warnings": [
+      "deductions exceed earnings by 63901.96"
+    ]
+  }
+}

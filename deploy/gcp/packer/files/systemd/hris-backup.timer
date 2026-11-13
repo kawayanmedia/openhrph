@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the HRIS backup nightly
+
+[Timer]
+OnCalendar=*-*-* 18:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

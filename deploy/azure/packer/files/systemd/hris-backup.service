@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up HRIS database and uploaded files to Cloud Storage
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/hris-backup
+StandardOutput=journal
+StandardError=journal
