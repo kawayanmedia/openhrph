@@ -114,7 +114,7 @@ final class LegacyWriter
             'compensations', 'bonus', 'commission', 'thirteenth_month', 'leave_conversion', 'separation_pay',
             'representation_allowance', 'transportation_allowance', 'cola', 'fixed_housing_allowance',
             'other_taxable_regular', 'other_taxable_supplementary', 'profit_sharing', 'fees', 'hazard_pay',
-            'loans', 'basic_earned', 'benefit_exempt', 'minimum_wage_exemption', 'warnings',
+            'loans', 'basic_earned', 'benefit_exempt', 'de_minimis_exempt', 'minimum_wage_exemption', 'warnings',
             'total_employee', 'total_employer', 'total_deductions', 'net_pay',
             'created_at', 'updated_at',
         ];
@@ -186,6 +186,7 @@ final class LegacyWriter
             'loans' => $slip->loans,
             'basic_earned' => $slip->basicEarned,
             'benefit_exempt' => $slip->benefitExempt,
+            'de_minimis_exempt' => json_encode((object) $slip->deMinimisExempt),
             'minimum_wage_exemption' => $slip->minimumWageExemption,
             'warnings' => json_encode(array_values($slip->warnings)),
             'total_employee' => $employeeContribution,
@@ -403,6 +404,8 @@ final class LegacyWriter
             return;
         }
 
+        self::reverseDeMinimisYtd($run);
+
         if (! Schema::hasTable('employee_payroll_ytd')) {
             return;
         }
@@ -562,6 +565,133 @@ final class LegacyWriter
                     'updated_at' => $now,
                 ]);
         }
+
+        foreach ($slips as $slip) {
+            if ($slip->gross !== 0) {
+                self::updateDeMinimisYtd($run, $slip, $now);
+            }
+        }
+    }
+
+    /**
+     * Add the de minimis exemption this payslip used to the period ledger.
+     */
+    private static function updateDeMinimisYtd(Run $run, Payslip $slip, mixed $now): void
+    {
+        if (! Schema::hasTable('employee_payroll_ytd_de_minimis')) {
+            return;
+        }
+
+        foreach ($slip->deMinimisExempt as $key => $amount) {
+            $amount = (int) $amount;
+
+            if ($amount <= 0) {
+                continue;
+            }
+
+            [$code, $period] = self::deMinimisKey((string) $key);
+
+            $query = DB::table('employee_payroll_ytd_de_minimis')
+                ->where('company_id', $run->companyID)
+                ->where('employee_id', $slip->employeeID)
+                ->where('year', $run->year())
+                ->where('period', $period)
+                ->where('code', $code);
+
+            $current = $query->value('exempt_centavos');
+
+            if ($current === null) {
+                DB::table('employee_payroll_ytd_de_minimis')->insert([
+                    'company_id' => $run->companyID,
+                    'employee_id' => $slip->employeeID,
+                    'year' => $run->year(),
+                    'period' => $period,
+                    'code' => $code,
+                    'exempt_centavos' => $amount,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                continue;
+            }
+
+            DB::table('employee_payroll_ytd_de_minimis')
+                ->where('company_id', $run->companyID)
+                ->where('employee_id', $slip->employeeID)
+                ->where('year', $run->year())
+                ->where('period', $period)
+                ->where('code', $code)
+                ->update([
+                    'exempt_centavos' => (int) $current + $amount,
+                    'updated_at' => $now,
+                ]);
+        }
+    }
+
+    /**
+     * Take the payroll's own de minimis consumption back out of the ledger so
+     * re-processing replaces rather than adds.
+     */
+    private static function reverseDeMinimisYtd(Run $run): void
+    {
+        if (! Schema::hasTable('employee_payroll_ytd_de_minimis')
+            || ! Schema::hasColumn('payroll_details', 'de_minimis_exempt')) {
+            return;
+        }
+
+        $totals = [];
+
+        $details = DB::table('payroll_details')
+            ->where('payroll_id', $run->payrollID)
+            ->where('company_id', $run->companyID)
+            ->whereNull('deleted_at')
+            ->get(['employee_id', 'de_minimis_exempt']);
+
+        foreach ($details as $detail) {
+            $usage = json_decode((string) ($detail->de_minimis_exempt ?? ''), true);
+
+            if (! is_array($usage)) {
+                continue;
+            }
+
+            foreach ($usage as $key => $amount) {
+                [$code, $period] = self::deMinimisKey((string) $key);
+                $bucket = ((int) $detail->employee_id).'|'.$code.'|'.$period;
+                $totals[$bucket] = ($totals[$bucket] ?? 0) + (int) $amount;
+            }
+        }
+
+        foreach ($totals as $bucket => $amount) {
+            [$employeeID, $code, $period] = explode('|', (string) $bucket, 3);
+
+            $query = DB::table('employee_payroll_ytd_de_minimis')
+                ->where('company_id', $run->companyID)
+                ->where('employee_id', (int) $employeeID)
+                ->where('year', $run->year())
+                ->where('period', $period)
+                ->where('code', $code);
+
+            $current = $query->value('exempt_centavos');
+
+            if ($current === null) {
+                continue;
+            }
+
+            $query->update([
+                'exempt_centavos' => max(0, (int) $current - max(0, (int) $amount)),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private static function deMinimisKey(string $key): array
+    {
+        [$code, $period] = array_pad(explode('|', $key, 2), 2, '');
+
+        return [strtolower(trim($code)), $period];
     }
 
     private static function recordAudit(Run $run, Summary $summary, WriteOptions $options): void

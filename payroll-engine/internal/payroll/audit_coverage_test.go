@@ -76,10 +76,10 @@ func TestAdditionalEarningsDeductionsAndLoansReconcile(t *testing.T) {
 		t.Fatalf("gross = %s, want 16550.00", slip.Gross)
 	}
 
-	// Rice subsidy is capped at the 2,000 monthly de minimis ceiling, so the
-	// semi-monthly cut-off exempts 1,000 of it.
-	if slip.NonTaxable != money.FromPesos(1000) {
-		t.Fatalf("non-taxable = %s, want 1000.00", slip.NonTaxable)
+	// Rice subsidy is capped at the 2,000 monthly de minimis ceiling. Nothing
+	// has used the month's ceiling yet, so the whole 2,000 is exempt.
+	if slip.NonTaxable != money.FromPesos(2000) {
+		t.Fatalf("non-taxable = %s, want 2000.00", slip.NonTaxable)
 	}
 
 	// 26,100 -> MSC 26,000: SSS 5% x 20,000 = 1,000 and WISP 5% x 6,000 = 300,
@@ -94,14 +94,14 @@ func TestAdditionalEarningsDeductionsAndLoansReconcile(t *testing.T) {
 		t.Fatalf("philhealth/pagibig = %s / %s", slip.PhilHealthEmployee, slip.PagIBIGEmployee)
 	}
 
-	// Taxable = 16,550 - 1,000 exempt - 500 - 150 - 326.25 - 100 = 14,473.75.
-	if slip.TaxableIncome != money.FromPesos(14473.75) {
-		t.Fatalf("taxable income = %s, want 14473.75", slip.TaxableIncome)
+	// Taxable = 16,550 - 2,000 exempt - 500 - 150 - 326.25 - 100 = 13,473.75.
+	if slip.TaxableIncome != money.FromPesos(13473.75) {
+		t.Fatalf("taxable income = %s, want 13473.75", slip.TaxableIncome)
 	}
 
-	// 15% x (14,473.75 - 10,417) = 608.5125 -> 608.51.
-	if slip.WithholdingTax != money.FromPesos(608.51) {
-		t.Fatalf("withholding tax = %s, want 608.51", slip.WithholdingTax)
+	// 15% x (13,473.75 - 10,417) = 458.5125 -> 458.51.
+	if slip.WithholdingTax != money.FromPesos(458.51) {
+		t.Fatalf("withholding tax = %s, want 458.51", slip.WithholdingTax)
 	}
 
 	// Loans are part of other deductions and must be counted exactly once.
@@ -113,13 +113,13 @@ func TestAdditionalEarningsDeductionsAndLoansReconcile(t *testing.T) {
 		t.Fatalf("other deductions = %s, want 1500.00 (500 deduction + 1,000 loan)", slip.OtherDeductions)
 	}
 
-	// 500 + 150 + 326.25 + 100 + 608.51 + 1,500 = 3,184.76.
-	if slip.TotalDeductions != money.FromPesos(3184.76) {
-		t.Fatalf("total deductions = %s, want 3184.76", slip.TotalDeductions)
+	// 500 + 150 + 326.25 + 100 + 458.51 + 1,500 = 3,034.76.
+	if slip.TotalDeductions != money.FromPesos(3034.76) {
+		t.Fatalf("total deductions = %s, want 3034.76", slip.TotalDeductions)
 	}
 
-	if slip.NetPay != money.FromPesos(13365.24) {
-		t.Fatalf("net pay = %s, want 13365.24", slip.NetPay)
+	if slip.NetPay != money.FromPesos(13515.24) {
+		t.Fatalf("net pay = %s, want 13515.24", slip.NetPay)
 	}
 }
 
@@ -487,14 +487,15 @@ func TestMinimumWageFlagIsIgnoredWhenTheRateExceedsTheMinimum(t *testing.T) {
 }
 
 // TestDeMinimisAnnualClothingCeiling covers F-37: the clothing ceiling is
-// P6,000 per annum, so a semi-monthly period exempts P250.00 (6,000 / 24).
+// P6,000 per annum. The ceiling applies to the year's cumulative exemption, so
+// a single payment of P6,000 is wholly exempt and later ones use what is left.
 func TestDeMinimisAnnualClothingCeiling(t *testing.T) {
 	cfg := semiMonthlyConfig()
 	cfg.DeMinimis = []model.DeMinimisBenefit{
 		{Code: "clothing", Ceiling: money.FromPesos(6000), Basis: model.DeMinimisAnnual},
 	}
 
-	slip, err := Compute(cfg, model.Employee{
+	employee := model.Employee{
 		ID:           48,
 		MonthlyBasic: money.FromPesos(26100),
 		PaymentType:  model.PaymentMonthly,
@@ -504,25 +505,41 @@ func TestDeMinimisAnnualClothingCeiling(t *testing.T) {
 			Code: "clothing", Name: "Uniform and clothing allowance",
 			Kind: model.KindAllowance, Amount: money.FromPesos(6000),
 		}},
-	})
+	}
+
+	slip, err := Compute(cfg, employee)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if slip.NonTaxable != money.FromPesos(250) {
-		t.Fatalf("non-taxable clothing = %s, want 250.00", slip.NonTaxable)
+	if slip.NonTaxable != money.FromPesos(6000) {
+		t.Fatalf("non-taxable clothing = %s, want 6000.00", slip.NonTaxable)
+	}
+
+	employee.YTD = model.YtdTotals{
+		Year:      2026,
+		DeMinimis: map[string]money.Centavos{"clothing|2026": money.FromPesos(4500)},
+	}
+
+	slip, err = Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.NonTaxable != money.FromPesos(1500) {
+		t.Fatalf("remaining clothing exemption = %s, want 1500.00", slip.NonTaxable)
 	}
 }
 
 // TestDeMinimisSemesterMedicalCeiling covers F-37: the medical cash ceiling is
-// P1,500 per semester, i.e. P250.00 per month or P125.00 per semi-monthly pay.
+// P1,500 per semester, tracked against the semester's cumulative exemption.
 func TestDeMinimisSemesterMedicalCeiling(t *testing.T) {
 	cfg := semiMonthlyConfig()
 	cfg.DeMinimis = []model.DeMinimisBenefit{
 		{Code: "medical", Ceiling: money.FromPesos(1500), Basis: model.DeMinimisSemester},
 	}
 
-	slip, err := Compute(cfg, model.Employee{
+	employee := model.Employee{
 		ID:           49,
 		MonthlyBasic: money.FromPesos(26100),
 		PaymentType:  model.PaymentMonthly,
@@ -532,13 +549,29 @@ func TestDeMinimisSemesterMedicalCeiling(t *testing.T) {
 			Code: "medical", Name: "Medical cash allowance to dependents",
 			Kind: model.KindAllowance, Amount: money.FromPesos(500),
 		}},
-	})
+	}
+
+	slip, err := Compute(cfg, employee)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if slip.NonTaxable != money.FromPesos(125) {
-		t.Fatalf("non-taxable medical = %s, want 125.00", slip.NonTaxable)
+	if slip.NonTaxable != money.FromPesos(500) {
+		t.Fatalf("non-taxable medical = %s, want 500.00", slip.NonTaxable)
+	}
+
+	employee.YTD = model.YtdTotals{
+		Year:      2026,
+		DeMinimis: map[string]money.Centavos{"medical|2026-S1": money.FromPesos(1200)},
+	}
+
+	slip, err = Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.NonTaxable != money.FromPesos(300) {
+		t.Fatalf("remaining medical exemption = %s, want 300.00", slip.NonTaxable)
 	}
 }
 

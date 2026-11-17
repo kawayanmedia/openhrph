@@ -72,6 +72,7 @@ final class Config
         public string $statutoryDriver = 'ph',
         public array $components = [],
         public Sector $sector = Sector::Private,
+        public string $payrollDate = '',
     ) {}
 
     public function periodsPerYear(): int
@@ -138,6 +139,7 @@ final class Config
             statutoryDriver: (string) ($data['statutory_driver'] ?? 'ph'),
             components: array_values((array) ($data['components'] ?? [])),
             sector: $sector,
+            payrollDate: (string) ($data['payroll_date'] ?? ''),
         );
     }
 
@@ -173,6 +175,7 @@ final class Config
             'philhealth_base' => $this->philHealthBase,
             'pagibig_base' => $this->pagIbigBase,
             'gsis_base' => $this->gsisBase,
+            'payroll_date' => $this->payrollDate,
             'de_minimis' => array_map(static fn (DeMinimisBenefit $row): array => $row->toArray(), $this->deMinimis),
             'holidays' => array_map(static fn (Holiday $row): array => $row->toArray(), $this->holidays),
             'pay_without_timesheet' => $this->payWithoutTimesheet,

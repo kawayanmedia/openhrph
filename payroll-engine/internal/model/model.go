@@ -2,6 +2,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/money"
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/statutory"
 )
@@ -122,6 +124,10 @@ type YtdTotals struct {
 	Contributions       money.Centavos
 	ThirteenthMonthPaid money.Centavos
 	OtherBenefits       money.Centavos
+
+	// DeMinimis is the exemption already used this month, semester or year,
+	// keyed by "{code}|{period}".
+	DeMinimis map[string]money.Centavos
 }
 
 // MinimumWage is one effective-dated regional/industry wage order.
@@ -229,6 +235,10 @@ type Config struct {
 	CountryCode     string
 	StatutoryDriver string
 	Components      []statutory.GenericComponent
+
+	// PayrollDate keys the de minimis ledger to the calendar month, semester
+	// or year the ceiling applies to.
+	PayrollDate time.Time
 }
 
 // PeriodsPerYear returns how many pays a frequency produces in a year.
@@ -312,6 +322,11 @@ type Payslip struct {
 
 	DeductionLines []DeductionLine
 	DeductionItems []DeductionLine
+
+	// DeMinimisExempt is the exemption this payslip consumed, keyed by
+	// "{code}|{period}". It is written to the ledger and kept out of the
+	// parity fixture shape.
+	DeMinimisExempt map[string]money.Centavos
 }
 
 // DeductionLine is one country-neutral deduction line for a payslip.

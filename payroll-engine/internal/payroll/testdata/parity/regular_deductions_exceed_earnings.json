@@ -729,7 +729,8 @@
     "de_minimis": [],
     "holidays": [],
     "pay_without_timesheet": true,
-    "pay_unworked_regular_holidays": true
+    "pay_unworked_regular_holidays": true,
+    "payroll_date": "2026-03-15"
   },
   "employee": {
     "id": 502,

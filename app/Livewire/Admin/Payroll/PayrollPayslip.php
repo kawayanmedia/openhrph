@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Payroll;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Services\Payroll\EarningTaxReport;
 use App\Services\Payroll\Engine\Legacy\LegacyInput;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -51,6 +52,7 @@ class PayrollPayslip extends Component
             'employee' => $employee,
             'detail' => $detail,
             'isGovernment' => LegacyInput::isGovernmentCompany((int) $payroll->company_id),
+            'taxReport' => config('app.debug') ? EarningTaxReport::forPayrollDetail($detail) : null,
         ])->title('Payslip — '.trim($employee->first_name.' '.$employee->last_name));
     }
 }

@@ -37,6 +37,10 @@ After a payroll is processed or approved:
 
 The payslip page is print-ready. Use your browser's print command to print it or save it as a PDF.
 
+### Debug tax breakdown
+
+When the installation runs with `APP_DEBUG=true`, the payslip page also shows a **Debug · earnings tax treatment** panel. It lists each earning and states whether it is taxable or non-taxable, the maximum that applies to it (the statutory de minimis ceiling, or the `maximum_non_tax` value on the company's `compensations` catalogue row), and how much of a non-taxable earning went above the ceiling still available for its month, semester or year and became taxable. The panel is hidden when printing and never appears in the PDF payslip.
+
 ## Payslip PDFs
 
 A payslip PDF opens from the protected payslip route. A user with admin access can open any payslip in the active company; an employee can open only the payslip that belongs to them, and only with an admin-workspace sign-in. Employee-portal accounts cannot open payslips.

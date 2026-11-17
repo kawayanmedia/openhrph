@@ -421,7 +421,7 @@ func TestDeMinimisCeilingCapsTheExemptAllowance(t *testing.T) {
 	cfg := semiMonthlyConfig()
 	cfg.DeMinimis = []model.DeMinimisBenefit{{Code: "rice", Ceiling: money.FromPesos(2000)}}
 
-	slip, err := Compute(cfg, model.Employee{
+	employee := model.Employee{
 		ID:           33,
 		MonthlyBasic: money.FromPesos(26100),
 		PaymentType:  model.PaymentDaily,
@@ -434,14 +434,31 @@ func TestDeMinimisCeilingCapsTheExemptAllowance(t *testing.T) {
 			Taxable: false,
 		}},
 		Timesheets: []model.TimesheetLine{{Date: "2026-01-03", DayType: "regular", Hours: 8}},
-	})
+	}
+
+	slip, err := Compute(cfg, employee)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// The ceiling is monthly (2,000), so a semi-monthly cut-off exempts 1,000
-	// of the 3,000 allowance; the remaining 2,000 is taxable.
-	if slip.NonTaxable != money.FromPesos(1000) {
-		t.Fatalf("non-taxable = %s, want 1000.00", slip.NonTaxable)
+	// The ceiling is 2,000 per month and nothing has used it yet, so 2,000 of
+	// the 3,000 allowance is exempt and 1,000 is taxable.
+	if slip.NonTaxable != money.FromPesos(2000) {
+		t.Fatalf("non-taxable = %s, want 2000.00", slip.NonTaxable)
+	}
+
+	// An earlier payroll in the same month already used 1,500, leaving 500.
+	employee.YTD = model.YtdTotals{
+		Year:      2026,
+		DeMinimis: map[string]money.Centavos{"rice|2026-01": money.FromPesos(1500)},
+	}
+
+	slip, err = Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.NonTaxable != money.FromPesos(500) {
+		t.Fatalf("remaining non-taxable = %s, want 500.00", slip.NonTaxable)
 	}
 }

@@ -2,6 +2,7 @@ package payroll
 
 import (
 	"testing"
+	"time"
 
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/model"
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/money"
@@ -38,6 +39,7 @@ func semiMonthlyConfig() model.Config {
 		TaxBrackets:                statutory.TRAINTaxBrackets(statutory.FrequencySemiMonthly),
 		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyMonthly),
 		PayUnworkedRegularHolidays: true,
+		PayrollDate:                time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 	}
 }
 

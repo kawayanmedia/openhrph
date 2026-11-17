@@ -59,6 +59,22 @@ can be changed, and the override is used for your company wherever the original 
 the override to fall back to the shared values. Assign the compensation to an employee from
 **Employee Compensation** or **Employees → Assign compensations**.
 
+Each non-taxable row records its maximum amount per annum: the annualised BIR de minimis ceilings
+under RR 29-2025 (rice, uniform and clothing, medical cash allowance, laundry, actual medical
+assistance, achievement awards, gifts, and CBA/productivity incentives) and the ₱90,000 13th
+month and other benefits exclusion on the bonus rows. The ceiling payroll applies to a de minimis
+allowance is the statutory one from the de minimis table. It is tracked against what the employee
+has already used in the same month, semester or year, so a payment inside the ceiling is not
+taxed just because earlier payrolls used part of it; only the amount above the remaining ceiling
+is taxable.
+
+An allowance assigned as **special** with a release date is paid only in the payroll period that
+contains that date. A recurring allowance follows its payment schedule (first pay, last pay or
+every pay).
+
+A payroll processed before a ceiling change keeps the figures stored with it. Reopen and
+re-process the payroll to recalculate it with the current ceilings.
+
 ## How pay is calculated
 
 - **Monthly-paid employees** receive a fixed period basic (the monthly rate divided by the number of pays). Working fewer or more days in a cut-off does not change it; absences reduce it by the daily rate and premium days add only the premium portion (rest day +30%, regular holiday +100%, and so on).

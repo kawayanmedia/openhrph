@@ -72,6 +72,14 @@ final class Payslip
         public array $deductionLines = [],
         /** @var list<DeductionLine> */
         public array $deductionItems = [],
+        /**
+         * De minimis exemption consumed this period, keyed by "{code}|{period}".
+         * Deliberately kept out of toArray(): the serialised shape is
+         * parity-locked to the Go engine and the writer reads the property.
+         *
+         * @var array<string, int>
+         */
+        public array $deMinimisExempt = [],
     ) {}
 
     /**
@@ -179,6 +187,10 @@ final class Payslip
         $this->totalEmployerCost = (int) ($data['total_employer_cost'] ?? 0);
         $this->netPay = (int) ($data['net_pay'] ?? 0);
         $this->warnings = array_values(array_map('strval', (array) ($data['warnings'] ?? [])));
+        $this->deMinimisExempt = array_map(
+            static fn ($value): int => (int) $value,
+            (array) ($data['de_minimis_exempt'] ?? []),
+        );
     }
 
     /**

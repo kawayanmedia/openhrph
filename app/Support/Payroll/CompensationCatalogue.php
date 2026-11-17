@@ -26,6 +26,35 @@ final class CompensationCatalogue
     private const OTHER_BENEFITS_EXCLUSION_CENTAVOS = self::OTHER_BENEFITS_EXCLUSION * 100;
 
     /**
+     * Annual equivalents of the BIR de minimis ceilings under RR 2-98 as
+     * amended by RR 29-2025 (https://bir-cdn.bir.gov.ph/BIR/pdf/RR%20No.%2029-2025.pdf),
+     * in centavos. The payroll engine prorates the statutory ceiling by its own
+     * basis (`statutory_de_minimis`); these values complete the catalogue for
+     * the admin screen, whose ceiling is per annum. Monetised leave credits and
+     * the overtime meal allowance are capped by days or by the minimum wage, so
+     * they carry no peso ceiling.
+     *
+     * @var array<string, int>
+     */
+    private const DE_MINIMIS_ANNUAL_CENTAVOS = [
+        'rice' => 3000000,                // ₱2,500 per month
+        'clothing' => 800000,             // ₱8,000 per year
+        'medical' => 400000,              // ₱2,000 per semester
+        'laundry' => 480000,              // ₱400 per month
+        'medical_assistance' => 1200000,  // ₱12,000 per year
+        'achievement_award' => 1200000,   // ₱12,000 per year
+        'gifts' => 600000,                // ₱6,000 per year
+        'cba_productivity' => 1200000,    // ₱12,000 per year
+    ];
+
+    /**
+     * The government PERA grant is ₱2,000 per month (DBM Budget Circular
+     * 2009-3, https://www.dbm.gov.ph/wp-content/uploads/2012/03/BC-2009-3.pdf,
+     * renewed yearly in the GAA), in centavos per year.
+     */
+    private const PERA_ANNUAL_CENTAVOS = 2400000;
+
+    /**
      * @return list<array{
      *     code: string,
      *     name: string,
@@ -88,19 +117,19 @@ final class CompensationCatalogue
 
             // De minimis benefits. `code` must equal the statutory_de_minimis
             // code so the ceiling in payroll.statutory.de_minimis applies.
-            ['code' => 'rice', 'name' => 'Rice Subsidy', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'clothing', 'name' => 'Uniform and Clothing Allowance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'medical', 'name' => 'Medical Cash Allowance to Dependents', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'laundry', 'name' => 'Laundry Allowance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
+            ['code' => 'rice', 'name' => 'Rice Subsidy', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['rice']],
+            ['code' => 'clothing', 'name' => 'Uniform and Clothing Allowance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['clothing']],
+            ['code' => 'medical', 'name' => 'Medical Cash Allowance to Dependents', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['medical']],
+            ['code' => 'laundry', 'name' => 'Laundry Allowance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['laundry']],
             ['code' => 'meal', 'name' => 'Meal Allowance for Overtime and Night Shift', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'medical_assistance', 'name' => 'Actual Medical Assistance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'achievement_award', 'name' => 'Employee Achievement Award', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'gifts', 'name' => 'Christmas and Anniversary Gift', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'cba_productivity', 'name' => 'CBA and Productivity Incentive', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
+            ['code' => 'medical_assistance', 'name' => 'Actual Medical Assistance', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['medical_assistance']],
+            ['code' => 'achievement_award', 'name' => 'Employee Achievement Award', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['achievement_award']],
+            ['code' => 'gifts', 'name' => 'Christmas and Anniversary Gift', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['gifts']],
+            ['code' => 'cba_productivity', 'name' => 'CBA and Productivity Incentive', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::DE_MINIMIS_ANNUAL_CENTAVOS['cba_productivity']],
 
             // Government and other non-taxable allowances.
             ['code' => 'SUBSISTENCE ALLOWANCE', 'name' => 'Subsistence Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'PERA', 'name' => 'Personnel Economic Relief Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Government'],
+            ['code' => 'PERA', 'name' => 'Personnel Economic Relief Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'maximum_non_tax' => self::PERA_ANNUAL_CENTAVOS, 'sector' => 'Government'],
 
             // Government statutory bonuses. Amounts are derived from the
             // employee's basic pay or from the annual DBM issuance, never from

@@ -270,7 +270,7 @@ final class Computer
         // Additional earnings: allowances, compensations, bonuses, commissions.
         foreach ($employee->allowances as $earning) {
             $slip->allowances += $earning->amount;
-            $slip->nonTaxable += self::nonTaxablePart($cfg, $employee, $earning, $periods);
+            $slip->nonTaxable += self::nonTaxablePart($cfg, $employee, $earning, $slip);
         }
 
         foreach ($employee->compensations as $earning) {
@@ -881,7 +881,7 @@ final class Computer
         return [$amount, self::separationIsTaxable($reason)];
     }
 
-    private static function separationIsTaxable(string $reason): bool
+    public static function separationIsTaxable(string $reason): bool
     {
         return ! in_array(strtolower(trim($reason)), [
             'retrenchment',
@@ -1027,9 +1027,10 @@ final class Computer
 
     /**
      * The portion of an allowance that is not taxable. De minimis benefits are
-     * capped at their statutory ceiling and basis; anything above is taxable.
+     * capped at their statutory ceiling for the period; anything above the
+     * remaining ceiling is taxable.
      */
-    private static function nonTaxablePart(Config $cfg, Employee $employee, Earning $earning, int $periods): int
+    private static function nonTaxablePart(Config $cfg, Employee $employee, Earning $earning, Payslip $slip): int
     {
         if ($earning->taxable) {
             return 0;
@@ -1039,11 +1040,111 @@ final class Computer
             $benefit = self::deMinimisBenefit($cfg, $earning);
 
             if ($benefit !== null) {
-                return self::deMinimisExemption($cfg, $employee, $earning, $benefit, $periods);
+                return self::deMinimisExemption($cfg, $employee, $earning, $benefit, $slip);
             }
         }
 
         return $earning->amount;
+    }
+
+    /**
+     * How the engine taxes one earning line: the exempt portion, the maximum
+     * applied to it, and the part above that maximum.
+     *
+     * Debug and audit use only. The serialised payslip shape and the Go parity
+     * contract do not include this.
+     *
+     * @param  array<string, int>  $periodUsage  exempt centavos already used in each benefit period
+     * @return array{taxable: bool, exempt: int, ceiling: ?int, basis: string, source: string, excess: int, key: ?string}
+     */
+    public static function earningTaxTreatment(Config $cfg, Employee $employee, Earning $earning, array $periodUsage = []): array
+    {
+        $amount = $earning->amount;
+
+        if ($earning->kind === Earning::KIND_ALLOWANCE) {
+            if ($earning->taxable) {
+                return self::taxTreatment(taxable: true, amount: $amount, exempt: 0);
+            }
+
+            if ($employee->benefits->deMinimis) {
+                $benefit = self::deMinimisBenefit($cfg, $earning);
+
+                if ($benefit !== null) {
+                    if ($benefit->basis === DeMinimisBenefit::BASIS_HOURLY_OT) {
+                        $ceiling = self::deMinimisHourlyOtCeiling($cfg, $employee, $benefit);
+
+                        return self::taxTreatment(
+                            taxable: true,
+                            amount: $amount,
+                            exempt: Money::min($amount, $ceiling),
+                            ceiling: $ceiling,
+                            basis: $benefit->basis,
+                            source: 'statutory de minimis',
+                        );
+                    }
+
+                    $key = self::deMinimisUsageKey($cfg, $employee, $benefit);
+                    $ceiling = Money::max(0, $benefit->ceiling - (int) ($periodUsage[$key] ?? 0));
+
+                    return self::taxTreatment(
+                        taxable: true,
+                        amount: $amount,
+                        exempt: Money::min($amount, $ceiling),
+                        ceiling: $ceiling,
+                        basis: $benefit->basis,
+                        source: 'statutory de minimis · year-to-date',
+                        key: $key,
+                    );
+                }
+            }
+
+            return self::taxTreatment(
+                taxable: false,
+                amount: $amount,
+                exempt: $amount,
+                source: $employee->benefits->deMinimis ? '' : 'de minimis not applied (employee flag off)',
+            );
+        }
+
+        if ($earning->kind === Earning::KIND_BONUS && $earning->nonTaxableCeiling > 0) {
+            return self::taxTreatment(
+                taxable: true,
+                amount: $amount,
+                exempt: Money::min($amount, $earning->nonTaxableCeiling),
+                ceiling: $earning->nonTaxableCeiling,
+                basis: 'catalogue',
+                source: 'compensations.maximum_non_tax',
+            );
+        }
+
+        return self::taxTreatment(
+            taxable: $earning->taxable,
+            amount: $amount,
+            exempt: $earning->taxable ? 0 : $amount,
+        );
+    }
+
+    /**
+     * @return array{taxable: bool, exempt: int, ceiling: ?int, basis: string, source: string, excess: int, key: ?string}
+     */
+    private static function taxTreatment(
+        bool $taxable,
+        int $amount,
+        int $exempt,
+        ?int $ceiling = null,
+        string $basis = '',
+        string $source = '',
+        ?string $key = null,
+    ): array {
+        return [
+            'taxable' => $taxable,
+            'exempt' => $exempt,
+            'ceiling' => $ceiling,
+            'basis' => $basis,
+            'source' => $source,
+            'excess' => $ceiling === null ? 0 : Money::max(0, $amount - $exempt),
+            'key' => $key,
+        ];
     }
 
     private static function deMinimisBenefit(Config $cfg, Earning $earning): ?DeMinimisBenefit
@@ -1059,24 +1160,73 @@ final class Computer
         return null;
     }
 
+    /**
+     * The exempt portion of one de minimis allowance. The ceiling applies to
+     * the cumulative amount for its own period (month, semester or year), so
+     * the exemption left is the ceiling less what prior payrolls in that
+     * period already exempted.
+     */
     private static function deMinimisExemption(
         Config $cfg,
         Employee $employee,
         Earning $earning,
         DeMinimisBenefit $benefit,
-        int $periods,
+        Payslip $slip,
     ): int {
-        $periodsPerMonth = $periods > 0 ? $periods : 1;
+        if ($benefit->basis === DeMinimisBenefit::BASIS_HOURLY_OT) {
+            return Money::min($earning->amount, self::deMinimisHourlyOtCeiling($cfg, $employee, $benefit));
+        }
 
-        return match ($benefit->basis) {
-            DeMinimisBenefit::BASIS_ANNUAL => Money::min($earning->amount, self::split($benefit->ceiling, $periodsPerMonth * 12)),
-            DeMinimisBenefit::BASIS_SEMESTER => Money::min(
-                $earning->amount,
-                self::firstPart(self::split($benefit->ceiling, 6), $periodsPerMonth),
-            ),
-            DeMinimisBenefit::BASIS_HOURLY_OT => self::deMinimisHourlyOtExemption($cfg, $employee, $earning, $benefit),
-            default => Money::min($earning->amount, self::firstPart($benefit->ceiling, $periodsPerMonth)),
+        $key = self::deMinimisUsageKey($cfg, $employee, $benefit);
+        $remaining = self::deMinimisRemaining($employee, $slip, $benefit, $key);
+        $exempt = Money::min($earning->amount, $remaining);
+
+        if ($exempt > 0) {
+            $slip->deMinimisExempt[$key] = (int) ($slip->deMinimisExempt[$key] ?? 0) + $exempt;
+        }
+
+        return $exempt;
+    }
+
+    /**
+     * The exemption still available for a benefit in this payroll's period.
+     */
+    private static function deMinimisRemaining(
+        Employee $employee,
+        Payslip $slip,
+        DeMinimisBenefit $benefit,
+        string $key,
+    ): int {
+        $used = (int) ($employee->ytd->deMinimis[$key] ?? 0)
+            + (int) ($slip->deMinimisExempt[$key] ?? 0);
+
+        return Money::max(0, $benefit->ceiling - $used);
+    }
+
+    /**
+     * The ledger key for a benefit: its statutory code plus the calendar
+     * month, semester or year the ceiling applies to.
+     */
+    private static function deMinimisUsageKey(Config $cfg, Employee $employee, DeMinimisBenefit $benefit): string
+    {
+        $code = strtolower(trim($benefit->code)) ?: 'de_minimis';
+        $date = $cfg->payrollDate !== ''
+            ? DateTimeImmutable::createFromFormat('!Y-m-d', $cfg->payrollDate)
+            : false;
+
+        if ($date === false) {
+            $period = $employee->ytd->year > 0 ? (string) $employee->ytd->year : '0';
+
+            return $code.'|'.$period;
+        }
+
+        $period = match ($benefit->basis) {
+            DeMinimisBenefit::BASIS_ANNUAL => $date->format('Y'),
+            DeMinimisBenefit::BASIS_SEMESTER => $date->format('Y').'-S'.((int) $date->format('n') <= 6 ? '1' : '2'),
+            default => $date->format('Y-m'),
         };
+
+        return $code.'|'.$period;
     }
 
     /**
@@ -1084,12 +1234,8 @@ final class Computer
      * of the hourly minimum wage for each overtime hour in the period
      * (RR 29-2025 sets 30%).
      */
-    private static function deMinimisHourlyOtExemption(
-        Config $cfg,
-        Employee $employee,
-        Earning $earning,
-        DeMinimisBenefit $benefit,
-    ): int {
+    private static function deMinimisHourlyOtCeiling(Config $cfg, Employee $employee, DeMinimisBenefit $benefit): int
+    {
         $daysPerYear = $cfg->daysPerYear > 0 ? $cfg->daysPerYear : 261;
         $hoursPerDay = $cfg->hoursPerDay > 0 ? $cfg->hoursPerDay : 8;
 
@@ -1098,9 +1244,8 @@ final class Computer
             : Rules::hourlyRate($employee->monthlyBasic, $daysPerYear, $hoursPerDay);
 
         $rate = $benefit->percentage / 100;
-        $ceiling = Money::mul($hourly, self::overtimeHours($employee->timesheets) * $rate);
 
-        return Money::min($earning->amount, $ceiling);
+        return Money::mul($hourly, self::overtimeHours($employee->timesheets) * $rate);
     }
 
     /**

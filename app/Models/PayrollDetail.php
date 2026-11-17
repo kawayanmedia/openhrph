@@ -21,7 +21,7 @@ class PayrollDetail extends Model
 
     protected $fillable = ['company_id', 'payroll_id', 'employee_id'];
 
-    protected $casts = ['compensations' => 'json', 'warnings' => 'json'];
+    protected $casts = ['compensations' => 'json', 'warnings' => 'json', 'de_minimis_exempt' => 'array'];
 
     /**
      * The "booted" method of the model.

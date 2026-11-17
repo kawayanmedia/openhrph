@@ -158,13 +158,17 @@ class Compensation extends Resource
                 ->hideFromIndex()
                 ->onlyOnForms()
                 ->currency(currency_symbol())
+                ->help('Per-annum ceiling. A de minimis allowance is capped by the statutory de minimis table, prorated to the pay period.')
                 ->dependsOn(['group', 'is_taxable'], function (Currency $field, Request $request, FormData $formData) {
                     $isBonusOrCommission = in_array($formData->group, [
                         CompensationModel::GROUP_BONUS,
                         CompensationModel::GROUP_COMMISSION,
                     ], true);
 
-                    if (! $isBonusOrCommission) {
+                    $isNonTaxableAllowance = $formData->group === CompensationModel::GROUP_ALLOWANCE
+                        && in_array($formData->is_taxable, [false, 0, '0'], true);
+
+                    if (! $isBonusOrCommission && ! $isNonTaxableAllowance) {
                         $field->hide()->rules();
 
                         return;
@@ -172,7 +176,7 @@ class Compensation extends Resource
 
                     $field->show();
 
-                    $formData->is_taxable === false
+                    $isBonusOrCommission && in_array($formData->is_taxable, [false, 0, '0'], true)
                         ? $field->rules('required')
                         : $field->rules();
                 }),

@@ -750,7 +750,8 @@
     ],
     "holidays": [],
     "pay_without_timesheet": true,
-    "pay_unworked_regular_holidays": true
+    "pay_unworked_regular_holidays": true,
+    "payroll_date": "2026-03-15"
   },
   "employee": {
     "id": 501,
@@ -1061,16 +1062,16 @@
     "gsis_employee": 0,
     "gsis_employer": 0,
     "gsis_total": 0,
-    "taxable_income": 1745833,
-    "non_taxable": 171667,
+    "taxable_income": 1527500,
+    "non_taxable": 390000,
     "benefit_exempt": 0,
     "minimum_wage_exemption": 0,
-    "withholding_tax": 109577,
+    "withholding_tax": 72870,
     "other_deductions": 0,
     "loans": 0,
-    "total_deductions": 232077,
+    "total_deductions": 195370,
     "total_employer_cost": 199000,
-    "net_pay": 1807923,
+    "net_pay": 1844630,
     "warnings": []
   }
 }

@@ -239,3 +239,84 @@ it('shows the GSIS BP number instead of SSS on a government payslip', function (
         ->assertSee('0001')
         ->assertDontSee('SSS:');
 });
+
+function payslipTaxReportFixture(): array
+{
+    return [
+        'from_inputs' => true,
+        'note' => '',
+        'summary' => [
+            'gross' => 18500.0,
+            'non_taxable' => 3250.0,
+            'benefit_exempt' => 0.0,
+            'minimum_wage_exemption' => 0.0,
+            'taxable' => 15000.0,
+        ],
+        'rows' => [
+            ['label' => 'Basic pay (period)', 'amount' => 15000.0, 'taxable' => true, 'exempt' => 0.0, 'ceiling' => null, 'basis' => '', 'source' => '', 'excess' => 0.0],
+            ['label' => 'Rice Subsidy', 'amount' => 3000.0, 'taxable' => true, 'exempt' => 1250.0, 'ceiling' => 1250.0, 'basis' => 'monthly', 'source' => 'statutory de minimis', 'excess' => 1750.0],
+            ['label' => 'Non-taxable compensation', 'amount' => 2000.0, 'taxable' => false, 'exempt' => 2000.0, 'ceiling' => null, 'basis' => '', 'source' => '', 'excess' => 0.0],
+        ],
+    ];
+}
+
+function payslipTaxReportPayroll(): Payroll
+{
+    $payroll = Payroll::factory()->make([
+        'id' => 56,
+        'company_id' => 1,
+        'payroll_group_id' => 1,
+        'payroll_date' => '2026-11-15',
+        'date_from' => '2026-11-01',
+        'date_to' => '2026-11-15',
+    ]);
+    $payroll->setRelation('processedBy', null);
+    $payroll->setRelation('approvedBy', null);
+
+    return $payroll;
+}
+
+function payslipTaxReportEmployee(): Employee
+{
+    return Employee::factory()->make([
+        'id' => 6,
+        'company_id' => 1,
+        'office_id' => null,
+        'employee_number' => 'E-006',
+        'first_name' => 'Ella',
+        'last_name' => 'Torres',
+        'position' => null,
+    ]);
+}
+
+it('shows the earnings tax treatment when debug mode is on', function () {
+    config(['app.debug' => true]);
+
+    $this->view('livewire.admin.payroll.payslip', [
+        'payroll' => payslipTaxReportPayroll(),
+        'employee' => payslipTaxReportEmployee(),
+        'detail' => payslipDetailFixture(['id' => 11]),
+        'taxReport' => payslipTaxReportFixture(),
+    ])
+        ->assertSee('Debug · earnings tax treatment')
+        ->assertSee('Rice Subsidy')
+        ->assertSee('Partly taxable')
+        ->assertSee('per month')
+        ->assertSee('₱1,750.00')
+        ->assertSee('Non-taxable')
+        ->assertSee('Taxable income (persisted)');
+});
+
+it('hides the earnings tax treatment outside debug mode', function () {
+    config(['app.debug' => false]);
+
+    $this->view('livewire.admin.payroll.payslip', [
+        'payroll' => payslipTaxReportPayroll(),
+        'employee' => payslipTaxReportEmployee(),
+        'detail' => payslipDetailFixture(['id' => 12]),
+        'taxReport' => payslipTaxReportFixture(),
+    ])
+        ->assertDontSee('Debug · earnings tax treatment')
+        ->assertDontSee('Partly taxable')
+        ->assertDontSee('₱1,750.00');
+});

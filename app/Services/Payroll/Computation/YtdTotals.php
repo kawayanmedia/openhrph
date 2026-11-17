@@ -7,6 +7,9 @@ namespace App\Services\Payroll\Computation;
  */
 final class YtdTotals
 {
+    /**
+     * @param  array<string, int>  $deMinimis  exempt centavos already used, keyed by "{code}|{period}"
+     */
     public function __construct(
         public int $year = 0,
         public int $basicEarned = 0,
@@ -16,6 +19,7 @@ final class YtdTotals
         public int $contributions = 0,
         public int $thirteenthMonthPaid = 0,
         public int $otherBenefits = 0,
+        public array $deMinimis = [],
     ) {}
 
     /**
@@ -32,6 +36,10 @@ final class YtdTotals
             contributions: (int) ($data['contributions'] ?? 0),
             thirteenthMonthPaid: (int) ($data['thirteenth_month_paid'] ?? 0),
             otherBenefits: (int) ($data['other_benefits'] ?? 0),
+            deMinimis: array_map(
+                static fn ($value): int => (int) $value,
+                (array) ($data['de_minimis'] ?? []),
+            ),
         );
     }
 
@@ -49,6 +57,7 @@ final class YtdTotals
             'contributions' => $this->contributions,
             'thirteenth_month_paid' => $this->thirteenthMonthPaid,
             'other_benefits' => $this->otherBenefits,
+            'de_minimis' => $this->deMinimis,
         ];
     }
 }

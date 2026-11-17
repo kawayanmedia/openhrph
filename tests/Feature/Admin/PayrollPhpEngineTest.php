@@ -1,14 +1,19 @@
 <?php
 
+use App\Livewire\Admin\Payroll\PayrollPayslip;
 use App\Models\Employee;
 use App\Models\Office;
 use App\Models\Payroll;
+use App\Models\PayrollDetail;
 use App\Models\PayrollGroup;
 use App\Models\Timesheet;
+use App\Models\User;
+use App\Services\Payroll\EarningTaxReport;
 use App\Services\Payroll\Engine\PhpPayrollEngine;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -190,6 +195,119 @@ it('pays every earning category from the consolidated compensations table', func
         ->and(json_decode((string) $detail->compensations, true))->toHaveCount(1);
 });
 
+it('explains the tax treatment of each earning on a debug payslip', function () {
+    $payrollId = seedPhpEnginePayroll();
+
+    Employee::withoutEvents(fn () => app(TenantContext::class)->run(
+        9,
+        fn (): int => Employee::whereKey(501)->update(['deminimis' => 1]),
+    ));
+
+    $riceId = DB::table('compensations')->insertGetId([
+        'company_id' => 9,
+        'code' => 'rice',
+        'name' => 'Rice Subsidy',
+        'group' => 'Allowance',
+        'tax_option' => 'fully_nontaxable',
+        'is_taxable' => 0,
+        'amount' => 0,
+        'status' => 'Active',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('employees_compensations')->insert([
+        'company_id' => 9,
+        'employee_id' => 501,
+        'compensation_id' => $riceId,
+        'is_special' => 0,
+        'release_date' => null,
+        'amount' => 300000,
+        'is_recurring' => 1,
+        'is_prorated' => 0,
+        'on_paid_leave' => 0,
+        'on_unpaid_leave' => 0,
+        'is_taxable' => 0,
+        'is_active' => 1,
+        'status' => 'not_release',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+
+    $detail = app(TenantContext::class)->run(9, fn (): PayrollDetail => PayrollDetail::where('payroll_id', $payrollId)->firstOrFail());
+
+    $report = EarningTaxReport::forPayrollDetail($detail);
+
+    expect($report['from_inputs'])->toBeTrue();
+
+    $rice = collect($report['rows'])->firstWhere('label', 'Rice Subsidy');
+
+    expect($rice)->not->toBeNull()
+        ->and($rice['taxable'])->toBeTrue()
+        ->and($rice['exempt'])->toBe(2500.0)
+        ->and($rice['ceiling'])->toBe(2500.0)
+        ->and($rice['excess'])->toBe(500.0)
+        ->and($rice['source'])->toBe('statutory de minimis · year-to-date');
+
+    expect(collect($report['rows'])->firstWhere('label', 'Basic pay (period)')['excess'])->toBe(0.0);
+});
+
+it('renders the earnings tax treatment on the payslip component when debug is on', function () {
+    $payrollId = seedPhpEnginePayroll();
+
+    Employee::withoutEvents(fn () => app(TenantContext::class)->run(
+        9,
+        fn (): int => Employee::whereKey(501)->update(['deminimis' => 1]),
+    ));
+
+    $riceId = DB::table('compensations')->insertGetId([
+        'company_id' => 9,
+        'code' => 'rice',
+        'name' => 'Rice Subsidy',
+        'group' => 'Allowance',
+        'tax_option' => 'fully_nontaxable',
+        'is_taxable' => 0,
+        'amount' => 0,
+        'status' => 'Active',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('employees_compensations')->insert([
+        'company_id' => 9,
+        'employee_id' => 501,
+        'compensation_id' => $riceId,
+        'is_special' => 0,
+        'release_date' => null,
+        'amount' => 300000,
+        'is_recurring' => 1,
+        'is_prorated' => 0,
+        'on_paid_leave' => 0,
+        'on_unpaid_leave' => 0,
+        'is_taxable' => 0,
+        'is_active' => 1,
+        'status' => 'not_release',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+
+    config(['app.debug' => true]);
+
+    $this->actingAs(User::factory()->create(['company_id' => 9, 'owner' => true]));
+
+    app(TenantContext::class)->run(9, function () use ($payrollId) {
+        Livewire::test(PayrollPayslip::class, ['payroll' => $payrollId, 'employee' => 501])
+            ->assertSee('Debug · earnings tax treatment')
+            ->assertSee('Rice Subsidy')
+            ->assertSee('Partly taxable')
+            ->assertSee('statutory de minimis');
+    });
+});
+
 it('writes each compensation into the payroll detail column for its tax class', function () {
     $payrollId = seedPhpEnginePayroll();
 
@@ -250,4 +368,135 @@ it('writes each compensation into the payroll detail column for its tax class', 
     // A tax class without a dedicated column must not inflate a column that
     // belongs to another class.
     expect(json_decode((string) $detail->compensations, true))->toHaveCount(4);
+});
+
+function seedDeMinimisAllowance(string $code, string $name, int $amount, array $overrides = []): void
+{
+    $compensationId = DB::table('compensations')->insertGetId([
+        'company_id' => 9,
+        'code' => $code,
+        'name' => $name,
+        'group' => 'Allowance',
+        'tax_option' => 'fully_nontaxable',
+        'is_taxable' => 0,
+        'amount' => 0,
+        'status' => 'Active',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('employees_compensations')->insert(array_merge([
+        'company_id' => 9,
+        'employee_id' => 501,
+        'compensation_id' => $compensationId,
+        'is_special' => 0,
+        'release_date' => null,
+        'amount' => $amount,
+        'is_recurring' => 1,
+        'is_prorated' => 0,
+        'on_paid_leave' => 0,
+        'on_unpaid_leave' => 0,
+        'is_taxable' => 0,
+        'is_active' => 1,
+        'status' => 'not_release',
+        'frequency' => 'every_pay',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ], $overrides));
+}
+
+function markEmployeeDeMinimis(int $employeeId = 501): void
+{
+    Employee::withoutEvents(fn () => app(TenantContext::class)->run(
+        9,
+        fn (): int => Employee::whereKey($employeeId)->update(['deminimis' => 1]),
+    ));
+}
+
+it('carries the unused de minimis ceiling into the next payroll of the same month', function () {
+    $firstPayroll = seedPhpEnginePayroll();
+
+    markEmployeeDeMinimis();
+    seedDeMinimisAllowance('rice', 'Rice Subsidy', 250000);
+
+    Payroll::factory()->create([
+        'id' => 78,
+        'company_id' => 9,
+        'payroll_group_id' => 1,
+        'status' => 'open',
+        'cut_off' => 'last_pay',
+        'date_from' => '2026-03-16',
+        'date_to' => '2026-03-31',
+        'payroll_date' => '2026-03-31',
+        'type' => 'regular',
+        'meta' => [],
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($firstPayroll));
+    (new PhpPayrollEngine)->process(phpEnginePayroll(78));
+
+    $first = DB::table('payroll_details')->where('payroll_id', $firstPayroll)->first();
+    $second = DB::table('payroll_details')->where('payroll_id', 78)->first();
+
+    expect((int) $first->non_taxable_income)->toBe(250000)
+        ->and((int) $second->non_taxable_income)->toBe(0);
+
+    expect(json_decode((string) $first->de_minimis_exempt, true))->toBe(['rice|2026-03' => 250000])
+        ->and(json_decode((string) $second->de_minimis_exempt, true))->toBe([]);
+
+    expect((int) DB::table('employee_payroll_ytd_de_minimis')
+        ->where('company_id', 9)
+        ->where('employee_id', 501)
+        ->where('period', '2026-03')
+        ->where('code', 'rice')
+        ->value('exempt_centavos'))->toBe(250000);
+});
+
+it('replaces the de minimis ledger contribution when a payroll is re-processed', function () {
+    $payrollId = seedPhpEnginePayroll();
+
+    markEmployeeDeMinimis();
+    seedDeMinimisAllowance('rice', 'Rice Subsidy', 250000);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+
+    expect((int) DB::table('employee_payroll_ytd_de_minimis')
+        ->where('employee_id', 501)
+        ->where('period', '2026-03')
+        ->where('code', 'rice')
+        ->value('exempt_centavos'))->toBe(250000);
+});
+
+it('pays a special allowance only in the period that contains its release date', function () {
+    $payrollId = seedPhpEnginePayroll();
+
+    markEmployeeDeMinimis();
+    seedDeMinimisAllowance('clothing', 'Uniform and Clothing Allowance', 450000, [
+        'is_special' => 1,
+        'is_recurring' => 0,
+        'frequency' => null,
+        'release_date' => '2026-02-10',
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+
+    $detail = DB::table('payroll_details')->where('payroll_id', $payrollId)->first();
+
+    expect((int) $detail->allowance)->toBe(0);
+});
+
+it('pays a recurring allowance only in the pay schedule it was given', function () {
+    $payrollId = seedPhpEnginePayroll();
+
+    markEmployeeDeMinimis();
+    seedDeMinimisAllowance('clothing', 'Uniform and Clothing Allowance', 450000, [
+        'frequency' => 'first_pay',
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($payrollId));
+
+    $detail = DB::table('payroll_details')->where('payroll_id', $payrollId)->first();
+
+    expect((int) $detail->allowance)->toBe(0);
 });

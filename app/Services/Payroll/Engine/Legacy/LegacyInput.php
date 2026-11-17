@@ -171,6 +171,7 @@ final class LegacyInput
             philHealthBase: 'basic',
             pagIbigBase: 'basic',
             gsisBase: 'basic',
+            payrollDate: $run->payrollDate,
         );
 
         $config->sector = app(SectorManager::class)->forCompany($run->companyID)->sector();
@@ -606,6 +607,7 @@ final class LegacyInput
                 'ec.employee_id', 'ec.amount', 'ec.is_taxable', 'ec.is_active',
                 'ec.frequency', 'ec.valid_date_from', 'ec.valid_date_to',
                 'ec.is_prorated', 'ec.prorated_by', 'ec.release_date', 'ec.status',
+                'ec.is_special',
                 'c.code', 'c.name', 'c.group', 'c.tax_class_code', 'c.is_taxable as default_taxable',
                 'c.maximum_non_tax',
             ]);
@@ -630,6 +632,17 @@ final class LegacyInput
 
             if (strcasecmp($group, Compensation::GROUP_ALLOWANCE) === 0) {
                 if (! self::validDates((string) ($row->valid_date_from ?? ''), (string) ($row->valid_date_to ?? ''), $run)) {
+                    continue;
+                }
+
+                // A special assignment is released once, in the period that
+                // contains its release date; a recurring one follows the
+                // payment schedule it was given.
+                if ((int) ($row->is_special ?? 0) === 1) {
+                    if (! self::dateWithinPeriod($row->release_date ?? null, $run)) {
+                        continue;
+                    }
+                } elseif (! self::frequencyApplies((string) ($row->frequency ?? ''), $run, $config)) {
                     continue;
                 }
 
@@ -842,6 +855,72 @@ final class LegacyInput
         foreach ($employees as $employee) {
             if (isset($byEmployee[$employee->id])) {
                 $employee->ytd = $byEmployee[$employee->id];
+            }
+        }
+
+        self::loadDeMinimisUsage($run, $employees);
+    }
+
+    /**
+     * The de minimis exemption already consumed in each employee's current
+     * month, semester and year.
+     *
+     * @param  list<Employee>  $employees
+     */
+    private static function loadDeMinimisUsage(Run $run, array $employees): void
+    {
+        if (! Schema::hasTable('employee_payroll_ytd_de_minimis')) {
+            return;
+        }
+
+        $index = [];
+
+        foreach ($employees as $employee) {
+            $index[$employee->id] = $employee;
+        }
+
+        $rows = DB::table('employee_payroll_ytd_de_minimis')
+            ->where('company_id', $run->companyID)
+            ->where('year', $run->year())
+            ->whereIn('employee_id', array_keys($index))
+            ->get(['employee_id', 'period', 'code', 'exempt_centavos']);
+
+        foreach ($rows as $row) {
+            $employee = $index[(int) $row->employee_id] ?? null;
+
+            if ($employee === null) {
+                continue;
+            }
+
+            $key = strtolower(trim((string) $row->code)).'|'.(string) $row->period;
+            $employee->ytd->deMinimis[$key] = (int) ($row->exempt_centavos ?? 0);
+        }
+
+        // The current payroll's own earlier run is already in the ledger. Take
+        // it back out so re-processing starts from where it did the first time.
+        if (! Schema::hasColumn('payroll_details', 'de_minimis_exempt')) {
+            return;
+        }
+
+        $posted = DB::table('payroll_details')
+            ->where('payroll_id', $run->payrollID)
+            ->where('company_id', $run->companyID)
+            ->whereNull('deleted_at')
+            ->get(['employee_id', 'de_minimis_exempt']);
+
+        foreach ($posted as $detail) {
+            $employee = $index[(int) $detail->employee_id] ?? null;
+            $usage = json_decode((string) ($detail->de_minimis_exempt ?? ''), true);
+
+            if ($employee === null || ! is_array($usage)) {
+                continue;
+            }
+
+            foreach ($usage as $key => $amount) {
+                $employee->ytd->deMinimis[(string) $key] = max(
+                    0,
+                    (int) ($employee->ytd->deMinimis[(string) $key] ?? 0) - (int) $amount,
+                );
             }
         }
     }

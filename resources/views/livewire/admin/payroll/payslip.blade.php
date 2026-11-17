@@ -145,5 +145,105 @@
             <p>Taxable income: {{ currency_symbol() }}{{ number_format($detail->taxable_income, 2) }}</p>
             <p>Payroll #{{ $payroll->getKey() }}</p>
         </section>
+
+        @if (config('app.debug'))
+            @php
+                $taxRows = $taxReport['rows'] ?? [];
+                $taxSummary = $taxReport['summary'] ?? [];
+                $basisLabels = [
+                    'monthly' => 'per month',
+                    'annual' => 'per year',
+                    'semester' => 'per semester',
+                    'hourly_ot' => 'per OT hour',
+                    'catalogue' => 'catalogue maximum',
+                ];
+                $money = fn (?float $amount): string => $amount === null
+                    ? '—'
+                    : currency_symbol().number_format($amount, 2);
+            @endphp
+
+            <section class="mt-6 rounded-xl border border-dashed border-amber-400 bg-amber-50/70 p-4 text-xs print:hidden dark:border-amber-500/40 dark:bg-amber-500/10">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">Debug · earnings tax treatment</h2>
+                    <span class="rounded-full bg-amber-200/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900 dark:bg-amber-500/20 dark:text-amber-200">APP_DEBUG</span>
+                </div>
+
+                @if (($taxReport['note'] ?? '') !== '')
+                    <p class="mt-2 text-amber-800 dark:text-amber-200">{{ $taxReport['note'] }}</p>
+                @endif
+
+                <div class="mt-3 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="text-[10px] uppercase tracking-wider text-amber-800/80 dark:text-amber-300/80">
+                            <tr>
+                                <th class="py-1 pr-3 font-semibold">Earning</th>
+                                <th class="py-1 pr-3 text-right font-semibold">Amount</th>
+                                <th class="py-1 pr-3 font-semibold">Treatment</th>
+                                <th class="py-1 pr-3 text-right font-semibold">Maximum</th>
+                                <th class="py-1 pr-3 text-right font-semibold">Non-taxable</th>
+                                <th class="py-1 text-right font-semibold">Exceeded</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-amber-200/70 dark:divide-amber-500/20">
+                            @forelse ($taxRows as $row)
+                                <tr data-tax-row="{{ \Illuminate\Support\Str::slug($row['label']) }}">
+                                    <td class="py-1 pr-3 text-slate-700 dark:text-slate-200">
+                                        {{ $row['label'] }}
+                                        @if (($row['source'] ?? '') !== '')
+                                            <span class="block text-[10px] text-amber-700/80 dark:text-amber-300/70">{{ $row['source'] }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-1 pr-3 text-right tabular-nums">{{ $money($row['amount']) }}</td>
+                                    <td class="py-1 pr-3">
+                                        @if ($row['taxable'] === null)
+                                            <span class="rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">Unknown</span>
+                                        @elseif (! $row['taxable'])
+                                            <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">Non-taxable</span>
+                                        @elseif (($row['exempt'] ?? 0.0) > 0 && ($row['excess'] ?? 0.0) > 0)
+                                            <span class="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">Partly taxable</span>
+                                        @elseif (($row['exempt'] ?? 0.0) > 0)
+                                            <span class="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">Non-taxable</span>
+                                        @else
+                                            <span class="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">Taxable</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-1 pr-3 text-right tabular-nums">
+                                        @if ($row['ceiling'] === null)
+                                            —
+                                        @else
+                                            {{ $money($row['ceiling']) }}
+                                            <span class="block text-[10px] text-amber-700/80 dark:text-amber-300/70">{{ $basisLabels[$row['basis']] ?? $row['basis'] }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="py-1 pr-3 text-right tabular-nums">{{ ($row['exempt'] ?? 0) > 0 ? $money($row['exempt']) : '—' }}</td>
+                                    <td data-tax-excess="{{ $row['excess'] ?? 0 }}"
+                                        class="py-1 text-right tabular-nums {{ ($row['excess'] ?? 0) > 0 ? 'font-semibold text-rose-600 dark:text-rose-400' : '' }}">
+                                        {{ ($row['excess'] ?? 0) > 0 ? $money($row['excess']) : '—' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="py-2 text-slate-600 dark:text-slate-300">No earnings recorded for this period.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <dl class="mt-3 grid grid-cols-1 gap-x-6 gap-y-1 border-t border-amber-200/70 pt-2 text-[11px] text-amber-900 sm:grid-cols-2 dark:border-amber-500/20 dark:text-amber-200">
+                    <div class="flex justify-between gap-3"><dt>Gross pay (persisted)</dt><dd class="tabular-nums">{{ $money($taxSummary['gross'] ?? null) }}</dd></div>
+                    <div class="flex justify-between gap-3"><dt>Non-taxable income (persisted)</dt><dd class="tabular-nums">{{ $money($taxSummary['non_taxable'] ?? null) }}</dd></div>
+                    <div class="flex justify-between gap-3"><dt>Benefit exemption (persisted)</dt><dd class="tabular-nums">{{ $money($taxSummary['benefit_exempt'] ?? null) }}</dd></div>
+                    <div class="flex justify-between gap-3"><dt>Minimum-wage exemption (persisted)</dt><dd class="tabular-nums">{{ $money($taxSummary['minimum_wage_exemption'] ?? null) }}</dd></div>
+                    @if (($taxSummary['minimum_wage_exemption'] ?? 0) > 0)
+                        <div class="flex justify-between gap-3">
+                            <dt>Taxable before contributions (above minimum-wage exemption)</dt>
+                            <dd class="tabular-nums">{{ $money(max(0.0, ($taxSummary['gross'] ?? 0.0) - ($taxSummary['minimum_wage_exemption'] ?? 0.0))) }}</dd>
+                        </div>
+                    @endif
+                    <div class="flex justify-between gap-3"><dt>Taxable income (persisted)</dt><dd class="tabular-nums">{{ $money($taxSummary['taxable'] ?? null) }}</dd></div>
+                </dl>
+            </section>
+        @endif
     </article>
 </div>

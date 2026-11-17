@@ -4,6 +4,7 @@ package payroll
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -238,7 +239,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 	// Additional earnings: allowances, compensations, bonuses and commissions.
 	for _, earning := range employee.Allowances {
 		slip.Allowances = slip.Allowances.Add(earning.Amount)
-		slip.NonTaxable = slip.NonTaxable.Add(nonTaxablePart(cfg, employee, earning, periods))
+		slip.NonTaxable = slip.NonTaxable.Add(nonTaxablePart(cfg, employee, earning, &slip))
 	}
 
 	for _, earning := range employee.Compensations {
@@ -754,16 +755,16 @@ func previousDate(date string) string {
 }
 
 // nonTaxablePart returns the portion of an allowance that is not taxable.
-// De minimis benefits are capped at their statutory ceiling and basis;
-// anything above the ceiling is taxable.
-func nonTaxablePart(cfg model.Config, employee model.Employee, earning model.Earning, periods int) money.Centavos {
+// De minimis benefits are capped at their statutory ceiling for the period;
+// anything above the remaining ceiling is taxable.
+func nonTaxablePart(cfg model.Config, employee model.Employee, earning model.Earning, slip *model.Payslip) money.Centavos {
 	if earning.Taxable {
 		return 0
 	}
 
 	if earning.Kind == model.KindAllowance && employee.Benefits.DeMinimis {
 		if benefit, ok := deMinimisBenefit(cfg, earning); ok {
-			return deMinimisExemption(cfg, employee, earning, benefit, periods)
+			return deMinimisExemption(cfg, employee, earning, benefit, slip)
 		}
 	}
 
@@ -782,46 +783,97 @@ func deMinimisBenefit(cfg model.Config, earning model.Earning) (model.DeMinimisB
 	return model.DeMinimisBenefit{}, false
 }
 
-func deMinimisExemption(cfg model.Config, employee model.Employee, earning model.Earning, benefit model.DeMinimisBenefit, periods int) money.Centavos {
-	periodsPerMonth := periods
-	if periodsPerMonth <= 0 {
-		periodsPerMonth = 1
+// deMinimisExemption reports the exempt portion of one de minimis allowance.
+// The ceiling applies to the cumulative amount for its own period (month,
+// semester or year), so the exemption left is the ceiling less what prior
+// payrolls in that period already exempted.
+func deMinimisExemption(cfg model.Config, employee model.Employee, earning model.Earning, benefit model.DeMinimisBenefit, slip *model.Payslip) money.Centavos {
+	if benefit.Basis == model.DeMinimisHourlyOT {
+		return money.Min(earning.Amount, deMinimisHourlyOTCeiling(cfg, employee, benefit))
 	}
+
+	key := deMinimisUsageKey(cfg, employee, benefit)
+	remaining := deMinimisRemaining(employee, slip, benefit, key)
+	exempt := money.Min(earning.Amount, remaining)
+
+	if exempt > 0 {
+		if slip.DeMinimisExempt == nil {
+			slip.DeMinimisExempt = map[string]money.Centavos{}
+		}
+
+		slip.DeMinimisExempt[key] = slip.DeMinimisExempt[key] + exempt
+	}
+
+	return exempt
+}
+
+// deMinimisRemaining is the exemption still available for a benefit in the
+// payroll's period.
+func deMinimisRemaining(employee model.Employee, slip *model.Payslip, benefit model.DeMinimisBenefit, key string) money.Centavos {
+	used := employee.YTD.DeMinimis[key] + slip.DeMinimisExempt[key]
+
+	return money.Max(0, benefit.Ceiling-used)
+}
+
+// deMinimisUsageKey is the ledger key for a benefit: its statutory code plus
+// the calendar month, semester or year the ceiling applies to.
+func deMinimisUsageKey(cfg model.Config, employee model.Employee, benefit model.DeMinimisBenefit) string {
+	code := strings.ToLower(strings.TrimSpace(benefit.Code))
+	if code == "" {
+		code = "de_minimis"
+	}
+
+	if cfg.PayrollDate.IsZero() {
+		year := employee.YTD.Year
+		if year < 0 {
+			year = 0
+		}
+
+		return code + "|" + strconv.Itoa(year)
+	}
+
+	period := cfg.PayrollDate.Format("2006-01")
 
 	switch benefit.Basis {
 	case model.DeMinimisAnnual:
-		return money.Min(earning.Amount, split(benefit.Ceiling, periodsPerMonth*12))
+		period = cfg.PayrollDate.Format("2006")
 	case model.DeMinimisSemester:
-		perMonth := split(benefit.Ceiling, 6)
-
-		return money.Min(earning.Amount, firstPart(perMonth, periodsPerMonth))
-	case model.DeMinimisHourlyOT:
-		daysPerYear := cfg.DaysPerYear
-		if daysPerYear <= 0 {
-			daysPerYear = 261
+		semester := 1
+		if cfg.PayrollDate.Month() > 6 {
+			semester = 2
 		}
 
-		hoursPerDay := cfg.HoursPerDay
-		if hoursPerDay <= 0 {
-			hoursPerDay = 8
-		}
-
-		hourly := rules.HourlyRate(employee.MonthlyBasic, daysPerYear, hoursPerDay)
-		if employee.MinimumWage > 0 {
-			hourly = employee.MinimumWage.Mul(1 / float64(hoursPerDay))
-		}
-
-		percentage := benefit.Percentage
-		if percentage <= 0 {
-			percentage = model.DeMinimisHourlyOTPercentage
-		}
-
-		ceiling := hourly.Mul(overtimeHours(employee.Timesheets) * float64(percentage) / 100)
-
-		return money.Min(earning.Amount, ceiling)
-	default:
-		return money.Min(earning.Amount, firstPart(benefit.Ceiling, periodsPerMonth))
+		period = fmt.Sprintf("%s-S%d", cfg.PayrollDate.Format("2006"), semester)
 	}
+
+	return code + "|" + period
+}
+
+// deMinimisHourlyOTCeiling is the meal-allowance ceiling for overtime and
+// night-shift work: a percentage of the hourly minimum wage for each overtime
+// hour in the period (RR 29-2025 sets 30%).
+func deMinimisHourlyOTCeiling(cfg model.Config, employee model.Employee, benefit model.DeMinimisBenefit) money.Centavos {
+	daysPerYear := cfg.DaysPerYear
+	if daysPerYear <= 0 {
+		daysPerYear = 261
+	}
+
+	hoursPerDay := cfg.HoursPerDay
+	if hoursPerDay <= 0 {
+		hoursPerDay = 8
+	}
+
+	hourly := rules.HourlyRate(employee.MonthlyBasic, daysPerYear, hoursPerDay)
+	if employee.MinimumWage > 0 {
+		hourly = employee.MinimumWage.Mul(1 / float64(hoursPerDay))
+	}
+
+	percentage := benefit.Percentage
+	if percentage <= 0 {
+		percentage = model.DeMinimisHourlyOTPercentage
+	}
+
+	return hourly.Mul(overtimeHours(employee.Timesheets) * float64(percentage) / 100)
 }
 
 func overtimeHours(lines []model.TimesheetLine) float64 {

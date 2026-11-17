@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/model"
@@ -112,7 +113,7 @@ func Write(ctx context.Context, db *sql.DB, run Run, slips []model.Payslip, opti
 			compensations, int64(slip.Bonus), int64(slip.Commission),
 			int64(slip.ThirteenthMonth), int64(slip.LeaveConversion), int64(slip.SeparationPay),
 			int64(slip.Loans), int64(slip.BasicEarned), int64(slip.BenefitExempt),
-			int64(slip.MinimumWageExemption), warnings,
+			jsonMap(slip.DeMinimisExempt), int64(slip.MinimumWageExemption), warnings,
 			int64(slip.SSSEmployee.Add(slip.SSSProvident).Add(slip.PhilHealthEmployee).Add(slip.PagIBIGEmployee).Add(slip.GSISEmployee).Add(statutoryLineEmployeeTotal(slip))),
 			int64(slip.TotalEmployerCost), int64(slip.TotalDeductions), int64(slip.NetPay),
 			now, now,
@@ -177,6 +178,19 @@ func jsonArray[T any](values []T) string {
 	encoded, err := json.Marshal(values)
 	if err != nil {
 		return "[]"
+	}
+
+	return string(encoded)
+}
+
+func jsonMap[K comparable, V any](values map[K]V) string {
+	if len(values) == 0 {
+		return "{}"
+	}
+
+	encoded, err := json.Marshal(values)
+	if err != nil {
+		return "{}"
 	}
 
 	return string(encoded)
@@ -344,6 +358,15 @@ func reverseYTD(ctx context.Context, tx *sql.Tx, run Run) error {
 		return nil
 	}
 
+	var ledgerExists int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = DATABASE() AND table_name = 'employee_payroll_ytd_de_minimis'`).Scan(&ledgerExists); err == nil && ledgerExists > 0 {
+		if err := reverseDeMinimisYTD(ctx, tx, run); err != nil {
+			return err
+		}
+	}
+
 	var exists int
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM information_schema.tables
@@ -423,6 +446,133 @@ func reverseYTD(ctx context.Context, tx *sql.Tx, run Run) error {
 	return nil
 }
 
+// updateDeMinimisYTD adds the exemption this payslip used to the period ledger.
+func updateDeMinimisYTD(ctx context.Context, tx *sql.Tx, run Run, slip model.Payslip) error {
+	var exists int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.tables
+		WHERE table_schema = DATABASE() AND table_name = 'employee_payroll_ytd_de_minimis'`).Scan(&exists); err != nil || exists == 0 {
+		return nil
+	}
+
+	now := time.Now()
+
+	for key, amount := range slip.DeMinimisExempt {
+		if amount <= 0 {
+			continue
+		}
+
+		code, period := deMinimisKey(key)
+
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO employee_payroll_ytd_de_minimis (
+				company_id, employee_id, year, period, code, exempt_centavos, created_at, updated_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				exempt_centavos = exempt_centavos + VALUES(exempt_centavos),
+				updated_at = VALUES(updated_at)`,
+			run.CompanyID, slip.EmployeeID, run.PayrollDate.Year(), period, code,
+			int64(amount), now, now,
+		); err != nil {
+			return fmt.Errorf("update ytd de minimis for employee %d: %w", slip.EmployeeID, err)
+		}
+	}
+
+	return nil
+}
+
+// reverseDeMinimisYTD takes the payroll's own de minimis consumption back out
+// of the ledger so re-processing replaces rather than adds.
+func reverseDeMinimisYTD(ctx context.Context, tx *sql.Tx, run Run) error {
+	var hasColumn int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.columns
+		WHERE table_schema = DATABASE() AND table_name = 'payroll_details'
+		  AND column_name = 'de_minimis_exempt'`).Scan(&hasColumn); err != nil || hasColumn == 0 {
+		return nil
+	}
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT employee_id, de_minimis_exempt
+		FROM payroll_details
+		WHERE payroll_id = ? AND company_id = ? AND deleted_at IS NULL`,
+		run.PayrollID, run.CompanyID)
+	if err != nil {
+		return fmt.Errorf("load previous de minimis ytd: %w", err)
+	}
+
+	defer rows.Close()
+
+	type usage struct {
+		employeeID int64
+		code       string
+		period     string
+		amount     int64
+	}
+
+	totals := map[string]*usage{}
+
+	for rows.Next() {
+		var (
+			employeeID int64
+			raw        sql.NullString
+		)
+
+		if err := rows.Scan(&employeeID, &raw); err != nil {
+			return fmt.Errorf("scan previous de minimis ytd: %w", err)
+		}
+
+		if !raw.Valid || raw.String == "" {
+			continue
+		}
+
+		parsed := map[string]int64{}
+		if err := json.Unmarshal([]byte(raw.String), &parsed); err != nil {
+			continue
+		}
+
+		for key, amount := range parsed {
+			code, period := deMinimisKey(key)
+			bucket := fmt.Sprintf("%d|%s|%s", employeeID, code, period)
+
+			if totals[bucket] == nil {
+				totals[bucket] = &usage{employeeID: employeeID, code: code, period: period}
+			}
+
+			totals[bucket].amount += amount
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	now := time.Now()
+
+	for _, total := range totals {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE employee_payroll_ytd_de_minimis
+			SET exempt_centavos = GREATEST(0, exempt_centavos - ?), updated_at = ?
+			WHERE company_id = ? AND employee_id = ? AND year = ? AND period = ? AND code = ?`,
+			total.amount, now, run.CompanyID, total.employeeID, run.PayrollDate.Year(),
+			total.period, total.code,
+		); err != nil {
+			return fmt.Errorf("reverse ytd de minimis for employee %d: %w", total.employeeID, err)
+		}
+	}
+
+	return nil
+}
+
+func deMinimisKey(key string) (string, string) {
+	parts := strings.SplitN(key, "|", 2)
+	if len(parts) != 2 {
+		return strings.ToLower(strings.TrimSpace(key)), ""
+	}
+
+	return strings.ToLower(strings.TrimSpace(parts[0])), parts[1]
+}
+
 func updateYTD(ctx context.Context, tx *sql.Tx, run Run, slips []model.Payslip) error {
 	var exists int
 	if err := tx.QueryRowContext(ctx, `
@@ -477,6 +627,10 @@ func updateYTD(ctx context.Context, tx *sql.Tx, run Run, slips []model.Payslip) 
 			contributions, thirteenth, otherBenefits, now, now,
 		); err != nil {
 			return fmt.Errorf("update ytd for employee %d: %w", slip.EmployeeID, err)
+		}
+
+		if err := updateDeMinimisYTD(ctx, tx, run, slip); err != nil {
+			return err
 		}
 	}
 
@@ -546,7 +700,7 @@ INSERT INTO payroll_details (
 	night_hours, night_pay, rest_day_pay, holiday_pay,
 	absent_days, absent_days_amount, allowance, incentive,
 	compensations, bonus, commission, thirteenth_month, leave_conversion, separation_pay,
-	loans, basic_earned, benefit_exempt, minimum_wage_exemption, warnings,
+	loans, basic_earned, benefit_exempt, de_minimis_exempt, minimum_wage_exemption, warnings,
 	total_employee, total_employer, total_deductions, net_pay,
 	created_at, updated_at
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`

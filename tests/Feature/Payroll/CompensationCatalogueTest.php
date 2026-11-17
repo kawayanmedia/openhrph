@@ -174,5 +174,33 @@ it('shows the catalogue read-only in the admin panel', function () {
 
     $override = Compensation::overrideFor($company->id, $system);
 
-    $this->get("/app/resources/compensation/{$override->id}/edit")->assertOk();
+    $this->get("/app/resources/compensation/{$override->id}/edit")
+        ->assertOk()
+        ->assertSee('Maximum non-taxable amount');
 });
+
+it('publishes the annual de minimis ceiling on each capped allowance', function (string $code, int $centavos) {
+    $row = Compensation::withoutGlobalScopes()->where('code', $code)->firstOrFail();
+
+    expect((int) $row->getRawOriginal('maximum_non_tax'))->toBe($centavos);
+})->with([
+    'rice' => ['rice', 3000000],
+    'uniform' => ['clothing', 800000],
+    'medical cash allowance' => ['medical', 400000],
+    'laundry' => ['laundry', 480000],
+    'medical assistance' => ['medical_assistance', 1200000],
+    'achievement award' => ['achievement_award', 1200000],
+    'gifts' => ['gifts', 600000],
+    'cba productivity' => ['cba_productivity', 1200000],
+    'pera' => ['PERA', 2400000],
+]);
+
+it('keeps a null ceiling on benefits whose cap is not a fixed peso amount', function (string $code) {
+    $row = Compensation::withoutGlobalScopes()->where('code', $code)->firstOrFail();
+
+    expect($row->getRawOriginal('maximum_non_tax'))->toBeNull();
+})->with([
+    'overtime meal allowance' => ['meal'],
+    'monetised leave' => ['MONETIZED LEAVE'],
+    'subsistence allowance' => ['SUBSISTENCE ALLOWANCE'],
+]);

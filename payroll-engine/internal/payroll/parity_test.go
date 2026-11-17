@@ -39,14 +39,15 @@ type fxBenefitFlags struct {
 }
 
 type fxYTD struct {
-	Year                int   `json:"year"`
-	BasicEarned         int64 `json:"basic_earned"`
-	GrossEarned         int64 `json:"gross_earned"`
-	TaxableIncome       int64 `json:"taxable_income"`
-	TaxWithheld         int64 `json:"tax_withheld"`
-	Contributions       int64 `json:"contributions"`
-	ThirteenthMonthPaid int64 `json:"thirteenth_month_paid"`
-	OtherBenefits       int64 `json:"other_benefits"`
+	Year                int              `json:"year"`
+	BasicEarned         int64            `json:"basic_earned"`
+	GrossEarned         int64            `json:"gross_earned"`
+	TaxableIncome       int64            `json:"taxable_income"`
+	TaxWithheld         int64            `json:"tax_withheld"`
+	Contributions       int64            `json:"contributions"`
+	ThirteenthMonthPaid int64            `json:"thirteenth_month_paid"`
+	OtherBenefits       int64            `json:"other_benefits"`
+	DeMinimis           map[string]int64 `json:"de_minimis,omitempty"`
 }
 
 type fxTimesheet struct {
@@ -161,6 +162,7 @@ type fxConfig struct {
 	Holidays                   []fxHoliday       `json:"holidays"`
 	PayWithoutTimesheet        bool              `json:"pay_without_timesheet"`
 	PayUnworkedRegularHolidays bool              `json:"pay_unworked_regular_holidays"`
+	PayrollDate                string            `json:"payroll_date"`
 }
 
 type fxEmployee struct {
@@ -283,6 +285,7 @@ func toFxConfig(cfg model.Config) fxConfig {
 		GSISBase:                   cfg.GSISBase,
 		PayWithoutTimesheet:        cfg.PayWithoutTimesheet,
 		PayUnworkedRegularHolidays: cfg.PayUnworkedRegularHolidays,
+		PayrollDate:                cfg.PayrollDate.Format("2006-01-02"),
 	}
 
 	out.SSSBrackets = []fxSssBracket{}
@@ -421,6 +424,7 @@ func toFxEmployee(employee model.Employee) fxEmployee {
 			GrossEarned: money64(employee.YTD.GrossEarned), TaxableIncome: money64(employee.YTD.TaxableIncome),
 			TaxWithheld: money64(employee.YTD.TaxWithheld), Contributions: money64(employee.YTD.Contributions),
 			ThirteenthMonthPaid: money64(employee.YTD.ThirteenthMonthPaid), OtherBenefits: money64(employee.YTD.OtherBenefits),
+			DeMinimis: deMinimisMap(employee.YTD.DeMinimis),
 		},
 		Timesheets:    []fxTimesheet{},
 		Allowances:    toFxEarnings(employee.Allowances),
@@ -551,6 +555,20 @@ func toFxPayslip(slip model.Payslip) fxPayslip {
 	}
 }
 
+func deMinimisMap(values map[string]money.Centavos) map[string]int64 {
+	if len(values) == 0 {
+		return nil
+	}
+
+	out := map[string]int64{}
+
+	for key, amount := range values {
+		out[key] = money64(amount)
+	}
+
+	return out
+}
+
 func baseConfig() model.Config {
 	return model.Config{
 		Frequency:                  statutory.FrequencySemiMonthly,
@@ -577,6 +595,7 @@ func baseConfig() model.Config {
 		GSISBase:                   "basic",
 		PayWithoutTimesheet:        true,
 		PayUnworkedRegularHolidays: true,
+		PayrollDate:                time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC),
 	}
 }
 
@@ -677,6 +696,20 @@ func parityScenarios() []struct {
 		{Code: "medical", Name: "Medical Allowance", Kind: model.KindAllowance, Amount: money.FromPesos(1500), Taxable: false},
 		{Code: "laundry", Name: "Laundry Allowance", Kind: model.KindAllowance, Amount: money.FromPesos(400), Taxable: false},
 		{Code: "transport", Name: "Transport Allowance", Kind: model.KindAllowance, Amount: money.FromPesos(1000), Taxable: true},
+	}
+
+	// 8b. The same allowances after earlier payrolls in the period have used
+	// most of each ceiling: only the remaining headroom stays exempt.
+	allowancesYtd := monthlyEmployee()
+	allowancesYtd.Timesheets = fullMonth.Timesheets
+	allowancesYtd.Allowances = append([]model.Earning{}, allowances.Allowances...)
+	allowancesYtd.YTD = model.YtdTotals{
+		Year: 2026,
+		DeMinimis: map[string]money.Centavos{
+			"rice|2026-03":    money.FromPesos(1900),
+			"medical|2026":    money.FromPesos(9000),
+			"laundry|2026-S1": money.FromPesos(3500),
+		},
 	}
 
 	// 9. Bonuses, commissions and compensations.
@@ -835,6 +868,7 @@ func parityScenarios() []struct {
 		{"regular_no_timesheet_unpaid", unpaidCfg, noTimesheetUnpaid},
 		{"regular_absence_and_paid_leave", cfg, absent},
 		{"regular_de_minimis_allowances", deMinimisCfg, allowances},
+		{"regular_de_minimis_year_to_date", deMinimisCfg, allowancesYtd},
 		{"regular_bonus_commission_compensation", cfg, earnings},
 		{"regular_deductions_exceed_earnings", cfg, deductions},
 		{"regular_contribution_base_gross", grossCfg, gross},

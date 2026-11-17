@@ -249,6 +249,7 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 		PhilHealthBase:             "basic",
 		PagIBIGBase:                "basic",
 		GSISBase:                   "basic",
+		PayrollDate:                run.PayrollDate,
 	}
 
 	var (
@@ -939,7 +940,8 @@ func loadCompensations(ctx context.Context, db *sql.DB, run Run, cfg model.Confi
 		       COALESCE(ec.is_prorated, 0), COALESCE(ec.prorated_by, ''),
 		       COALESCE(DATE_FORMAT(ec.release_date, '%Y-%m-%d'), ''),
 		       COALESCE(ec.status, ''), COALESCE(c.code, ''), COALESCE(c.name, ''),
-		       COALESCE(c.group, ''), COALESCE(c.maximum_non_tax, 0)
+		       COALESCE(c.group, ''), COALESCE(c.maximum_non_tax, 0),
+		       COALESCE(ec.is_special, 0)
 		FROM employees_compensations ec
 		LEFT JOIN compensations c ON c.id = ec.compensation_id
 		WHERE ec.deleted_at IS NULL AND ec.company_id = ?
@@ -968,10 +970,11 @@ func loadCompensations(ctx context.Context, db *sql.DB, run Run, cfg model.Confi
 			name       string
 			group      string
 			maxNonTax  float64
+			special    bool
 		)
 
 		if err := rows.Scan(&employeeID, &amount, &taxable, &active, &frequency, &from, &to,
-			&prorated, &proratedBy, &release, &status, &code, &name, &group, &maxNonTax); err != nil {
+			&prorated, &proratedBy, &release, &status, &code, &name, &group, &maxNonTax, &special); err != nil {
 			return fmt.Errorf("scan compensation: %w", err)
 		}
 
@@ -993,6 +996,17 @@ func loadCompensations(ctx context.Context, db *sql.DB, run Run, cfg model.Confi
 		switch {
 		case strings.EqualFold(group, "Allowance"):
 			if !validDates(from, to, run) {
+				continue
+			}
+
+			// A special assignment is released once, in the period that
+			// contains its release date; a recurring one follows the payment
+			// schedule it was given.
+			if special {
+				if !releaseWithinPeriod(release, run) {
+					continue
+				}
+			} else if !frequencyApplies(frequency, run, cfg) {
 				continue
 			}
 
@@ -1227,6 +1241,132 @@ func loadYTD(ctx context.Context, db *sql.DB, run Run, employees []model.Employe
 
 				break
 			}
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return loadYTDDeMinimis(ctx, db, run, employees)
+}
+
+// loadYTDDeMinimis loads the exemption already used in each employee's
+// current month, semester and year.
+func loadYTDDeMinimis(ctx context.Context, db *sql.DB, run Run, employees []model.Employee) error {
+	if !tableExists(ctx, db, "employee_payroll_ytd_de_minimis") {
+		return nil
+	}
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT employee_id, period, code, exempt_centavos
+		FROM employee_payroll_ytd_de_minimis
+		WHERE company_id = ? AND year = ?
+		  AND employee_id IN (SELECT id FROM employees WHERE company_id = ? AND payroll_group_id = ? AND deleted_at IS NULL)`,
+		run.CompanyID, run.PayrollDate.Year(), run.CompanyID, run.GroupID)
+	if err != nil {
+		return fmt.Errorf("load ytd de minimis: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			employeeID int64
+			period     string
+			code       string
+			exempt     int64
+		)
+
+		if err := rows.Scan(&employeeID, &period, &code, &exempt); err != nil {
+			return fmt.Errorf("scan ytd de minimis: %w", err)
+		}
+
+		for i := range employees {
+			if employees[i].ID != employeeID {
+				continue
+			}
+
+			if employees[i].YTD.DeMinimis == nil {
+				employees[i].YTD.DeMinimis = map[string]money.Centavos{}
+			}
+
+			key := strings.ToLower(strings.TrimSpace(code)) + "|" + period
+			employees[i].YTD.DeMinimis[key] = money.Centavos(exempt)
+
+			break
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	// The current payroll's own earlier run is already in the ledger. Take it
+	// back out so re-processing starts from where it did the first time.
+	return subtractCurrentRunDeMinimis(ctx, db, run, employees)
+}
+
+// subtractCurrentRunDeMinimis removes the payroll's own prior consumption from
+// the loaded ledger.
+func subtractCurrentRunDeMinimis(ctx context.Context, db *sql.DB, run Run, employees []model.Employee) error {
+	var hasColumn int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.columns
+		WHERE table_schema = DATABASE() AND table_name = 'payroll_details'
+		  AND column_name = 'de_minimis_exempt'`).Scan(&hasColumn); err != nil || hasColumn == 0 {
+		return nil
+	}
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT employee_id, de_minimis_exempt
+		FROM payroll_details
+		WHERE payroll_id = ? AND company_id = ? AND deleted_at IS NULL`,
+		run.PayrollID, run.CompanyID)
+	if err != nil {
+		return fmt.Errorf("load current de minimis ytd: %w", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			employeeID int64
+			raw        sql.NullString
+		)
+
+		if err := rows.Scan(&employeeID, &raw); err != nil {
+			return fmt.Errorf("scan current de minimis ytd: %w", err)
+		}
+
+		if !raw.Valid || raw.String == "" {
+			continue
+		}
+
+		usage := map[string]int64{}
+		if err := json.Unmarshal([]byte(raw.String), &usage); err != nil {
+			continue
+		}
+
+		for i := range employees {
+			if employees[i].ID != employeeID {
+				continue
+			}
+
+			if employees[i].YTD.DeMinimis == nil {
+				employees[i].YTD.DeMinimis = map[string]money.Centavos{}
+			}
+
+			for key, amount := range usage {
+				remaining := int64(employees[i].YTD.DeMinimis[key]) - amount
+				if remaining < 0 {
+					remaining = 0
+				}
+
+				employees[i].YTD.DeMinimis[key] = money.Centavos(remaining)
+			}
+
+			break
 		}
 	}
 
