@@ -1,0 +1,54 @@
+map $http_x_forwarded_proto $hris_https {
+    default off;
+    https   on;
+}
+
+server {
+    listen ${NGINX_PORT} default_server;
+
+    server_name _;
+
+    root /var/www/html/public;
+    index index.php;
+
+    charset utf-8;
+    client_max_body_size 25m;
+    client_body_timeout 120s;
+
+    access_log /dev/stdout;
+    error_log  /dev/stderr warn;
+
+    # Re-resolve the container name so the web container survives app restarts.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $php_fpm "${PHP_FPM_HOST}:9000";
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    location ~ \.php$ {
+        fastcgi_pass $php_fpm;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_param HTTPS $hris_https;
+        fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
+        fastcgi_read_timeout 120s;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        include fastcgi_params;
+    }
+
+    location /storage/ {
+        try_files $uri =404;
+        access_log off;
+        expires 7d;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

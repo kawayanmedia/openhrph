@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+export HRIS_SSM_PREFIX="${ssm_prefix}"
+
+# The bootstrap script fetches the encrypted environment file from SSM,
+# initialises a new database if needed, runs migrations, warms caches, starts
+# the services, and checks /up. Output is appended to
+# /var/log/hris-bootstrap.log.
+/usr/local/bin/hris-bootstrap

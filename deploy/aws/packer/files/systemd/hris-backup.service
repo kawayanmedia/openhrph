@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync HRIS uploaded files to S3
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/hris-backup
+StandardOutput=journal
+StandardError=journal

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+# The bootstrap service reads the application environment from Key Vault,
+# creates the database and user, runs migrations, configures Caddy, and starts
+# the application services. Output is appended to /var/log/hris-bootstrap.log.
+install -d -m 0750 /etc/hris
+
+cat > /etc/hris/bootstrap.conf <<'EOF'
+HRIS_KEYVAULT=${key_vault_name}
+HRIS_ENV_SECRET=${secret_name}
+HRIS_STORAGE_ACCOUNT=${storage_account}
+HRIS_STORAGE_CONTAINER=${storage_container}
+HRIS_DATA_DISK=${data_disk_device}
+EOF
+
+chmod 0600 /etc/hris/bootstrap.conf
+
+systemctl daemon-reload
+systemctl start --no-block hris-bootstrap.service

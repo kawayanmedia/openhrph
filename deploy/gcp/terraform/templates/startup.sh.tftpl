@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+# The bootstrap service fetches the application environment from Secret Manager,
+# creates the database and user, runs migrations, configures Caddy, and starts
+# the application services. Output is appended to /var/log/hris-bootstrap.log.
+install -d -m 0750 /etc/hris
+
+cat > /etc/hris/bootstrap.conf <<'EOF'
+HRIS_PROJECT=${project_id}
+HRIS_ENV_SECRET=${secret_name}
+HRIS_BACKUP_BUCKET=${backup_bucket}
+HRIS_DATA_DISK=${data_disk_device}
+EOF
+
+chmod 0600 /etc/hris/bootstrap.conf
+
+systemctl daemon-reload
+systemctl start --no-block hris-bootstrap.service

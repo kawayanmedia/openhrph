@@ -1,0 +1,45 @@
+subscription_id = "your-azure-subscription-id"
+
+resource_group_name = "rg-hris-production"
+location            = "southeastasia"
+
+project     = "hris"
+environment = "production"
+app_ref     = "main"
+
+# Resource group that contains the Packer managed image.
+image_resource_group = "rg-hris-images"
+image_prefix         = "hris"
+
+vm_size   = "Standard_B2s"
+disk_size = 40
+db_disk_size = 50
+
+admin_username = "azureuser"
+# Paste an SSH public key to disable password authentication.
+ssh_public_key = ""
+# ssh_public_key = "ssh-ed25519 AAAA... you@example.com"
+
+vnet_cidr = "10.64.0.0/16"
+subnet_cidr = "10.64.1.0/24"
+
+# Leave empty to disable SSH. For tighter access, use Azure Bastion or a VPN.
+ssh_allowed_cidrs = []
+# ssh_allowed_cidrs = ["203.0.113.10/32"]
+
+# Set domain_name to enable HTTPS through Caddy. Point DNS at the public IP.
+domain_name = ""
+dns_zone_name = ""
+dns_resource_group = ""
+dns_record_name = "@"
+acme_email = ""
+
+storage_replication_type = "LRS"
+key_vault_purge_protection = true
+
+# Leave empty to derive the URL from domain_name or the public IP.
+app_url = ""
+
+tags = {
+  owner = "platform"
+}

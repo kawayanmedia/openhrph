@@ -1,0 +1,20 @@
+[Unit]
+Description=HRIS queue worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/hris
+ExecStart=/usr/bin/php /var/www/hris/artisan queue:work --sleep=3 --tries=3 --timeout=600 --max-time=3600
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=90
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

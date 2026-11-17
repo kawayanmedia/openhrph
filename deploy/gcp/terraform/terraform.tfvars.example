@@ -1,0 +1,33 @@
+project_id = "your-gcp-project-id"
+region     = "asia-southeast1"
+zone       = "asia-southeast1-b"
+
+project     = "hris"
+environment = "production"
+app_ref     = "main"
+
+machine_type = "e2-medium"
+disk_size    = 40
+db_disk_size = 50
+disk_type    = "pd-balanced"
+
+network_cidr = "10.62.0.0/16"
+subnet_cidr  = "10.62.1.0/24"
+
+# 35.235.240.0/20 is the IAP TCP forwarding range. Leave empty to disable SSH.
+ssh_allowed_cidrs = ["35.235.240.0/20"]
+
+# Set domain_name to enable HTTPS through Caddy. Point DNS at the static IP.
+domain_name     = ""
+dns_managed_zone = ""
+acme_email      = ""
+
+deletion_protection = true
+bucket_force_destroy = false
+
+# Leave empty to derive the URL from domain_name or the static IP.
+app_url = ""
+
+tags = {
+  owner = "platform"
+}

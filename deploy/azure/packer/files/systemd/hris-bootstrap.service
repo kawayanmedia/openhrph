@@ -1,0 +1,17 @@
+[Unit]
+Description=HRIS first-boot bootstrap and configuration refresh
+After=network-online.target mysql.service
+Wants=network-online.target
+Requires=mysql.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/hris-bootstrap
+RemainAfterExit=yes
+TimeoutStartSec=1800
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
