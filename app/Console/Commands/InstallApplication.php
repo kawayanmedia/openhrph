@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\InstallationSetting;
 use App\Models\Payroll;
-use App\Services\Payroll\Statutory\DeductionCatalogue;
+use App\Sectors\Catalogues\SectorCatalogue;
 use App\Support\Installation\Installation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -99,7 +99,7 @@ class InstallApplication extends Command
         $this->line("  Companies marked: {$companyCount}");
         $this->line("  Currency: {$currency} · Locale: {$locale} · Timezone: {$timezone}");
 
-        $this->seedDeductions($country);
+        $this->seedSectorCatalogues($sector);
 
         if (! $this->option('skip-statutory')) {
             $this->importStatutory($country);
@@ -174,17 +174,15 @@ class InstallApplication extends Command
             ->exists();
     }
 
-    private function seedDeductions(string $country): void
+    private function seedSectorCatalogues(string $sector): void
     {
-        $total = 0;
+        $counts = SectorCatalogue::seedAll($sector);
 
-        DB::table('companies')->orderBy('id')->pluck('id')->each(function ($companyId) use ($country, &$total): void {
-            $total += DeductionCatalogue::seedDefaults((int) $companyId, $country);
-        });
-
-        if ($total > 0) {
-            $this->line("  Deduction templates created: {$total}");
-        }
+        $this->line("  Employment types created: {$counts['employment_types']}");
+        $this->line("  Leave types created: {$counts['leave_types']}");
+        $this->line("  Deduction templates created: {$counts['deductions']}");
+        $this->line("  Loan types created: {$counts['loans']}");
+        $this->line("  Compensation templates synced: {$counts['compensations']}");
     }
 
     private function importStatutory(string $country): void

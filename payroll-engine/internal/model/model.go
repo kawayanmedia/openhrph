@@ -181,6 +181,10 @@ type Config struct {
 	// GSIS instead of SSS (RA 8291); the two are mutually exclusive.
 	IsGovernment bool
 
+	// Sector is "Government" or "Private". IsGovernment is kept for parity
+	// with older fixture files and stays the single computation switch.
+	Sector string
+
 	DaysPerYear int
 	HoursPerDay int
 

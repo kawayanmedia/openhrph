@@ -2,7 +2,10 @@
 
 namespace App\Support\Installation;
 
+use App\Enums\Sector;
 use App\Models\InstallationSetting;
+use App\Sectors\Contracts\SectorPolicy;
+use App\Sectors\SectorManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -107,27 +110,49 @@ final class Installation
      */
     public static function sector(): ?string
     {
+        return self::sectorEnum()?->value;
+    }
+
+    /**
+     * The locked sector as an enum, or null when the installer has not run.
+     */
+    public static function sectorEnum(): ?Sector
+    {
         $sector = self::get(self::KEY_SECTOR);
 
         if (! is_string($sector) || trim($sector) === '') {
             return null;
         }
 
-        return self::normalizeSector($sector);
+        return Sector::tryFromValue($sector);
+    }
+
+    /**
+     * The active sector policy. Falls back to Private before installation.
+     */
+    public static function sectorPolicy(): SectorPolicy
+    {
+        return app(SectorManager::class)->current();
+    }
+
+    /**
+     * The active sector profile as a plain array.
+     *
+     * @return array<string, mixed>
+     */
+    public static function sectorProfile(): array
+    {
+        return self::sectorPolicy()->profile()->toArray();
     }
 
     public static function isGovernment(): bool
     {
-        return self::sector() === self::SECTOR_GOVERNMENT;
+        return self::sectorEnum()?->isGovernment() ?? false;
     }
 
     public static function normalizeSector(string $sector): ?string
     {
-        return match (strtolower(trim($sector))) {
-            'government', 'gov', 'public' => self::SECTOR_GOVERNMENT,
-            'private', 'priv' => self::SECTOR_PRIVATE,
-            default => null,
-        };
+        return Sector::tryFromValue($sector)?->value;
     }
 
     public static function countryCode(): string

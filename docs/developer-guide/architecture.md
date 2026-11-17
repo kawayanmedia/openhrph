@@ -102,6 +102,21 @@ Field classes live in `app/Livewire/Admin/Fields`. They describe the attribute, 
 - Metrics extend the metric base class and provide dashboard cards.
 - Lenses extend the lens base class and provide alternate index queries.
 
+## Sectors
+
+An installation serves one sector: Government or Private. `App\Sectors\SectorManager`
+resolves the active `SectorPolicy` from the installation setting, the legacy
+`IS_GOVERNMENT` flag, or the configured default. The policy selects statutory
+agencies, catalogues, leave/compensation defaults, document checklists, reports,
+settings fields and menu visibility. `config/sectors.php` holds the declarative
+differences; rates stay in the effective-dated `statutory_*` tables.
+
+The installer pins every company to the installation sector. Payroll resolves per
+company so legacy rows keep working. `Non-Profit` follows the Private policy.
+
+See [Government and Private sectors](sectors.md) for the requirements matrix,
+research citations and the policy contract.
+
 ## Multi-tenancy
 
 The application uses a single database with shared tables, scoped by `company_id`.
@@ -151,7 +166,7 @@ sequenceDiagram
     P-->>U: Status, totals, register
 ```
 
-The Go engine reads MySQL directly and writes payroll details in a transaction. PHP keeps a fallback driver for debugging; it is parity-locked to the Go engine by a shared corpus (`payroll-engine/internal/payroll/testdata/parity`) so both runtimes produce the same payslips. Statutory rates live in effective-dated tables so historical runs remain reproducible, and the PHP calculators are split per agency (SSS, PhilHealth, Pag-IBIG, BIR) under `App\Services\Government`.
+The Go engine reads MySQL directly and writes payroll details in a transaction. PHP keeps a fallback driver for debugging; it is parity-locked to the Go engine by a shared corpus (`payroll-engine/internal/payroll/testdata/parity`) so both runtimes produce the same payslips. Statutory rates live in effective-dated tables so historical runs remain reproducible, and the PHP calculators are split per agency (SSS, PhilHealth, Pag-IBIG, BIR) under `App\Services\Statutory\Philippines`.
 
 See [Payroll engine](payroll-engine.md) for build and operation details.
 

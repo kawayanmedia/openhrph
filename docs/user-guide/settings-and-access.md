@@ -42,7 +42,8 @@ Keep reference data tidy before adding employees and running payroll.
 | Deductions | **Payroll Management → Deduction** | Recurring deductions |
 | Loans | **Payroll Management → Loan** | Loan types |
 | Payroll groups | **Payroll Management → Payroll Group** | Semi-monthly, monthly, and their rules |
-| Government tables | **Government** | SSS, PhilHealth, Pag-IBIG, minimum wage |
+| Sector settings | **Settings → Sector** | Sector-specific defaults, GSIS or SSS base, night differential |
+| Statutory (PH) tables | **Statutory (PH)** | SSS, PhilHealth, Pag-IBIG, minimum wage |
 
 ## Users, groups, and permissions
 

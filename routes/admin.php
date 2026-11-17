@@ -49,7 +49,7 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate')])
         Route::get('payroll/{payroll}', PayrollRun::class)->name('payroll.run');
         Route::get('payroll/{payroll}/payslips/{employee}', PayrollPayslip::class)->name('payroll.payslip');
 
-        Route::get('settings/{page}', Settings::class)->name('settings')->where('page', 'general|attendance|payroll|statutory|leave');
+        Route::get('settings/{page}', Settings::class)->name('settings')->where('page', 'general|attendance|payroll|statutory|sector|leave');
 
         Route::get('resources/{resource}', AdminIndex::class)->name('resource.index');
         Route::get('resources/{resource}/new', AdminForm::class)->name('resource.create');

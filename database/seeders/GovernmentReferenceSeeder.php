@@ -4,7 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\Government\SalaryGrade;
-use App\Models\Leave;
+use App\Sectors\Catalogues\LeaveTypeCatalogue;
+use App\Support\Installation\Installation;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
@@ -53,49 +54,22 @@ class GovernmentReferenceSeeder extends Seeder
 
     public function run(): void
     {
-        $this->runForDemoTenant(function (Company $company): void {
-            $this->seedLeaveTypes($company);
-            $this->seedSalaryGrades($company);
+        $sector = Installation::sectorPolicy();
+
+        $this->runForDemoTenant(function (Company $company) use ($sector): void {
+            LeaveTypeCatalogue::seedDefaults($company->getKey(), $sector->sector());
+
+            // The DBM salary schedule is a Government reference. A private
+            // installation never sees or seeds it.
+            if ($sector->sector()->isGovernment()) {
+                $this->seedSalaryGrades($company);
+            }
 
             Artisan::call('payroll:holidays:import', [
                 '--year' => 2026,
                 '--company' => $company->getKey(),
             ]);
         });
-    }
-
-    private function seedLeaveTypes(Company $company): void
-    {
-        $leaveTypes = [
-            ['VL', 'Vacation Leave', false, 0, 0],
-            ['SL', 'Sick Leave', false, 0, 0],
-            ['SPL', 'Special Privilege Leave', false, 0, 3],
-            ['PL', 'Paternity Leave', false, 0, 7],
-            ['ML', 'Maternity Leave', false, 0, 105],
-            ['SPL-SP', 'Solo Parent Leave', false, 0, 7],
-            ['FL', 'Forced Leave/Mandatory Leave', false, 1, 5],
-            ['MON', 'Monetization Leave', false, 0, 0],
-            ['STUDY', 'Study Leave', false, 0, 0],
-            ['CAL', 'Calamity Leave', false, 0, 0],
-            ['REHAB', 'Rehabilitation Leave', false, 0, 0],
-            ['SLWOP', 'Sick Leave Without Pay', false, 0, 0],
-            ['VLWOP', 'Vacation Leave Without Pay', false, 0, 0],
-        ];
-
-        foreach ($leaveTypes as [$code, $name, $deductible, $deductTo, $allowPerYear]) {
-            $this->upsertModel(
-                Leave::class,
-                ['company_id' => $company->getKey(), 'name' => $name],
-                [
-                    'code' => $code,
-                    'deductable' => $deductible,
-                    'deduct_to' => $deductTo,
-                    'allow_per_year' => $allowPerYear,
-                    'is_active' => true,
-                    'description' => null,
-                ],
-            );
-        }
     }
 
     private function seedSalaryGrades(Company $company): void

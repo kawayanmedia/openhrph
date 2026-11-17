@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Services\Government\Models\PhilHealth;
+use App\Services\Statutory\Philippines\Models\PhilHealth;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -3,15 +3,7 @@
 namespace App\Services\Payroll\Engine\Legacy;
 
 use App\Models\Compensation;
-use App\Services\Government\Bir\TaxBracket;
-use App\Services\Government\Bir\WithholdingTaxTable;
-use App\Services\Government\ContributionSchedule;
-use App\Services\Government\Gsis\GsisSchedule;
-use App\Services\Government\PagIbig\PagIbigSchedule;
-use App\Services\Government\PayFrequency;
-use App\Services\Government\PhilHealth\PhilHealthSchedule;
-use App\Services\Government\Sss\SssBracket;
-use App\Services\Government\Sss\SssSchedule;
+use App\Sectors\SectorManager;
 use App\Services\Payroll\Computation\BenefitFlags;
 use App\Services\Payroll\Computation\Config;
 use App\Services\Payroll\Computation\DeMinimisBenefit;
@@ -23,6 +15,15 @@ use App\Services\Payroll\Computation\TimesheetLine;
 use App\Services\Payroll\Computation\YtdTotals;
 use App\Services\Payroll\Engine\PayrollEngineException;
 use App\Services\Payroll\Statutory\ComponentResolver;
+use App\Services\Statutory\Philippines\Bir\TaxBracket;
+use App\Services\Statutory\Philippines\Bir\WithholdingTaxTable;
+use App\Services\Statutory\Philippines\ContributionSchedule;
+use App\Services\Statutory\Philippines\Gsis\GsisSchedule;
+use App\Services\Statutory\Philippines\PagIbig\PagIbigSchedule;
+use App\Services\Statutory\Philippines\PayFrequency;
+use App\Services\Statutory\Philippines\PhilHealth\PhilHealthSchedule;
+use App\Services\Statutory\Philippines\Sss\SssBracket;
+use App\Services\Statutory\Philippines\Sss\SssSchedule;
 use App\Support\Installation\Installation;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
@@ -172,7 +173,8 @@ final class LegacyInput
             gsisBase: 'basic',
         );
 
-        $config->isGovernment = self::isGovernmentCompany($run->companyID);
+        $config->sector = app(SectorManager::class)->forCompany($run->companyID)->sector();
+        $config->isGovernment = $config->sector->isGovernment();
         $config->countryCode = Installation::countryCode();
         $config->statutoryDriver = Installation::statutoryDriver($config->countryCode);
 
@@ -282,7 +284,7 @@ final class LegacyInput
             $config->defaultIndustry = 'NON-AGRICULTURE';
             $config->deMinimis = self::loadDeMinimis($run);
         } else {
-            $sector = $config->isGovernment ? 'government' : 'private';
+            $sector = strtolower($config->sector->value);
 
             $config->components = ComponentResolver::definitions(
                 $run->companyID,
@@ -769,7 +771,7 @@ final class LegacyInput
             ->where('el.company_id', $run->companyID)
             ->whereIn('el.employee_id', array_keys($index))
             ->get([
-                'el.employee_id', 'l.name', 'el.monthly_amortization', 'el.balance', 'el.scheme',
+                'el.employee_id', 'l.code', 'l.name', 'el.monthly_amortization', 'el.balance', 'el.scheme',
                 'el.repayment_start_date', 'el.repayment_end_date', 'el.is_active',
             ]);
 
@@ -796,6 +798,7 @@ final class LegacyInput
             }
 
             $employees[$position]->loans[] = new Earning(
+                code: (string) ($row->code ?? ''),
                 name: (string) ($row->name ?? ''),
                 kind: Earning::KIND_LOAN,
                 amount: $amount,
@@ -1087,18 +1090,14 @@ final class LegacyInput
     }
 
     /**
-     * Government agencies are GSIS-covered and must not be assessed SSS. The
-     * company's `type` column is the single source of truth for this.
+     * Government agencies are GSIS-covered and must not be assessed SSS.
+     *
+     * Resolution goes through SectorManager so the company type, the
+     * installation sector and the legacy environment flag cannot disagree.
      */
     public static function isGovernmentCompany(int $companyID): bool
     {
-        if (! Schema::hasTable('companies') || ! Schema::hasColumn('companies', 'type')) {
-            return false;
-        }
-
-        $type = DB::table('companies')->where('id', $companyID)->value('type');
-
-        return strtolower(trim((string) $type)) === 'government';
+        return app(SectorManager::class)->isGovernment($companyID);
     }
 
     public static function loadGsis(Run $run, GsisSchedule $fallback): GsisSchedule

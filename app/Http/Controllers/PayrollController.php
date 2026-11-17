@@ -39,14 +39,13 @@ class PayrollController extends Controller
         abort_unless($isOwnPayslip || $isAdmin, 403);
         abort_unless($isOwnPayslip || (int) $detail->company_id === (int) $user->company_id, 404);
 
-        // The PDF template is the Philippine statutory form; other countries
+        // The PDF form is the Philippine statutory layout; other countries
         // use the country-neutral HTML payslip.
         abort_unless(Installation::statutoryDriver() === 'ph', 404);
 
         $payslipGateway = new PayslipGateway;
         $payslipGateway->get($id);
 
-        // Process the pdf
         return $payslipGateway->generatePdf();
     }
 

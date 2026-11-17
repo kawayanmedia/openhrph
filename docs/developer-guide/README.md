@@ -13,10 +13,11 @@ This guide is for developers, integrators, and system administrators who build, 
 2. [Local development](local-development.md) — get a working environment.
 3. [Admin panel](admin-panel.md) — how the Livewire admin works and how to extend it.
 4. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
-5. [Testing](testing.md) — Pest, Playwright, and Go tests.
-6. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
-7. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
-8. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
+5. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
+6. [Testing](testing.md) — Pest, Playwright, and Go tests.
+7. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
+8. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
+9. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
 
 ## Repository map
 
@@ -27,6 +28,8 @@ This guide is for developers, integrators, and system administrators who build, 
 | `app/Livewire/Portal/` | Employee self-service portal |
 | `app/Support/Tenancy/` | Tenant context, scopes, cache helpers, and exceptions |
 | `app/Services/Payroll/` | PHP payroll engine fallback and the Go engine wrapper |
+| `app/Services/Statutory/Philippines/` | Philippine statutory calculators (SSS, PhilHealth, Pag-IBIG, GSIS, BIR) |
+| `app/Sectors/` | Sector policy, catalogues, and the sector manager |
 | `bootstrap/` | Laravel bootstrap, middleware, and health route |
 | `config/` | Application configuration, including `admin.php`, `payroll.php`, and `tenancy.php` |
 | `database/migrations/` | Application migrations; the only source of truth for the schema |
@@ -63,6 +66,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | Add a dashboard metric | `app/Livewire/Admin/Metrics/` |
 | Change the admin menu | `config/admin.php` and `app/Livewire/Admin/Support/Navigation.php` |
 | Change payroll rules | `payroll-engine/internal/` and `config/payroll.php` |
+| Change sector rules or catalogues | `app/Sectors/`, `config/sectors.php`, and `docs/developer-guide/sectors.md` |
 | Change tenancy behavior | `app/Support/Tenancy/` and `docs/tenancy.md` |
 | Change UI tokens | `resources/css/app.css` |
 | Change deployment | `deploy/aws/` and `docs/deployment/` |

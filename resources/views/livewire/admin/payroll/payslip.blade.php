@@ -129,7 +129,11 @@
 
         <section class="mt-6 grid grid-cols-1 gap-3 text-xs text-slate-500 sm:grid-cols-2 dark:text-slate-400">
             <p>TIN: {{ mask_id($employee->tin_number) }}</p>
-            <p>SSS: {{ mask_id($employee->sss_number) }}</p>
+            @if ($isGovernment ?? false)
+                <p>GSIS BP: {{ mask_id($employee->gsis_number) }}</p>
+            @else
+                <p>SSS: {{ mask_id($employee->sss_number) }}</p>
+            @endif
             <p>PhilHealth: {{ mask_id($employee->philhealth_number) }}</p>
             <p>Pag-IBIG: {{ mask_id($employee->hdmf_number) }}</p>
             <p>Employer: {{ config('app.name') }}</p>

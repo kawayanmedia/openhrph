@@ -27,6 +27,7 @@ use App\Models\Office;
 use App\Models\PayrollGroup;
 use App\Models\Schedule;
 use App\Models\User;
+use App\Support\Installation\Installation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
@@ -207,6 +208,8 @@ class Employee extends Resource
 
     protected function earningData(): array
     {
+        $isGovernment = Installation::sectorPolicy()->sector()->isGovernment();
+
         return [
             Select::make('Payment Type', 'payment_type')
                 ->options(payment_types())
@@ -259,14 +262,41 @@ class Employee extends Resource
                 ])
                 ->hideFromIndex(),
 
-            Text::make('SSS Number', 'sss_number')
-                ->rules('nullable', 'regex:/^\d{2}-?\d{7}-?\d$/')
-                ->withMeta([
-                    'extraAttributes' => [
-                        'placeholder' => '00-0000000-0',
-                    ],
-                ])
-                ->hideFromIndex(),
+            ...($isGovernment
+                ? [
+                    Text::make('GSIS BP Number', 'gsis_number')
+                        ->rules('nullable', 'regex:/^[\d\s-]{8,24}$/')
+                        ->withMeta([
+                            'extraAttributes' => [
+                                'placeholder' => '0000-0000-0000',
+                            ],
+                        ])
+                        ->help('Required for GSIS remittances. A private installation uses the SSS number instead.')
+                        ->hideFromIndex(),
+
+                    Text::make('Salary Grade', 'salary_grade')
+                        ->rules('nullable', 'integer', 'between:1,33')
+                        ->hideFromIndex(),
+
+                    Text::make('Step', 'step')
+                        ->rules('nullable', 'integer', 'between:1,8')
+                        ->hideFromIndex(),
+
+                    Text::make('Item Number', 'item_number')
+                        ->rules('nullable', 'max:64')
+                        ->hideFromIndex(),
+                ]
+                : [
+                    Text::make('SSS Number', 'sss_number')
+                        ->rules('nullable', 'regex:/^\d{2}-?\d{7}-?\d$/')
+                        ->withMeta([
+                            'extraAttributes' => [
+                                'placeholder' => '00-0000000-0',
+                            ],
+                        ])
+                        ->help('Required for SSS remittances. A government installation uses the GSIS BP number instead.')
+                        ->hideFromIndex(),
+                ]),
 
             Text::make('PhilHealth Number', 'philhealth_number')
                 ->rules('nullable', 'regex:/^\d{2}-?\d{9}-?\d$/')

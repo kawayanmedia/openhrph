@@ -14,6 +14,7 @@ use App\Models\PayrollGroup;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Timesheet;
+use App\Sectors\SectorManager;
 use App\Services\Payroll\Statutory\ComponentResolver;
 use App\Support\Installation\Installation;
 use App\Support\Tenancy\TenantContext;
@@ -32,6 +33,8 @@ class PayrollReadiness
     protected ?PayrollGroup $focusGroup = null;
 
     protected bool $focusGroupResolved = false;
+
+    protected ?bool $governmentCompany = null;
 
     /**
      * The full readiness report.
@@ -323,7 +326,9 @@ class PayrollReadiness
                 $this->item(
                     key: 'government-ids',
                     title: 'Record government IDs',
-                    description: 'SSS, PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.',
+                    description: $this->companyIsGovernment()
+                        ? 'GSIS BP, PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.'
+                        : 'SSS, PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.',
                     complete: $employees->isNotEmpty() && $governmentIds->count() === $employees->count(),
                     required: false,
                     meta: $employees->isEmpty()
@@ -547,7 +552,11 @@ class PayrollReadiness
 
     protected function hasGovernmentIds(Employee $employee): bool
     {
-        return filled($employee->sss_number)
+        $statutoryId = $this->companyIsGovernment()
+            ? filled($employee->gsis_number)
+            : filled($employee->sss_number);
+
+        return $statutoryId
             && filled($employee->philhealth_number)
             && filled($employee->hdmf_number)
             && filled($employee->tin_number);
@@ -665,13 +674,17 @@ class PayrollReadiness
      */
     protected function companyIsGovernment(): bool
     {
+        if ($this->governmentCompany !== null) {
+            return $this->governmentCompany;
+        }
+
         $companyId = app(TenantContext::class)->id();
 
         if ($companyId === null || ! Schema::hasTable('companies')) {
-            return false;
+            return $this->governmentCompany = false;
         }
 
-        return strtolower(trim((string) DB::table('companies')->where('id', $companyId)->value('type'))) === 'government';
+        return $this->governmentCompany = app(SectorManager::class)->isGovernment($companyId);
     }
 
     /**

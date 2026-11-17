@@ -19,6 +19,7 @@ use App\Observers\LeaveRequestObserver;
 use App\Observers\PayrollDetailObserver;
 use App\Observers\PayrollGroupObserver;
 use App\Observers\TimesheetRequestObserver;
+use App\Sectors\SectorManager;
 use App\Services\Payroll\Engine\EngineManager;
 use App\Services\Payroll\Engine\GoPayrollEngine;
 use Illuminate\Database\Eloquent\Factories\Factory as FactoryNameResolver;
@@ -42,6 +43,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(GoPayrollEngine::class, function () {
             return new GoPayrollEngine;
         });
+
+        // Scoped, not singleton: Octane keeps the worker alive across requests.
+        $this->app->scoped(SectorManager::class);
     }
 
     /**

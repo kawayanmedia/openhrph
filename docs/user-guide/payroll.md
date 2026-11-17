@@ -18,13 +18,17 @@ review the country, currency, locale, and timezone. The country cannot change af
 processed payroll, because historical runs must keep the rules they were computed with.
 
 - A Philippine installation uses the built-in SSS, PhilHealth, Pag-IBIG, GSIS, and BIR withholding
-  schedules. Review them under **Government**.
+  schedules. Review them under **Statutory (PH)**.
 - Other countries use **Statutory components** and **Statutory bracket rows**. Each component
   declares whether it is a contribution, tax, levy, or fund; whether the employee, employer, or
   both pay it; and whether it is a percentage, bracket table, or fixed amount.
 - A component marked **Reduces taxable income** is applied before the tax component.
 - Deductions that are not statutory are maintained under **Payroll Management → Deductions** and
   can be fixed or a percentage of a chosen base.
+- Loans are maintained under **Payroll Management → Loans** and attached to an employee with an
+  amortization. A government installation seeds the GSIS policy, emergency, and real-estate loan
+  programs; they are salary deductions, not statutory contributions, and are remitted through the
+  loans working paper.
 - Every run also writes itemised deduction lines used by the payslip and the remittance report.
 
 Ask your payroll lead to confirm the effective dates and source of every rate. Effective-dated
@@ -200,6 +204,47 @@ The register reconciles to the journal entry posted when the payroll was approve
 - [ ] Statutory contributions and tax look right.
 - [ ] Net pay totals match your review.
 - [ ] You have taken a database backup or snapshot if your team requires one.
+
+## Sector-specific payroll work
+
+The installer fixes the sector for the whole installation. Payroll, catalogues and
+reports follow it.
+
+### Government
+
+- Contributions are **GSIS** (9% employee / 12% employer, effective-dated), not SSS.
+- The compensation catalogue includes PERA, RATA, mid-year bonus, year-end bonus,
+  cash gift, SRI and CNA. PBB and the loyalty cash gift stay inactive until the
+  current guidelines are verified.
+- Salary grade and step are part of the employee record. Use the step-increment
+  command after the required years of service:
+
+```bash
+php artisan payroll:step-increments --company=1            # report only
+php artisan payroll:step-increments --company=1 --apply    # write the increments
+php artisan payroll:loyalty-awards --company=1 --apply     # loyalty cash gift
+php artisan payroll:terminal-leave --company=1 --apply     # separated employees
+```
+
+All three commands are dry runs without `--apply` and write to `hr_audit_events`.
+
+### Private
+
+- Contributions are **SSS**, PhilHealth and Pag-IBIG.
+- 13th month pay (PD 851) and service incentive leave (Labor Code Art. 95) are in
+  the compensation/leave catalogues.
+- `payroll:remittance --format=sector` writes the private remittance set.
+
+### Document check
+
+```bash
+php artisan payroll:documents --company=1
+php artisan payroll:documents --company=1 --format=csv
+```
+
+The checklist comes from the sector profile. Identifier codes are checked against
+the employee master data; other documents are reported as `Manual` until uploads
+are stored.
 
 ## Common questions
 

@@ -38,6 +38,7 @@ For developers, integrators, and system administrators.
 | [Architecture](developer-guide/architecture.md) | Layers, request flow, admin panels, payroll engine, tenancy, queues, and storage |
 | [Multi-tenancy](tenancy.md) | Tenant resolution, scoping rules, queues, cache, storage, and adding tenant tables |
 | [Payroll engine](developer-guide/payroll-engine.md) | Build, run, statutory tables, preview, processing, and fallback driver |
+| [Government and Private sectors](developer-guide/sectors.md) | Sector policy, catalogues, government commands, and the regulatory research matrix |
 
 ### Work on the code
 

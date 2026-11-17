@@ -2,15 +2,15 @@
 
 namespace App\Services\Payroll\Computation;
 
-use App\Services\Government\Bir\WithholdingTaxService;
-use App\Services\Government\Bir\WithholdingTaxTable;
-use App\Services\Government\ContributionSchedule;
-use App\Services\Government\Generic\GenericContributionService;
-use App\Services\Government\Gsis\GsisContributionService;
-use App\Services\Government\PagIbig\PagIbigContributionService;
-use App\Services\Government\PayFrequency;
-use App\Services\Government\PhilHealth\PhilHealthContributionService;
-use App\Services\Government\Sss\SssContributionService;
+use App\Services\Statutory\Philippines\Bir\WithholdingTaxService;
+use App\Services\Statutory\Philippines\Bir\WithholdingTaxTable;
+use App\Services\Statutory\Philippines\ContributionSchedule;
+use App\Services\Statutory\Philippines\Generic\GenericContributionService;
+use App\Services\Statutory\Philippines\Gsis\GsisContributionService;
+use App\Services\Statutory\Philippines\PagIbig\PagIbigContributionService;
+use App\Services\Statutory\Philippines\PayFrequency;
+use App\Services\Statutory\Philippines\PhilHealth\PhilHealthContributionService;
+use App\Services\Statutory\Philippines\Sss\SssContributionService;
 use App\Support\Money;
 use DateTimeImmutable;
 use RuntimeException;

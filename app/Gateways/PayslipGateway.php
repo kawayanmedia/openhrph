@@ -2,200 +2,439 @@
 
 namespace App\Gateways;
 
+use App\Models\Employee;
+use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\PayrollYearDate;
-use setasign\Fpdi\Fpdi;
+use App\Services\Payroll\Engine\Legacy\LegacyInput;
+use App\Support\Installation\Installation;
+use FPDF;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
+/**
+ * Renders the payable payslip.
+ *
+ * The form is drawn in code instead of importing a fixed PDF template, so a
+ * government payroll can label the statutory deduction GSIS and print the
+ * GSIS BP number without leaving an SSS caption underneath it.
+ */
 class PayslipGateway
 {
-    public $payrollDetail;
+    public ?PayrollDetail $payrollDetail = null;
 
-    public $payrollYearDate;
+    public ?PayrollYearDate $payrollYearDate = null;
 
-    public function get($id)
+    /**
+     * @return array<string, mixed>
+     */
+    public function get($id): array
     {
-        $this->payrollDetail = PayrollDetail::find($id);
+        $this->payrollDetail = PayrollDetail::query()
+            ->with(['employee.department', 'payroll.processedBy', 'payroll.approvedBy', 'deductionLines'])
+            ->find($id);
+
+        $this->payrollYearDate = $this->payrollDetail?->employee_id === null
+            ? null
+            : PayrollYearDate::query()
+                ->where('employee_id', $this->payrollDetail->employee_id)
+                ->where('year', $this->payrollDetail->year)
+                ->first();
 
         return [
             'payroll_detail' => $this->payrollDetail,
-            'payroll_year_date' => PayrollYearDate::query()
-                ->where('employee_id', $this->payrollDetail?->employee_id)
-                ->where('year', $this->payrollDetail?->year)
-                ->first(),
+            'payroll_year_date' => $this->payrollYearDate,
         ];
     }
 
-    public function generatePdf()
+    /**
+     * The inline PDF response for the payslip route.
+     */
+    public function generatePdf(): Response
     {
-        $pdf = new Fpdi;
+        return response($this->pdfBytes(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$this->fileName().'"',
+        ]);
+    }
 
-        $pdf->addPage();
+    /**
+     * The rendered PDF, for callers that need the bytes (evidence packs).
+     */
+    public function pdfBytes(): string
+    {
+        return (string) $this->pdf()->Output('S', $this->fileName());
+    }
 
-        // $pdf->setSourceFile('soa template.pdf');
-        $pdf->setSourceFile('docs/payslip.pdf');
-        // $pdf->setSourceFile('docs/payslip_borders.pdf');
-        // import page 1
-        $tplId = $pdf->importPage(1);
-        // use the imported page and place it at point 10,10 with a width of 100 mm
-        $pdf->useTemplate($tplId);
+    protected function fileName(): string
+    {
+        $year = (int) ($this->payrollDetail?->year ?? now()->year);
 
-        $pdf->SetFont('Arial', '', 10);
-        $pdf->setXY(20, 21);
-        $pdf->Write(5, get_setting('company_name'));
+        return 'payslip-'.($this->payrollDetail?->employee_id ?? 0).'-'.$year.'.pdf';
+    }
 
-        if ((bool) get_setting('display_logo_payslip') == true) {
-            $pdf->setXY(20, 10);
-            if (get_setting('payslip_logo')) {
-                $pdf->Image(storage_path().'/app/public/'.get_setting('payslip_logo'), 20, 10, -300);
+    protected function pdf(): FPDF
+    {
+        $detail = $this->payrollDetail;
+
+        abort_if($detail === null, 404);
+
+        $employee = $detail->employee;
+        $payroll = $detail->payroll;
+        $government = LegacyInput::isGovernmentCompany((int) $detail->company_id);
+
+        $pdf = new FPDF('P', 'mm', 'A4');
+        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        $this->header($pdf, $employee, $payroll);
+        $this->identityBlock($pdf, $employee, $government);
+
+        $this->sectionTitle($pdf, 'EARNINGS');
+        $this->rows($pdf, $this->earningsRows($detail));
+        $this->totalRow($pdf, 'Gross pay', (float) $detail->gross_income);
+
+        $this->sectionTitle($pdf, 'DEDUCTIONS');
+        $this->rows($pdf, $this->deductionRows($detail, $government));
+        $this->totalRow($pdf, 'Total deductions', (float) $detail->total_deductions);
+
+        $this->netPay($pdf, (float) $detail->net_pay);
+
+        $this->sectionTitle($pdf, 'EMPLOYER AND YEAR TO DATE');
+        $this->rows($pdf, array_merge(
+            [
+                ['Employer share', (float) $detail->total_employer],
+                ['Taxable income', (float) $detail->taxable_income],
+            ],
+            $this->yearToDateRows($detail),
+        ));
+
+        $this->footer($pdf, $payroll);
+
+        return $pdf;
+    }
+
+    /**
+     * @param  Employee|null  $employee
+     * @param  Payroll|null  $payroll
+     */
+    protected function header(FPDF $pdf, $employee, $payroll): void
+    {
+        $company = (string) (get_setting('company_name') ?: config('app.name'));
+        $hasLogo = false;
+
+        if ((bool) get_setting('display_logo_payslip') && get_setting('payslip_logo')) {
+            $logo = storage_path('app/public/'.get_setting('payslip_logo'));
+            $hasLogo = is_file($logo);
+
+            if ($hasLogo) {
+                $pdf->Image($logo, 15, 12, 22);
             }
         }
 
-        $pdf->setXY(70, 28);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->fullname ?? ''));
-
-        $pdf->setXY(70, 34.5);
-        $pdf->Write(5, (string) ($this->payrollDetail->payroll?->payroll_date?->format('d F Y') ?? ''));
-
-        $pdf->setXY(70, 41);
-        $pdf->Write(5, (string) ($this->payrollDetail->payroll?->covered_dates ?? ''));
-
-        $pdf->setXY(70, 48);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->department?->name ?? ''));
-
-        $pdf->setXY(70, 54);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->position ?? ''));
-
-        // Right side tax status
-        $pdf->setXY(160, 28);
-        $pdf->Write(5, '__');
-
-        $pdf->setXY(160, 34);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->tin_number ?? ''));
-
-        $pdf->setXY(160, 41);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->sss_number ?? ''));
-
-        $pdf->setXY(160, 48);
-        $pdf->Write(5, (string) ($this->payrollDetail->employee?->philhealth_number ?? ''));
-
-        $pdf->setXY(160, 54);
-        $pdf->Write(5, $this->payrollDetail->employee->hdmf_number);
-
-        // Compensation
-        $pdf->setXY(58, 74);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->basic_salary, 2), 0, 'R');
-
-        // Earnings. The template has room for ten 6mm rows between the basic pay
-        // row and the totals block at y=142; overflow is folded into a single
-        // line so itemised compensations cannot overwrite the totals.
-        $earnings = [];
-
-        foreach ($this->payrollDetail->compensation_lines as $line) {
-            if ($line['amount'] != 0) {
-                $earnings[] = [$line['name'], $line['amount']];
-            }
-        }
-
-        foreach ([
-            'OT' => $this->payrollDetail->overtime_pay,
-            'ND' => $this->payrollDetail->night_pay,
-            'RD' => $this->payrollDetail->rest_day_pay,
-        ] as $label => $amount) {
-            if ($amount != 0) {
-                $earnings[] = [$label, $amount];
-            }
-        }
+        $leftWidth = $hasLogo ? 98 : 125;
+        $pdf->SetXY($hasLogo ? 42 : 15, 14);
+        $pdf->SetFont('Arial', 'B', 14);
+        $pdf->Cell($leftWidth, 7, $this->text($company), 0, 0, 'L');
+        $pdf->Cell(55, 7, 'PAYSLIP', 0, 1, 'R');
 
         $pdf->SetFont('Arial', '', 8);
+        $pdf->SetTextColor(110);
+        $pdf->Cell($leftWidth, 5, 'Amounts in '.Installation::currencyCode(), 0, 0, 'L');
+        $pdf->Cell(55, 5, 'Pay date '.$this->date($payroll?->payroll_date), 0, 1, 'R');
+        $pdf->Cell($leftWidth + 55, 5, 'Period '.$this->date($payroll?->date_from).' - '.$this->date($payroll?->date_to), 0, 1, 'R');
+        $pdf->SetTextColor(0);
 
-        $y = 81;
-        $maxRows = 10;
+        $pdf->SetDrawColor(200);
+        $pdf->Line(15, $pdf->GetY() + 1, 195, $pdf->GetY() + 1);
+        $pdf->Ln(4);
+    }
 
-        foreach (array_slice($earnings, 0, $maxRows) as [$label, $amount]) {
-            $pdf->setXY(20, $y);
-            $pdf->MultiCell(30, 5, $label, 0, 'L');
+    protected function identityBlock(FPDF $pdf, $employee, bool $government): void
+    {
+        $left = [
+            ['Employee', trim((string) ($employee?->first_name ?? '').' '.(string) ($employee?->last_name ?? ''))],
+            ['Employee no', (string) ($employee?->employee_number ?? '')],
+            ['Position', (string) ($employee?->position ?? '')],
+            ['Department', (string) ($employee?->department?->name ?? '')],
+        ];
 
-            $pdf->setXY(58, $y);
-            $pdf->MultiCell(20, 5, number_format($amount, 2), 0, 'R');
+        $right = [
+            ['TIN', $this->mask($employee?->tin_number)],
+            [$government ? 'GSIS BP' : 'SSS', $this->mask($government ? $employee?->gsis_number : $employee?->sss_number)],
+            ['PhilHealth', $this->mask($employee?->philhealth_number)],
+            ['Pag-IBIG', $this->mask($employee?->hdmf_number)],
+        ];
 
-            $y += 6;
+        $top = $pdf->GetY();
+
+        foreach ($left as $index => [$label, $value]) {
+            $this->identityRow($pdf, 15, $top + ($index * 5.5), $label, $value);
         }
 
-        if (count($earnings) > $maxRows) {
-            $overflow = array_sum(array_column(array_slice($earnings, $maxRows), 1));
-
-            $pdf->setXY(20, $y);
-            $pdf->MultiCell(30, 5, 'Other earnings', 0, 'L');
-
-            $pdf->setXY(58, $y);
-            $pdf->MultiCell(20, 5, number_format($overflow, 2), 0, 'R');
+        foreach ($right as $index => [$label, $value]) {
+            $this->identityRow($pdf, 110, $top + ($index * 5.5), $label, $value);
         }
 
-        $pdf->SetFont('Arial', '', 10);
-        $pdf->setXY(58, 142);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->gross_income, 2), 0, 'R');
+        $pdf->SetY($top + (max(count($left), count($right)) * 5.5) + 2);
+    }
 
-        // Deductions
-        $pdf->setXY(118, 75);
-        $pdf->MultiCell(20, 5, number_format(0, 2), 0, 'R');
+    protected function identityRow(FPDF $pdf, float $x, float $y, string $label, string $value): void
+    {
+        $pdf->SetXY($x, $y);
+        $pdf->SetFont('Arial', '', 8);
+        $pdf->SetTextColor(110);
+        $pdf->Cell(28, 5, $this->text($label), 0, 0, 'L');
+        $pdf->SetTextColor(0);
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->Cell(55, 5, $this->text($value !== '' ? $value : '-'), 0, 0, 'L');
+    }
 
-        $pdf->setXY(118, 81);
-        $pdf->MultiCell(20, 5, number_format(0, 2), 0, 'R');
+    protected function sectionTitle(FPDF $pdf, string $title): void
+    {
+        $pdf->Ln(3);
+        $pdf->SetFillColor(238, 242, 246);
+        $pdf->SetFont('Arial', 'B', 9);
+        $pdf->Cell(180, 6, '  '.$title, 0, 1, 'L', true);
+        $pdf->Ln(1);
+    }
 
-        $pdf->setXY(118, 87);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->absent_days_amount, 2), 0, 'R');
+    /**
+     * @param  list<array{0: string, 1: float}>  $rows
+     */
+    protected function rows(FPDF $pdf, array $rows): void
+    {
+        $rows = array_values(array_filter($rows, static fn (array $row): bool => abs($row[1]) >= 0.005));
 
-        $pdf->setXY(118, 100);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->sss_employee, 2), 0, 'R');
+        if ($rows === []) {
+            $pdf->SetFont('Arial', 'I', 8);
+            $pdf->SetTextColor(120);
+            $pdf->Cell(180, 5.5, 'None', 0, 1, 'L');
+            $pdf->SetTextColor(0);
 
-        $pdf->setXY(118, 106);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->sss_provident_employee, 2), 0, 'R');
-
-        $pdf->setXY(118, 113);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->philhealth_employee, 2), 0, 'R');
-
-        $pdf->setXY(118, 119);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->hdmf_employee, 2), 0, 'R');
-
-        $pdf->setXY(118, 126);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->withholding_tax, 2), 0, 'R');
-
-        $pdf->setXY(118, 142);
-        $pdf->MultiCell(20, 5, number_format($this->payrollDetail->total_deductions, 2), 0, 'R');
-
-        // Year to date
-        $yearDate = PayrollYearDate::query()
-            ->where('employee_id', $this->payrollDetail->employee_id)
-            ->where('year', $this->payrollDetail->year)
-            ->first();
-
-        if ($yearDate) {
-            $pdf->setXY(174, 74);
-            $pdf->MultiCell(20, 5, number_format($yearDate->taxable_gross, 2), 0, 'R');
-
-            $pdf->setXY(174, 81);
-            $pdf->MultiCell(20, 5, number_format($yearDate->tax, 2), 0, 'R');
-
-            $pdf->setXY(174, 87);
-            $pdf->MultiCell(20, 5, number_format($yearDate->sss, 2), 0, 'R');
-
-            $pdf->setXY(174, 93);
-            $pdf->MultiCell(20, 5, number_format($yearDate->philhealth, 2), 0, 'R');
-
-            $pdf->setXY(174, 99);
-            $pdf->MultiCell(20, 5, number_format($yearDate->hdmf, 2), 0, 'R');
-
-            $pdf->setXY(174, 106);
-            $pdf->MultiCell(20, 5, number_format($yearDate->gross_income, 2), 0, 'R');
-
-            $pdf->setXY(174, 113);
-            $pdf->MultiCell(20, 5, number_format($yearDate->non_taxable, 2), 0, 'R');
+            return;
         }
 
-        $pdf->SetFont('Arial', 'B', 10);
-        $pdf->setXY(174, 142);
-        $pdf->MultiCell(22, 5, number_format($this->payrollDetail->net_pay, 2), 0, 'R');
+        foreach ($rows as [$label, $amount]) {
+            $pdf->SetFont('Arial', '', 9);
+            $pdf->Cell(120, 5.5, $this->text($label), 0, 0, 'L');
+            $pdf->Cell(60, 5.5, $this->money($amount), 0, 1, 'R');
+        }
+    }
 
-        $pdf->Output('I', 'generated.pdf');
+    protected function totalRow(FPDF $pdf, string $label, float $amount): void
+    {
+        $pdf->SetDrawColor(200);
+        $pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
+        $pdf->SetFont('Arial', 'B', 9.5);
+        $pdf->Cell(120, 7, $this->text($label), 0, 0, 'L');
+        $pdf->Cell(60, 7, $this->money($amount), 0, 1, 'R');
+    }
+
+    protected function netPay(FPDF $pdf, float $amount): void
+    {
+        $pdf->Ln(3);
+        $pdf->SetFillColor(20, 38, 58);
+        $pdf->SetTextColor(255);
+        $pdf->SetFont('Arial', 'B', 11);
+        $pdf->Cell(120, 11, '  NET PAY', 0, 0, 'L', true);
+        $pdf->Cell(60, 11, $this->money($amount).'  ', 0, 1, 'R', true);
+        $pdf->SetTextColor(0);
+    }
+
+    /**
+     * @return list<array{0: string, 1: float}>
+     */
+    protected function earningsRows(PayrollDetail $detail): array
+    {
+        $rows = [
+            ['Basic pay (period)', (float) $detail->basic_salary],
+            ['Attendance and premiums', (float) $detail->regular_pay - (float) $detail->basic_salary],
+            ['Overtime', (float) $detail->overtime_pay],
+            ['Night differential', (float) $detail->night_pay],
+            ['Rest day', (float) $detail->rest_day_pay],
+            ['Holiday', (float) $detail->holiday_pay],
+            ['Allowances', (float) $detail->allowance],
+        ];
+
+        foreach ($detail->compensation_lines as $line) {
+            $rows[] = [(string) ($line['name'] ?? ''), (float) ($line['amount'] ?? 0)];
+        }
+
+        $rows = array_merge($rows, [
+            ['Other incentives', (float) $detail->unitemised_incentive],
+            ['Bonus', (float) $detail->bonus],
+            ['Commission', (float) $detail->commission],
+            ['13th month', (float) $detail->thirteenth_month],
+            ['Leave conversion', (float) $detail->leave_conversion],
+            ['Separation pay', (float) $detail->separation_pay],
+        ]);
+
+        if ((float) $detail->absent_days_amount > 0) {
+            $rows[] = ['Absences', -1 * (float) $detail->absent_days_amount];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return list<array{0: string, 1: float}>
+     */
+    protected function deductionRows(PayrollDetail $detail, bool $government): array
+    {
+        $lines = $detail->deductionLines;
+
+        if ($lines->isEmpty()) {
+            return $this->legacyDeductionRows($detail, $government);
+        }
+
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $amount = ((int) $line->employee_centavos) / 100;
+
+            if (abs($amount) < 0.005) {
+                continue;
+            }
+
+            $rows[] = [(string) ($line->name !== '' ? $line->name : $line->code), (float) $amount];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Payroll details written before the deduction ledger fall back to the
+     * dedicated columns. A government agency has no SSS deduction.
+     *
+     * @return list<array{0: string, 1: float}>
+     */
+    protected function legacyDeductionRows(PayrollDetail $detail, bool $government): array
+    {
+        $rows = [];
+
+        if ($government) {
+            $rows[] = ['GSIS', (float) $detail->gsis_employee];
+        } else {
+            $rows[] = ['SSS', (float) $detail->sss_employee + (float) $detail->sss_provident_employee];
+        }
+
+        $rows[] = ['PhilHealth', (float) $detail->philhealth_employee];
+        $rows[] = ['Pag-IBIG', (float) $detail->hdmf_employee];
+        $rows[] = ['Withholding tax', (float) $detail->withholding_tax];
+        $rows[] = ['Loans', (float) $detail->loans];
+        $rows[] = [
+            'Other deductions',
+            max(0.0, (float) $detail->total_deductions - (float) $detail->total_employee - (float) $detail->withholding_tax),
+        ];
+
+        return $rows;
+    }
+
+    /**
+     * @return list<array{0: string, 1: float}>
+     */
+    protected function yearToDateRows(PayrollDetail $detail): array
+    {
+        if (Schema::hasTable('employee_payroll_ytd')) {
+            $row = DB::table('employee_payroll_ytd')
+                ->where('company_id', $detail->company_id)
+                ->where('employee_id', $detail->employee_id)
+                ->where('year', $detail->year)
+                ->first();
+
+            if ($row !== null) {
+                return [
+                    ['YTD gross', ((int) ($row->gross_earned ?? 0)) / 100],
+                    ['YTD taxable income', ((int) ($row->taxable_income ?? 0)) / 100],
+                    ['YTD tax withheld', ((int) ($row->tax_withheld ?? 0)) / 100],
+                    ['YTD contributions', ((int) ($row->contributions ?? 0)) / 100],
+                ];
+            }
+        }
+
+        $ytd = $this->payrollYearDate;
+
+        if ($ytd === null) {
+            return [];
+        }
+
+        return [
+            ['YTD gross', (float) $ytd->gross_income],
+            ['YTD taxable income', (float) $ytd->taxable_gross],
+            ['YTD tax withheld', (float) $ytd->tax],
+            ['YTD contributions', (float) $ytd->sss + (float) $ytd->philhealth + (float) $ytd->hdmf],
+        ];
+    }
+
+    /**
+     * @param  Payroll|null  $payroll
+     */
+    protected function footer(FPDF $pdf, $payroll): void
+    {
+        $pdf->Ln(5);
+        $pdf->SetDrawColor(200);
+        $pdf->Line(15, $pdf->GetY(), 195, $pdf->GetY());
+        $pdf->Ln(2);
+        $pdf->SetFont('Arial', '', 8);
+        $pdf->SetTextColor(110);
+
+        $pdf->Cell(
+            180,
+            5,
+            $this->text('Prepared by: '.($payroll?->processedBy?->name ?? '-').'   Approved by: '.($payroll?->approvedBy?->name ?? '-')),
+            0,
+            1,
+            'L',
+        );
+
+        $pdf->Cell(180, 5, 'Payroll #'.($payroll?->getKey() ?? '-').'   Generated '.now()->format('d M Y H:i'), 0, 1, 'L');
+        $pdf->SetTextColor(0);
+    }
+
+    protected function money(float $amount): string
+    {
+        return number_format($amount, 2);
+    }
+
+    /**
+     * @param  mixed  $value
+     */
+    protected function date($value): string
+    {
+        if ($value === null) {
+            return '-';
+        }
+
+        return $value instanceof \DateTimeInterface
+            ? $value->format('d M Y')
+            : (string) $value;
+    }
+
+    protected function mask(?string $value): string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $length = strlen($value);
+
+        return $length <= 4
+            ? str_repeat('*', $length)
+            : str_repeat('*', $length - 4).substr($value, -4);
+    }
+
+    /**
+     * Core FPDF fonts are single-byte, so keep the form inside cp1252.
+     */
+    protected function text(string $value): string
+    {
+        $converted = @iconv('UTF-8', 'windows-1252//TRANSLIT', $value);
+
+        return $converted === false ? $value : $converted;
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Services\Payroll\Computation;
 
-use App\Services\Government\Bir\TaxBracket;
-use App\Services\Government\Gsis\GsisSchedule;
-use App\Services\Government\PagIbig\PagIbigSchedule;
-use App\Services\Government\PayFrequency;
-use App\Services\Government\PhilHealth\PhilHealthSchedule;
-use App\Services\Government\Sss\SssBracket;
+use App\Enums\Sector;
+use App\Services\Statutory\Philippines\Bir\TaxBracket;
+use App\Services\Statutory\Philippines\Gsis\GsisSchedule;
+use App\Services\Statutory\Philippines\PagIbig\PagIbigSchedule;
+use App\Services\Statutory\Philippines\PayFrequency;
+use App\Services\Statutory\Philippines\PhilHealth\PhilHealthSchedule;
+use App\Services\Statutory\Philippines\Sss\SssBracket;
 
 /**
  * Everything the computation needs that is not employee-specific.
@@ -70,6 +71,7 @@ final class Config
         public string $countryCode = 'PH',
         public string $statutoryDriver = 'ph',
         public array $components = [],
+        public Sector $sector = Sector::Private,
     ) {}
 
     public function periodsPerYear(): int
@@ -87,12 +89,16 @@ final class Config
      */
     public static function fromArray(array $data): self
     {
+        $sector = Sector::tryFromValue(
+            is_string($data['sector'] ?? null) ? $data['sector'] : null,
+        ) ?? ((bool) ($data['is_government'] ?? false) ? Sector::Government : Sector::Private);
+
         return new self(
             frequency: (string) ($data['frequency'] ?? self::FREQUENCY_SEMI_MONTHLY),
             cutoff: (string) ($data['cutoff'] ?? ''),
             runType: (string) ($data['run_type'] ?? self::RUN_REGULAR),
             meta: array_map(static fn ($value): string => (string) $value, (array) ($data['meta'] ?? [])),
-            isGovernment: (bool) ($data['is_government'] ?? false),
+            isGovernment: $sector->isGovernment(),
             daysPerYear: (int) ($data['days_per_year'] ?? 0),
             hoursPerDay: (int) ($data['hours_per_day'] ?? 0),
             sssSchedule: (string) ($data['sss_schedule'] ?? ''),
@@ -131,6 +137,7 @@ final class Config
             countryCode: (string) ($data['country_code'] ?? 'PH'),
             statutoryDriver: (string) ($data['statutory_driver'] ?? 'ph'),
             components: array_values((array) ($data['components'] ?? [])),
+            sector: $sector,
         );
     }
 
@@ -144,7 +151,8 @@ final class Config
             'cutoff' => $this->cutoff,
             'run_type' => $this->runType,
             'meta' => $this->meta,
-            'is_government' => $this->isGovernment,
+            'sector' => $this->sector->value,
+            'is_government' => $this->isGovernment || $this->sector->isGovernment(),
             'days_per_year' => $this->daysPerYear,
             'hours_per_day' => $this->hoursPerDay,
             'sss_schedule' => $this->sssSchedule,

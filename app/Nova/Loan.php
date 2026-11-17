@@ -102,6 +102,10 @@ class Loan extends Resource
                 ->rules('required')
                 ->sortable(),
 
+            Text::make('Agency', 'loan_agency')
+                ->help('SSS, HDMF, GSIS or Company')
+                ->sortable(),
+
             Boolean::make('Active', 'is_active')
                 ->sortable(),
         ];

@@ -121,6 +121,7 @@ class Settings extends Component
             'attendance' => 'Attendance',
             'payroll' => 'Payroll',
             'statutory' => 'Country & statutory',
+            'sector' => 'Sector',
             'leave' => 'Leave',
         ];
     }
@@ -136,6 +137,7 @@ class Settings extends Component
             'attendance' => $this->attendanceFields(),
             'payroll' => $this->payrollFields(),
             'statutory' => $this->statutoryFields(),
+            'sector' => $this->sectorFields(),
             'leave' => $this->leaveFields(),
             default => $this->generalFields(),
         };
@@ -264,6 +266,66 @@ class Settings extends Component
             Heading::make('Generic countries')
                 ->help('Non-PH countries read active components from Statutory components and their bracket rows. Import a JSON definition with `php artisan payroll:statutory:import --country=XX --file=path.json`.'),
         ];
+    }
+
+    /**
+     * Sector-specific defaults. The fields shown depend on the installation
+     * sector; the underlying settings keys are shared so payroll reads one
+     * shape for either sector.
+     *
+     * @return array<int, Field>
+     */
+    protected function sectorFields(): array
+    {
+        $policy = Installation::sectorPolicy();
+        $sector = $policy->sector();
+        $defaults = $policy->defaults();
+        $features = implode(', ', $policy->features()->enabledNames());
+
+        $fields = [
+            Heading::make('Sector: '.$sector->label())
+                ->help('Fixed for the whole installation. Change it with `php artisan openhr:install --force`.'),
+
+            Heading::make('Enabled capabilities')
+                ->help($features !== '' ? $features : 'None declared for this sector.'),
+        ];
+
+        if ($sector->isGovernment()) {
+            $fields[] = Text::make('GSIS contribution base', 'gsis_base')
+                ->default((string) ($defaults['gsis_base'] ?? 'basic'))
+                ->help('basic, gross, or taxable. The rate itself lives in the effective-dated GSIS table.');
+
+            $fields[] = Heading::make('Government bonuses and allowances')
+                ->help('PERA, RATA, mid-year bonus, year-end bonus, cash gift, SRI and CNA are in the compensation catalogue. PBB and loyalty cash gift stay inactive until their guidelines are verified.');
+
+            $fields[] = Heading::make('Government reference data')
+                ->help('Salary grades, plantilla items, NOSA and service records are government-only screens and are hidden in a private installation.');
+        } else {
+            $fields[] = Text::make('SSS contribution base', 'sss_base')
+                ->default((string) ($defaults['sss_base'] ?? 'basic'))
+                ->help('basic, gross, or taxable. The rate itself lives in the effective-dated SSS table.');
+
+            $fields[] = Text::make('PhilHealth contribution base', 'philhealth_base')
+                ->default((string) ($defaults['philhealth_base'] ?? 'basic'));
+
+            $fields[] = Text::make('Pag-IBIG contribution base', 'hdmf_base')
+                ->default((string) ($defaults['hdmf_base'] ?? 'basic'));
+
+            $fields[] = Heading::make('Private bonuses and leave')
+                ->help('13th month pay (PD 851), service incentive leave (Labor Code Art. 95), separation pay and retirement pay are in the catalogues and reports.');
+        }
+
+        $fields[] = Text::make('Night differential start', 'night_shift_differential_start')
+            ->default((string) ($defaults['night_shift_differential_start'] ?? '22:00'))
+            ->withMeta(['extraAttributes' => ['type' => 'time']])
+            ->rules('required');
+
+        $fields[] = Text::make('Night differential end', 'night_shift_differential_end')
+            ->default((string) ($defaults['night_shift_differential_end'] ?? '06:00'))
+            ->withMeta(['extraAttributes' => ['type' => 'time']])
+            ->rules('required');
+
+        return $fields;
     }
 
     /**

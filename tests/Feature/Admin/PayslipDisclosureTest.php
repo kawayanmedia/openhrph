@@ -202,3 +202,40 @@ it('surfaces compensation the itemised lines do not account for', function () {
         ->assertSee('Other incentives')
         ->assertSee('2,500.00');
 });
+
+it('shows the GSIS BP number instead of SSS on a government payslip', function () {
+    $payroll = Payroll::factory()->make([
+        'id' => 55,
+        'company_id' => 1,
+        'payroll_group_id' => 1,
+        'payroll_date' => '2026-11-15',
+        'date_from' => '2026-11-01',
+        'date_to' => '2026-11-15',
+    ]);
+    $payroll->setRelation('processedBy', null);
+    $payroll->setRelation('approvedBy', null);
+
+    $employee = Employee::factory()->make([
+        'id' => 5,
+        'company_id' => 1,
+        'office_id' => null,
+        'employee_number' => 'E-005',
+        'first_name' => 'Gina',
+        'last_name' => 'Cruz',
+        'gsis_number' => '0100-0000-0001',
+        'sss_number' => '34-1234567-8',
+        'tin_number' => '123-456-789-000',
+        'philhealth_number' => '12-345678901-2',
+        'hdmf_number' => '1234-5678-9012',
+    ]);
+
+    $this->view('livewire.admin.payroll.payslip', [
+        'payroll' => $payroll,
+        'employee' => $employee,
+        'detail' => payslipDetailFixture(['gsis_employee' => 1350]),
+        'isGovernment' => true,
+    ])
+        ->assertSee('GSIS BP:')
+        ->assertSee('0001')
+        ->assertDontSee('SSS:');
+});

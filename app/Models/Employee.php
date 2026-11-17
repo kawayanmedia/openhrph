@@ -56,6 +56,7 @@ class Employee extends Model implements HasMedia
         'daily_rate',
         'tin_number',
         'sss_number',
+        'gsis_number',
         'philhealth_number',
         'hdmf_number',
         'is_minimum_wage',

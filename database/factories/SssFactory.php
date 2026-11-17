@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Services\Government\Models\Sss;
+use App\Services\Statutory\Philippines\Models\Sss;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

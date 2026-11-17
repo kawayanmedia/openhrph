@@ -7,6 +7,7 @@ use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 
 uses(RefreshDatabase::class);
 
@@ -201,4 +202,119 @@ it('reports payroll master-data quality issues when strict', function () {
 
     $this->artisan('payroll:data-quality', ['--company' => 1, '--strict' => true])
         ->assertExitCode(1);
+});
+
+it('writes a per-employee GSIS working paper with the BP number', function () {
+    DB::table('employees')->where('id', 1)->update(['gsis_number' => '0100-0000-0001']);
+    DB::table('payroll_details')->where('id', 1)->update([
+        'basic_monthly_salary' => 3000000,
+        'gsis_employee' => 135000,
+        'gsis_employer' => 180000,
+    ]);
+
+    DB::table('payroll_detail_deductions')->insert([
+        'company_id' => 1, 'payroll_id' => 1, 'payroll_detail_id' => 1, 'employee_id' => 1,
+        'code' => 'GSIS-POLICY', 'name' => 'GSIS Policy Loan', 'category' => 'loan',
+        'employee_centavos' => 50000, 'employer_centavos' => 0, 'source' => 'loan',
+        'sort_order' => 800, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $path = sys_get_temp_dir().'/gsis-export.csv';
+
+    $this->artisan('payroll:remittance', ['payroll' => 1, '--format' => 'gsis', '--path' => $path])->assertExitCode(0);
+
+    $csv = file_get_contents($path);
+
+    expect($csv)->toContain('GSIS BP number')
+        ->and($csv)->toContain('0100-0000-0001')
+        ->and($csv)->toContain('1350.00')
+        ->and($csv)->toContain('1800.00')
+        ->and($csv)->toContain('3150.00')
+        ->and($csv)->not->toContain('GSIS-POLICY')
+        ->and($csv)->toContain('TOTAL');
+
+    @unlink($path);
+});
+
+it('reports GSIS loan amortizations in the loans working paper', function () {
+    DB::table('loans')->insert([
+        'company_id' => 1, 'loan_agency' => 'GSIS', 'code' => 'GSIS-POLICY',
+        'name' => 'GSIS Policy Loan', 'is_default' => true, 'is_active' => true,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    DB::table('payroll_detail_deductions')->insert([
+        'company_id' => 1, 'payroll_id' => 1, 'payroll_detail_id' => 1, 'employee_id' => 1,
+        'code' => 'GSIS-POLICY', 'name' => 'GSIS Policy Loan', 'category' => 'loan',
+        'employee_centavos' => 50000, 'employer_centavos' => 0, 'source' => 'loan',
+        'sort_order' => 800, 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $path = sys_get_temp_dir().'/loans-export.csv';
+
+    $this->artisan('payroll:remittance', [
+        'payroll' => 1,
+        '--format' => 'loans',
+        '--agency' => 'GSIS',
+        '--path' => $path,
+    ])->assertExitCode(0);
+
+    $csv = file_get_contents($path);
+
+    expect($csv)->toContain('GSIS-POLICY')
+        ->and($csv)->toContain('GSIS Policy Loan')
+        ->and($csv)->toContain('500.00')
+        ->and($csv)->toContain('TOTAL');
+
+    @unlink($path);
+});
+it('writes payslip PDFs into the evidence pack', function () {
+    $path = sys_get_temp_dir().'/payroll-evidence-'.uniqid();
+
+    $this->artisan('payroll:evidence-pack', [
+        'payroll' => 1,
+        '--path' => $path,
+        '--payslips' => true,
+    ])->assertExitCode(0);
+
+    $payslips = glob($path.'/payslip-*.pdf');
+
+    expect($payslips)->not->toBeEmpty()
+        ->and(file_get_contents($payslips[0]))->toStartWith('%PDF');
+
+    File::deleteDirectory($path);
+});
+
+it('writes the sector remittance set and the COA register working paper', function () {
+    $directory = sys_get_temp_dir().'/sector-remittance-'.uniqid();
+
+    $this->artisan('payroll:remittance', [
+        'payroll' => 1,
+        '--format' => 'sector',
+        '--path' => $directory,
+    ])->assertExitCode(0);
+
+    expect(file_exists($directory.'/remittance-sss.csv'))->toBeTrue()
+        ->and(file_exists($directory.'/remittance-bir.csv'))->toBeTrue()
+        ->and(file_exists($directory.'/remittance-gsis.csv'))->toBeFalse();
+
+    $coa = sys_get_temp_dir().'/coa-'.uniqid().'.csv';
+
+    $this->artisan('payroll:remittance', [
+        'payroll' => 1,
+        '--format' => 'coa',
+        '--path' => $coa,
+    ])->assertExitCode(0);
+
+    $csv = file_get_contents($coa);
+
+    expect($csv)->toContain('Employee no')
+        ->and($csv)->toContain('GSIS employee')
+        ->and($csv)->toContain('E-001');
+
+    foreach (glob($directory.'/*.csv') as $file) {
+        @unlink($file);
+    }
+    @unlink($coa);
+    @rmdir($directory);
 });

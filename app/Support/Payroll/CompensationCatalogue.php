@@ -2,6 +2,7 @@
 
 namespace App\Support\Payroll;
 
+use App\Enums\Sector;
 use App\Models\Compensation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -35,12 +36,14 @@ final class CompensationCatalogue
      *     is_taxable: bool,
      *     amount_basis?: ?string,
      *     frequency?: ?string,
-     *     maximum_non_tax?: int
+     *     maximum_non_tax?: int,
+     *     sector?: ?string,
+     *     status?: string
      * }>
      */
-    public static function rows(): array
+    public static function rows(?Sector $sector = null): array
     {
-        return [
+        $rows = [
             // Taxable regular compensation.
             ['code' => 'BASIC PAY ADJUSTMENT', 'name' => 'BASIC PAY ADJUSTMENT', 'tax_class_code' => Compensation::TAX_CLASS_BASIC_SALARY, 'tax_class' => 'Basic Salary', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true],
             ['code' => 'REG PAY', 'name' => 'REGULAR PAY', 'tax_class_code' => Compensation::TAX_CLASS_BASIC_SALARY, 'tax_class' => 'Basic Salary', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true],
@@ -67,14 +70,14 @@ final class CompensationCatalogue
 
             // Separation, retirement and leave. The exemptions are conditional,
             // so each treatment is its own row and the assignment decides.
-            ['code' => 'SEPARATION PAY (EXEMPT)', 'name' => 'SEPARATION PAY (EXEMPT)', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'SEPARATION PAY (TAXABLE)', 'name' => 'SEPARATION PAY (TAXABLE)', 'tax_class_code' => Compensation::TAX_CLASS_OTHSUPP1, 'tax_class' => 'Others Supplementary 1', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true],
-            ['code' => 'RETIREMENT PAY', 'name' => 'RETIREMENT PAY', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'LEAVE CONVERSION (TAXABLE)', 'name' => 'LEAVE CONVERSION (TAXABLE)', 'tax_class_code' => Compensation::TAX_CLASS_OTHSUPP2, 'tax_class' => 'Others Supplementary 2', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true],
+            ['code' => 'SEPARATION PAY (EXEMPT)', 'name' => 'SEPARATION PAY (EXEMPT)', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Private'],
+            ['code' => 'SEPARATION PAY (TAXABLE)', 'name' => 'SEPARATION PAY (TAXABLE)', 'tax_class_code' => Compensation::TAX_CLASS_OTHSUPP1, 'tax_class' => 'Others Supplementary 1', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true, 'sector' => 'Private'],
+            ['code' => 'RETIREMENT PAY', 'name' => 'RETIREMENT PAY', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Private'],
+            ['code' => 'LEAVE CONVERSION (TAXABLE)', 'name' => 'LEAVE CONVERSION (TAXABLE)', 'tax_class_code' => Compensation::TAX_CLASS_OTHSUPP2, 'tax_class' => 'Others Supplementary 2', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true, 'sector' => 'Private'],
             ['code' => 'MONETIZED LEAVE', 'name' => 'MONETIZED UNUSED LEAVE', 'tax_class_code' => Compensation::TAX_CLASS_DEMINIMISBENEFITS, 'tax_class' => 'De minimis benefits', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
 
             // Bonuses.
-            ['code' => '13TH MONTH PAY', 'name' => '13TH MONTH PAY', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Salary Based', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS],
+            ['code' => '13TH MONTH PAY', 'name' => '13TH MONTH PAY', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Salary Based', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Private'],
             ['code' => 'FIXED TAXABLE BONUS', 'name' => 'Fixed Taxable Bonus', 'tax_class_code' => null, 'tax_class' => 'Bonus', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_taxable', 'is_taxable' => true, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time'],
             ['code' => 'FIXED NON TAXABLE BONUS', 'name' => 'Fixed Non-Taxable Bonus', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'Periodic', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS],
 
@@ -97,8 +100,35 @@ final class CompensationCatalogue
 
             // Government and other non-taxable allowances.
             ['code' => 'SUBSISTENCE ALLOWANCE', 'name' => 'Subsistence Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
-            ['code' => 'PERA', 'name' => 'Personnel Economic Relief Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false],
+            ['code' => 'PERA', 'name' => 'Personnel Economic Relief Allowance', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Government'],
+
+            // Government statutory bonuses. Amounts are derived from the
+            // employee's basic pay or from the annual DBM issuance, never from
+            // this catalogue.
+            ['code' => 'MID-YEAR BONUS', 'name' => 'Mid-Year Bonus', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Salary Based', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government'],
+            ['code' => 'YEAR-END BONUS', 'name' => 'Year-End Bonus', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Salary Based', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government'],
+            ['code' => 'CASH GIFT', 'name' => 'Cash Gift', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government'],
+            ['code' => 'SRI', 'name' => 'Service Recognition Incentive', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government'],
+            ['code' => 'CNA INCENTIVE', 'name' => 'CNA Incentive', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government'],
+            ['code' => 'PBB', 'name' => 'Performance-Based Bonus', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government', 'status' => 'Inactive'],
+            ['code' => 'LOYALTY CASH GIFT', 'name' => 'Loyalty Cash Gift', 'tax_class_code' => Compensation::TAX_CLASS_13THMONTH, 'tax_class' => '13th month pay', 'group' => Compensation::GROUP_BONUS, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'amount_basis' => 'Fixed', 'frequency' => 'One-Time', 'maximum_non_tax' => self::OTHER_BENEFITS_EXCLUSION_CENTAVOS, 'sector' => 'Government', 'status' => 'Inactive'],
+            ['code' => 'RATA', 'name' => 'Representation and Transportation Allowance', 'tax_class_code' => Compensation::TAX_CLASS_REPRESENTATION, 'tax_class' => 'Representation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_taxable', 'is_taxable' => true, 'sector' => 'Government', 'status' => 'Inactive'],
+            ['code' => 'LAUNDRY ALLOWANCE', 'name' => 'Laundry Allowance (Government)', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_ALLOWANCE, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Government', 'status' => 'Inactive'],
+
+            ['code' => 'TERMINAL LEAVE PAY', 'name' => 'Terminal Leave Pay', 'tax_class_code' => Compensation::TAX_CLASS_NTAXCOMPENSATION, 'tax_class' => 'Salaries and other forms of compensation', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_nontaxable', 'is_taxable' => false, 'sector' => 'Government'],
+
+            // Private-sector items that do not apply to GSIS-covered agencies.
+            ['code' => 'SERVICE CHARGE', 'name' => 'Service Charge', 'tax_class_code' => Compensation::TAX_CLASS_OTHSUPP1, 'tax_class' => 'Others Supplementary 1', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true, 'sector' => 'Private', 'status' => 'Inactive'],
         ];
+
+        if ($sector === null) {
+            return $rows;
+        }
+
+        return array_values(array_filter(
+            $rows,
+            static fn (array $row): bool => ! isset($row['sector']) || strcasecmp((string) $row['sector'], $sector->value) === 0,
+        ));
     }
 
     /**
@@ -106,7 +136,7 @@ final class CompensationCatalogue
      * existing ones. Company overrides live in rows with a company_id and are
      * never touched here.
      */
-    public static function sync(?Carbon $now = null): int
+    public static function sync(?Carbon $now = null, ?Sector $sector = null): int
     {
         if (! Schema::hasTable('compensations')) {
             return 0;
@@ -115,7 +145,9 @@ final class CompensationCatalogue
         $now ??= now();
         $synced = 0;
 
-        foreach (self::rows() as $row) {
+        $hasSector = Schema::hasColumn('compensations', 'sector');
+
+        foreach (self::rows($sector) as $row) {
             $classification = [
                 'code' => $row['code'],
                 'name' => $row['name'],
@@ -124,13 +156,17 @@ final class CompensationCatalogue
                 'group' => $row['group'],
                 'tax_option' => $row['tax_option'],
                 'is_taxable' => $row['is_taxable'],
-                'status' => 'Active',
+                'status' => $row['status'] ?? 'Active',
                 'amount_basis' => $row['amount_basis'] ?? null,
                 'frequency' => $row['frequency'] ?? null,
                 'maximum_non_tax' => $row['maximum_non_tax'] ?? null,
                 'deleted_at' => null,
                 'updated_at' => $now,
             ];
+
+            if ($hasSector) {
+                $classification['sector'] = $row['sector'] ?? null;
+            }
 
             $query = DB::table('compensations')
                 ->whereNull('company_id')

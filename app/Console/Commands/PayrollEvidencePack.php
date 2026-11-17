@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Gateways\PayslipGateway;
 use App\Models\Payroll;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
@@ -14,7 +15,7 @@ class PayrollEvidencePack extends Command
     protected $signature = 'payroll:evidence-pack
         {payroll : Payroll id}
         {--path= : Directory for the evidence pack}
-        {--payslips : Also generate employee payslip PDFs when the template exists}';
+        {--payslips : Also write one payslip PDF per employee}';
 
     protected $description = 'Write the payroll register, remittance files, BIR 2316 data, manifest and README';
 
@@ -74,10 +75,23 @@ class PayrollEvidencePack extends Command
         }
 
         if ($this->option('payslips')) {
-            if (! is_file(base_path('docs/payslip.pdf'))) {
-                $notes[] = 'Payslip PDFs were not generated because docs/payslip.pdf is missing; print them from the payroll register.';
-            } else {
-                $notes[] = 'Payslip PDF generation is available in the payroll register; the evidence pack does not duplicate the template rendering.';
+            $generated = 0;
+
+            foreach ($payroll->payrollDetails()->get() as $detail) {
+                $gateway = new PayslipGateway;
+                $gateway->get((int) $detail->getKey());
+
+                if ($gateway->payrollDetail === null) {
+                    continue;
+                }
+
+                $name = 'payslip-'.$this->safeName((string) ($detail->employee_id ?? $detail->getKey())).'.pdf';
+                file_put_contents($path.'/'.$name, $gateway->pdfBytes());
+                $generated++;
+            }
+
+            if ($generated === 0) {
+                $notes[] = 'No payslip PDFs were generated because the payroll has no detail rows.';
             }
         }
 
@@ -124,6 +138,13 @@ class PayrollEvidencePack extends Command
         $this->info('Evidence pack written to '.$path);
 
         return self::SUCCESS;
+    }
+
+    protected function safeName(string $value): string
+    {
+        $name = preg_replace('/[^A-Za-z0-9._-]+/', '-', $value) ?? $value;
+
+        return trim($name, '-') !== '' ? trim($name, '-') : 'employee';
     }
 
     /**

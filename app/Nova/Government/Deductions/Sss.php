@@ -17,7 +17,7 @@ class Sss extends Resource
      *
      * @var string
      */
-    public static $model = \App\Services\Government\Models\Sss::class;
+    public static $model = \App\Services\Statutory\Philippines\Models\Sss::class;
 
     public static function uriKey()
     {

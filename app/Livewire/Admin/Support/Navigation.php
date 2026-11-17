@@ -2,9 +2,10 @@
 
 namespace App\Livewire\Admin\Support;
 
+use App\Sectors\SectorManager;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class Navigation
 {
@@ -21,7 +22,7 @@ class Navigation
 
     protected static function normalizeSection(array $section): ?array
     {
-        if (! static::canSee($section['can'] ?? null)) {
+        if (! static::canSee($section['can'] ?? null, $section['sector'] ?? $section['sectors'] ?? null)) {
             return null;
         }
 
@@ -56,7 +57,7 @@ class Navigation
 
         $groups = collect($section['groups'] ?? [])
             ->map(function (array $group) {
-                if (! static::canSee($group['can'] ?? null)) {
+                if (! static::canSee($group['can'] ?? null, $group['sector'] ?? $group['sectors'] ?? null)) {
                     return null;
                 }
 
@@ -87,7 +88,7 @@ class Navigation
 
     protected static function normalizeItem(array $item): ?array
     {
-        if (! static::canSee($item['can'] ?? null)) {
+        if (! static::canSee($item['can'] ?? null, $item['sector'] ?? $item['sectors'] ?? null)) {
             return null;
         }
 
@@ -130,8 +131,15 @@ class Navigation
         'holidays' => 'Holidays',
     ];
 
-    protected static function canSee(?string $key): bool
+    /**
+     * @param  string|array<int, string>|null  $sector
+     */
+    protected static function canSee(?string $key, string|array|null $sector = null): bool
     {
+        if (! static::sectorAllows($sector)) {
+            return false;
+        }
+
         if ($key === null) {
             return true;
         }
@@ -153,5 +161,26 @@ class Navigation
         }
 
         return ! empty($user->group?->permissions[$permission]);
+    }
+
+    /**
+     * @param  string|array<int, string>|null  $sector
+     */
+    protected static function sectorAllows(string|array|null $sector): bool
+    {
+        if ($sector === null) {
+            return true;
+        }
+
+        $current = app(SectorManager::class)->currentSector();
+        $allowed = array_map('strval', (array) $sector);
+
+        foreach ($allowed as $candidate) {
+            if (strcasecmp($candidate, $current->value) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

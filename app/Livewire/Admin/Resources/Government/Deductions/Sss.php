@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 
 class Sss extends Resource
 {
-    public static string $model = \App\Services\Government\Models\Sss::class;
+    public static string $model = \App\Services\Statutory\Philippines\Models\Sss::class;
 
     public static int $priority = 6;
 

@@ -67,7 +67,7 @@ The Go CLI accepts:
 - `GoPayrollEngine` runs the binary with Symfony Process.
 - `PhpPayrollEngine` is the fallback driver. It is parity-locked to the Go
   engine: the earning rules live in `App\Services\Payroll\Computation`, the
-  statutory calculators in `App\Services\Government`, and both are pinned to the
+  statutory calculators in `App\Services\Statutory\Philippines`, and both are pinned to the
   Go output by a shared corpus, so it returns the same payslips.
 - `EngineResult` normalizes the JSON response for the Livewire payroll page.
 
@@ -75,7 +75,7 @@ The Go wrapper passes the DSN resolved from the Laravel database config. It only
 
 ## Statutory services
 
-Each agency is a separate, framework-free namespace under `App\Services\Government`. A service
+Each agency is a separate, framework-free namespace under `App\Services\Statutory\Philippines`. A service
 takes its rates and brackets in the constructor and returns a centavo-exact result object, so a
 historical run stays reproducible after a rate change and the code can be reused outside this
 application.
@@ -97,6 +97,24 @@ $sss->employeeShare(); // ₱1,250.00, amounts are centavos
 and `PayFrequency` supplies the periods per month and year. `App\Support\Money` holds the shared
 half-away-from-zero centavo arithmetic. The payroll engine loads the effective-dated rows into
 these value objects; the calculators never touch the database.
+
+## Sectors
+
+The installation sector is separate from the country. The country selects the
+statutory driver; the sector selects which agencies and catalogues apply.
+
+- A Government company remits **GSIS** instead of SSS (RA 8291) and uses the
+  Government catalogues, leave defaults and bonus scheme.
+- A Private company remits SSS and uses the Labor Code catalogues.
+- `Non-Profit` follows Private.
+
+The PHP `Config` carries both `sector` and `is_government`. `is_government` stays
+in the JSON contract for older parity fixtures; the Go engine sets `Sector` from
+the company type and keeps `IsGovernment` as the computation switch.
+
+`App\Services\Statutory\Philippines` is the Philippine statutory calculator
+namespace (SSS, PhilHealth, Pag-IBIG, GSIS, BIR). It is not the public-sector
+policy layer; that lives in `App\Sectors`.
 
 ## Countries and statutory drivers
 
@@ -140,6 +158,11 @@ Philippine ₱90,000 benefit exclusion.
 Each run also writes itemised `payroll_detail_deductions` rows. PH payrolls keep their dedicated
 `payroll_details` columns and are mapped to the same ledger, so the payslip and remittance reports
 read one shape for every country.
+
+Loan lines carry the loan catalogue `code` and use `source = loan`. GSIS policy, emergency and
+real-estate loans are therefore amortizations like any other loan; they never appear as statutory
+GSIS contributions. The `loans` working paper reads these lines, and `gsis` reads the premium
+columns plus the employee's `gsis_number` (GSIS BP number).
 
 ## Statutory tables
 

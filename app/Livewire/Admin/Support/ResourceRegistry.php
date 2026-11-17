@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Support;
 
 use App\Livewire\Admin\Resource;
+use App\Sectors\SectorManager;
 use Illuminate\Support\Str;
 use Symfony\Component\Finder\Finder;
 
@@ -16,8 +17,23 @@ class ResourceRegistry
         $class = static::find($uriKey);
 
         abort_unless($class, 404);
+        abort_unless(static::sectorAllows($class), 404);
 
         return new $class;
+    }
+
+    /**
+     * A sector-tagged resource is invisible to the other sector.
+     */
+    protected static function sectorAllows(string $class): bool
+    {
+        $sector = $class::$sector ?? null;
+
+        if ($sector === null) {
+            return true;
+        }
+
+        return strcasecmp((string) $sector, app(SectorManager::class)->currentSector()->value) === 0;
     }
 
     public static function find(string $uriKey): ?string
@@ -31,7 +47,7 @@ class ResourceRegistry
         }
 
         // Fall back to a direct class-name match for namespaces not on disk yet.
-        $candidate = $namespace . '\\' . Str::studly(Str::replace('-', ' ', $uriKey));
+        $candidate = $namespace.'\\'.Str::studly(Str::replace('-', ' ', $uriKey));
 
         if (class_exists($candidate)) {
             return $candidate;
@@ -43,7 +59,7 @@ class ResourceRegistry
     /**
      * All resource classes discovered under the admin resources directory.
      *
-     * @return array<int, class-string<Resource>>
+     * @return array<int, class-string<resource>>
      */
     public static function available(): array
     {
@@ -60,7 +76,7 @@ class ResourceRegistry
         if (is_dir($path)) {
             foreach ((new Finder)->files()->in($path)->name('*.php') as $file) {
                 $relative = Str::replace('/', '\\', $file->getRelativePathname());
-                $class = $namespace . '\\' . Str::replaceLast('.php', '', $relative);
+                $class = $namespace.'\\'.Str::replaceLast('.php', '', $relative);
 
                 if (class_exists($class) && is_subclass_of($class, Resource::class)) {
                     $classes[] = $class;

@@ -26,7 +26,7 @@ This page helps you keep employee records complete and ready for attendance and 
    - **Identity** — employee number, name, biometric ID, and contact details.
    - **Assignment** — office, department, position, employment status, and employment type.
    - **Schedule and payroll** — schedule, payroll group, payment type, basic salary, and daily rate.
-   - **Government numbers** — TIN, SSS, PhilHealth, and Pag-IBIG/HDMF.
+   - **Statutory numbers** — TIN, PhilHealth, and Pag-IBIG/HDMF for everyone, plus the SSS number for a Private installation or the GSIS BP number (and salary grade, step and item number) for a Government installation. The form only shows the fields that apply to the installation sector.
    - **Leave balances** — vacation, sick, and personal leave totals.
    - **Portal access** — login email and password if the employee will use the employee portal.
 4. Select **Create**.

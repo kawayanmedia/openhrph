@@ -34,7 +34,6 @@ class DatabaseSeederTest extends TestCase
         'payroll_groups',
         'leave_types',
         'holidays',
-        'salary_grades',
         'plantilla_items',
         'deductions',
         'loans',

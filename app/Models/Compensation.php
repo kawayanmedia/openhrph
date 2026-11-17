@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Enums\Sector;
 use App\Models\Scopes\CompensationCatalogueScope;
 use App\Scopes\FilterScope;
+use App\Sectors\SectorManager;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Compensation extends Model
 {
@@ -279,10 +282,29 @@ class Compensation extends Model
      *
      * @return array<int, string>
      */
+    /**
+     * Restrict the catalogue to rows shared by both sectors plus the current
+     * sector's own rows. Rows created before the sector column existed are
+     * treated as shared.
+     */
+    public function scopeForSector(Builder $query, ?Sector $sector = null): void
+    {
+        if (! Schema::hasColumn('compensations', 'sector')) {
+            return;
+        }
+
+        $sector ??= app(SectorManager::class)->currentSector();
+
+        $query->where(function (Builder $query) use ($sector): void {
+            $query->whereNull('sector')->orWhere('sector', $sector->value);
+        });
+    }
+
     public static function selectOptions(): array
     {
         return self::query()
             ->effective()
+            ->forSector()
             ->orderBy('group')
             ->orderBy('name')
             ->get()
@@ -301,6 +323,7 @@ class Compensation extends Model
     {
         return self::query()
             ->effective()
+            ->forSector()
             ->where('group', $group)
             ->orderBy('name')
             ->pluck('name', 'id')

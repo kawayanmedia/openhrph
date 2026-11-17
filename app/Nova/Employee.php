@@ -562,6 +562,13 @@ class Employee extends Resource
                     ],
                 ])
                 ->hideFromIndex(),
+            Text::make('GSIS BP Number', 'gsis_number')
+                ->withMeta([
+                    'extraAttributes' => [
+                        'placeholder' => '0000-0000-0000',
+                    ],
+                ])
+                ->hideFromIndex(),
             Text::make('PhilHealth Number', 'philhealth_number')
                 ->withMeta([
                     'extraAttributes' => [

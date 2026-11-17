@@ -34,7 +34,7 @@ class Compensation extends Resource
 
     public static function indexQuery(Builder $query): Builder
     {
-        return $query->effective();
+        return $query->effective()->forSector();
     }
 
     public static function canCreateResource(): bool

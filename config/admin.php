@@ -112,6 +112,7 @@ return [
                     'label' => 'Company',
                     'items' => [
                         ['type' => 'link', 'url' => '/settings/general', 'label' => 'General Settings', 'can' => 'general_settings'],
+                        ['type' => 'link', 'url' => '/settings/sector', 'label' => 'Sector Settings', 'can' => 'general_settings'],
                         ['type' => 'resource', 'key' => 'office', 'label' => 'Office'],
                         ['type' => 'resource', 'key' => 'department', 'label' => 'Department'],
                         ['type' => 'resource', 'key' => 'announcement', 'label' => 'Announcement', 'can' => 'announcements'],
@@ -195,7 +196,7 @@ return [
         ],
 
         [
-            'label' => 'Government',
+            'label' => 'Statutory (PH)',
             'icon' => 'office-building',
             'groups' => [
                 [

@@ -140,6 +140,20 @@ return [
                 ['code' => 'cash_advance', 'name' => 'Cash advance', 'type' => 'voluntary', 'calculation' => 'fixed', 'reduces_taxable_income' => false, 'sort_order' => 30],
                 ['code' => 'other', 'name' => 'Other deduction', 'type' => 'voluntary', 'calculation' => 'fixed', 'reduces_taxable_income' => false, 'sort_order' => 900],
             ],
+            // Loan programs offered by each agency. `sector` limits a program
+            // to government or private organisations; a missing sector applies
+            // to both. Loans are amortized through employees_loans and are not
+            // part of the statutory contribution tables.
+            'loans' => [
+                ['agency' => 'SSS', 'code' => 'SSS-SALARY', 'name' => 'SSS Salary Loan', 'sector' => 'private'],
+                ['agency' => 'SSS', 'code' => 'SSS-EMERGENCY', 'name' => 'SSS Emergency Loan', 'sector' => 'private'],
+                ['agency' => 'HDMF', 'code' => 'HDMF-MPL', 'name' => 'Pag-IBIG Multi-Purpose Loan'],
+                ['agency' => 'HDMF', 'code' => 'HDMF-CALAMITY', 'name' => 'Pag-IBIG Calamity Loan'],
+                ['agency' => 'GSIS', 'code' => 'GSIS-POLICY', 'name' => 'GSIS Policy Loan', 'sector' => 'government'],
+                ['agency' => 'GSIS', 'code' => 'GSIS-EMERGENCY', 'name' => 'GSIS Emergency Loan', 'sector' => 'government'],
+                ['agency' => 'GSIS', 'code' => 'GSIS-REAL-ESTATE', 'name' => 'GSIS Real Estate Loan', 'sector' => 'government'],
+                ['agency' => 'Company', 'code' => 'COMPANY-LOAN', 'name' => 'Company Loan'],
+            ],
         ],
 
         // Add one entry per supported jurisdiction. Rates and bands are never

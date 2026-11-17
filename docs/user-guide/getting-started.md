@@ -51,7 +51,11 @@ The left sidebar contains the areas your group allows:
 - **Time and Attendance** — attendance settings, devices, holidays, rates, tardiness, schedules, and timesheets.
 - **Leave Management** — leave settings and leave records.
 - **Payroll Management** — compensations, deductions, loans, payroll groups, payroll runs, employee compensation, employee loans, and payslips.
-- **Government** — PhilHealth, SSS, Pag-IBIG, and minimum-wage reference tables.
+- **Statutory (PH)** — PhilHealth, SSS, Pag-IBIG, and minimum-wage reference tables.
+
+**Settings → Sector** shows the defaults for the installation sector: GSIS and the government
+bonus catalogue for Government, or SSS/Pag-IBIG bases and 13th month for Private. The sector itself
+is fixed for the installation; change it with `php artisan openhr:install --force`.
 
 Some entries may be hidden because your group does not have permission. That is expected.
 

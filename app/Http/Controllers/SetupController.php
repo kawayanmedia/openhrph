@@ -64,11 +64,14 @@ class SetupController extends Controller
                 $company->setup_done = true;
                 $company->save();
 
+                $sector = Installation::sectorPolicy();
+                $sectorDefaults = $sector->defaults();
+
                 // Setup settings
                 $companySettings = [
                     'company_name' => 'Your Company Name '.$id,
                     'trade_name' => 'Your Trade Name '.$id,
-                    'type' => Installation::sector() ?? 'Private',
+                    'type' => $sector->sector()->value,
                     'tin' => '',
                     'rdo' => '',
                     'sss' => '',
@@ -81,8 +84,8 @@ class SetupController extends Controller
 
                     'maximum_pairing_range' => '20',
                     'minimum_pairing_range' => '2',
-                    'night_shift_differential_start' => '22:00',
-                    'night_shift_differential_end' => '06:00',
+                    'night_shift_differential_start' => (string) ($sectorDefaults['night_shift_differential_start'] ?? '22:00'),
+                    'night_shift_differential_end' => (string) ($sectorDefaults['night_shift_differential_end'] ?? '06:00'),
 
                     'daily_paid' => PayrollGroup::NUMBER_WORKING_DAYS_MONFRI,
                     'days_year_no_weeked' => PayrollGroup::NUMBER_WORKING_DAYS_MONFRI,

@@ -47,6 +47,14 @@ abstract class Resource implements Wireable
      */
     public static int $priority = 9999;
 
+    /**
+     * Optional sector restriction, e.g. `Government` or `Private`.
+     *
+     * A resource with a sector is only reachable when the installation uses
+     * that sector. Leave it null for resources shared by both sectors.
+     */
+    public static ?string $sector = null;
+
     public function __construct(public ?Model $resource = null) {}
 
     /**

@@ -41,6 +41,11 @@ The payslip page is print-ready. Use your browser's print command to print it or
 
 A payslip PDF opens from the protected payslip route. A user with admin access can open any payslip in the active company; an employee can open only the payslip that belongs to them, and only with an admin-workspace sign-in. Employee-portal accounts cannot open payslips.
 
+The PDF is drawn by the application, so it follows the installation sector. A government payroll
+shows the **GSIS** premium and the employee's **GSIS BP** number; a private payroll shows the SSS
+contributions and SSS number. The evidence pack can also write one PDF per employee:
+`php artisan payroll:evidence-pack {payroll} --path=storage/app/payroll-evidence/{payroll} --payslips`.
+
 If a PDF does not open:
 
 - Confirm you are signed in to the admin workspace.
@@ -57,9 +62,16 @@ php artisan payroll:remittance {payroll} --format=summary
 php artisan payroll:remittance {payroll} --format=sss --path=sss.csv
 php artisan payroll:remittance {payroll} --format=philhealth --path=philhealth.csv
 php artisan payroll:remittance {payroll} --format=pagibig --path=pagibig.csv
+php artisan payroll:remittance {payroll} --format=gsis --path=gsis.csv
 php artisan payroll:remittance {payroll} --format=bir --path=bir.csv
+php artisan payroll:remittance {payroll} --format=coa --path=coa.csv
+php artisan payroll:remittance {payroll} --format=sector --path=remittance/
+php artisan payroll:remittance {payroll} --format=loans --path=loans.csv
+php artisan payroll:remittance {payroll} --format=loans --agency=GSIS --path=gsis-loans.csv
 php artisan payroll:remittance {payroll} --format=all --path=remittance/
 ```
+
+`--format=sector` writes the set the installation actually remits: GSIS, PhilHealth, Pag-IBIG and BIR for a Government installation, or SSS, PhilHealth, Pag-IBIG and BIR for Private. It also writes the loans working paper, and the COA register for Government.
 
 Each agency file lists the employees and ends with a `TOTAL` control row. Reconcile that total to the payroll register and the general ledger payable before filing. These are working papers, not the agency's e-filing file; verify the current form mapping before submission.
 
@@ -68,8 +80,16 @@ Each agency file lists the employees and ends with a `TOTAL` control row. Reconc
 | SSS | Employee no, Name, SSS number, Monthly salary credit, Employee share, Employer share, Total |
 | PhilHealth | Employee no, Name, PhilHealth number, Monthly basic, Employee share, Employer share, Total |
 | Pag-IBIG | Employee no, Name, Pag-IBIG number, Fund salary, Employee share, Employer share, Total |
+| GSIS | Employee no, Name, GSIS BP number, Employee share, Employer share, Total, Monthly compensation |
 | BIR | Employee no, Name, TIN, Taxable income, Tax withheld |
+| COA | Employee no, Name, Basic, Gross, GSIS/SSS shares, PhilHealth, Pag-IBIG, Tax, Loans, Other deductions, Net pay |
+| Loans | Employee no, Name, Loan agency, Loan code, Loan name, Deducted this period |
 | Summary | Agency, Employee share, Employer share, Total |
+
+GSIS premium and GSIS loans are reported separately. A GSIS loan (policy, emergency, or real
+estate) is a salary deduction, not a statutory contribution, so it appears in the loans working
+paper and never in the GSIS premium paper. Use `--agency=GSIS` to produce only the GSIS loans
+file for remittance.
 
 `payroll:bir-2316` writes the year-to-date BIR 2316 data with a control total. It rejects rows with an invalid TIN unless `--allow-invalid-tin` is passed; use `--rejects=path.csv` to capture the rejected rows.
 

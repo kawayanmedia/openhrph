@@ -40,6 +40,38 @@ it('accepts the private sector and seeds the deduction templates', function () {
         ->and(DB::table('deductions')->where('company_id', $company->getKey())->where('code', 'union_dues')->exists())->toBeTrue();
 });
 
+it('seeds the loan catalogue for the installation sector', function () {
+    $company = Company::factory()->create(['type' => 'Private']);
+
+    $this->artisan('openhr:install', [
+        '--sector' => 'Government',
+        '--country' => 'PH',
+        '--skip-statutory' => true,
+    ])->assertExitCode(0);
+
+    $companyId = $company->getKey();
+
+    expect(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-POLICY')->exists())->toBeTrue()
+        ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-EMERGENCY')->exists())->toBeTrue()
+        ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-REAL-ESTATE')->exists())->toBeTrue()
+        ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'SSS-SALARY')->exists())->toBeFalse();
+});
+
+it('seeds private loan programs for a private installation', function () {
+    $company = Company::factory()->create(['type' => 'Government']);
+
+    $this->artisan('openhr:install', [
+        '--sector' => 'Private',
+        '--country' => 'PH',
+        '--skip-statutory' => true,
+    ])->assertExitCode(0);
+
+    $companyId = $company->getKey();
+
+    expect(DB::table('loans')->where('company_id', $companyId)->where('code', 'SSS-SALARY')->exists())->toBeTrue()
+        ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-POLICY')->exists())->toBeFalse();
+});
+
 it('forces companies created after installation onto the chosen sector', function () {
     $this->artisan('openhr:install', [
         '--sector' => 'Government',

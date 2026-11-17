@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Payroll;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Services\Payroll\Engine\Legacy\LegacyInput;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -49,6 +50,7 @@ class PayrollPayslip extends Component
             'payroll' => $payroll,
             'employee' => $employee,
             'detail' => $detail,
+            'isGovernment' => LegacyInput::isGovernmentCompany((int) $payroll->company_id),
         ])->title('Payslip — '.trim($employee->first_name.' '.$employee->last_name));
     }
 }

@@ -330,6 +330,10 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 
 	// A government agency remits GSIS instead of SSS (RA 8291).
 	cfg.IsGovernment = isGovernmentCompany(ctx, db, run.CompanyID)
+	cfg.Sector = "Private"
+	if cfg.IsGovernment {
+		cfg.Sector = "Government"
+	}
 
 	if cfg.StatutoryDriver == "ph" {
 		if cfg.SSSBrackets, err = loadSSSBrackets(ctx, db, run); err != nil {
@@ -1121,7 +1125,7 @@ func loadLoans(ctx context.Context, db *sql.DB, run Run, cfg model.Config, emplo
 	}
 
 	rows, err := db.QueryContext(ctx, `
-		SELECT el.employee_id, COALESCE(l.name, ''), COALESCE(el.monthly_amortization, 0),
+		SELECT el.employee_id, COALESCE(l.code, ''), COALESCE(l.name, ''), COALESCE(el.monthly_amortization, 0),
 		       COALESCE(el.balance, 0), COALESCE(el.scheme, ''),
 		       COALESCE(DATE_FORMAT(el.repayment_start_date, '%Y-%m-%d'), ''),
 		       COALESCE(DATE_FORMAT(el.repayment_end_date, '%Y-%m-%d'), ''),
@@ -1140,6 +1144,7 @@ func loadLoans(ctx context.Context, db *sql.DB, run Run, cfg model.Config, emplo
 	for rows.Next() {
 		var (
 			employeeID   int64
+			code         string
 			name         string
 			amortisation float64
 			balance      float64
@@ -1149,7 +1154,7 @@ func loadLoans(ctx context.Context, db *sql.DB, run Run, cfg model.Config, emplo
 			active       bool
 		)
 
-		if err := rows.Scan(&employeeID, &name, &amortisation, &balance, &scheme, &start, &end, &active); err != nil {
+		if err := rows.Scan(&employeeID, &code, &name, &amortisation, &balance, &scheme, &start, &end, &active); err != nil {
 			return fmt.Errorf("scan loan: %w", err)
 		}
 
@@ -1168,6 +1173,7 @@ func loadLoans(ctx context.Context, db *sql.DB, run Run, cfg model.Config, emplo
 		}
 
 		employees[position].Loans = append(employees[position].Loans, model.Earning{
+			Code:   code,
 			Name:   name,
 			Kind:   model.KindLoan,
 			Amount: amount,

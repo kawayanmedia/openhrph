@@ -235,7 +235,7 @@ Before the first run:
 2. Confirm the rates have been checked against the latest official issuance.
 3. Do not enter or guess statutory rates yourself.
 
-> The **Government → Ref** pages in the admin workspace are legacy reference screens. Changing them does not change the rates used by the current payroll engine. If a statutory deduction looks wrong, stop and ask your payroll administrator to confirm the effective-dated tables.
+> The **Statutory (PH) → Ref** pages in the admin workspace are legacy reference screens. Changing them does not change the rates used by the current payroll engine. If a statutory deduction looks wrong, stop and ask your payroll administrator to confirm the effective-dated tables.
 
 ## Step 6 — Create the payroll group
 
@@ -314,7 +314,11 @@ OpenHR PH fills suggested dates when you choose the period:
 | Minimum wage | Turn on only if the employee is paid at the minimum wage. |
 | PayrollGroup | The payroll group created in Step 6. **Set this**, or the employee will not appear in a payroll run. |
 
-### Government
+### Government identifiers
+
+The employee form follows the installation sector. A Government installation asks for the
+**GSIS BP number**, **salary grade**, **step**, and **item number**. A Private installation asks for
+the **SSS number** instead.
 
 Enter the **TIN Number**, **SSS Number**, **PhilHealth Number**, and **HDMF** number, using the formats shown as placeholders. These are used for statutory contributions and remittance reports.
 

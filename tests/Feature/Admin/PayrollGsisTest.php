@@ -163,3 +163,54 @@ it('refuses to process a government payroll without a GSIS schedule', function (
     expect(fn () => (new PhpPayrollEngine)->process(gsisPayroll($payrollId)))
         ->toThrow(PayrollEngineException::class, 'statutory_gsis');
 });
+
+it('deducts a GSIS policy loan as a loan instead of a statutory contribution', function () {
+    $payrollId = seedGsisPayroll();
+
+    $loanId = DB::table('loans')->insertGetId([
+        'company_id' => 9,
+        'loan_agency' => 'GSIS',
+        'code' => 'GSIS-POLICY',
+        'name' => 'GSIS Policy Loan',
+        'is_default' => true,
+        'is_active' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('employees_loans')->insert([
+        'employee_id' => 501,
+        'loan_id' => $loanId,
+        'reference_number' => 'GSIS-0001',
+        'amount' => 1200000,
+        'balance' => 600000,
+        'terms' => 12,
+        'repayment_start_date' => '2026-01-01',
+        'repayment_end_date' => '2026-12-31',
+        'scheme' => 'every_pay',
+        'monthly_amortization' => 100000,
+        'is_active' => true,
+        'company_id' => 9,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    (new PhpPayrollEngine)->process(gsisPayroll($payrollId));
+
+    $detail = DB::table('payroll_details')->where('payroll_id', $payrollId)->first();
+
+    // The ₱1,000 monthly amortization is split across two cut-offs.
+    expect((int) $detail->loans)->toBe(50000)
+        ->and((int) $detail->gsis_employee)->toBe(135000)
+        ->and((int) $detail->total_deductions)
+        ->toBe((int) $detail->total_employee + (int) $detail->withholding_tax + 50000);
+
+    $line = DB::table('payroll_detail_deductions')
+        ->where('payroll_detail_id', $detail->id)
+        ->where('source', 'loan')
+        ->first();
+
+    expect($line)->not->toBeNull()
+        ->and($line->code)->toBe('GSIS-POLICY')
+        ->and((int) $line->employee_centavos)->toBe(50000);
+});
