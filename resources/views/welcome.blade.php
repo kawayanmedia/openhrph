@@ -41,7 +41,7 @@
                 </h1>
                 <p class="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-300">
                     Estimate your Philippine withholding tax and take-home pay using the BIR TRAIN law brackets,
-                    the 2025 SSS schedule, and current PhilHealth and Pag-IBIG rates.
+                    the 2025 SSS or GSIS schedules, and current PhilHealth and Pag-IBIG rates.
                 </p>
             </section>
 
@@ -231,12 +231,20 @@
                         </span>
                         <div>
                             <h2 id="take-home-title" class="text-lg font-bold text-navy-900 dark:text-white">Take-Home Pay Calculator</h2>
-                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Same BIR inputs as the tax calculator, with SSS, PhilHealth and Pag-IBIG deducted before net pay.</p>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Same BIR inputs as the tax calculator, with SSS or GSIS, PhilHealth and Pag-IBIG deducted before net pay.</p>
                         </div>
                     </div>
 
                     <form id="take-home-form" class="ui-form-card-body flex-1" novalidate>
-                        <div class="sm:col-span-6">
+                        <div class="sm:col-span-3">
+                            <label class="ui-label" for="take-home-sector">Sector <span class="ui-required" aria-hidden="true">*</span></label>
+                            <select id="take-home-sector" name="sector" class="ui-select mt-1.5" required>
+                                <option value="Private" selected>Private (SSS)</option>
+                                <option value="Government">Government (GSIS)</option>
+                            </select>
+                            <p class="ui-help">PhilHealth and Pag-IBIG apply to both sectors.</p>
+                        </div>
+                        <div class="sm:col-span-3">
                             <label class="ui-label" for="take-home-period">Payroll period <span class="ui-required" aria-hidden="true">*</span></label>
                             <select id="take-home-period" name="period" class="ui-select mt-1.5" required>
                                 <option value="daily">Daily</option>
@@ -399,8 +407,8 @@
                         <h3 class="mt-6 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Employee deductions</h3>
                         <dl class="mt-2 divide-y divide-slate-200 text-sm dark:divide-navy-800">
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-600 dark:text-slate-300">SSS (employee share)</dt>
-                                <dd id="take-home-sss" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                                <dt id="take-home-social-insurance-label" class="text-slate-600 dark:text-slate-300">SSS (employee share)</dt>
+                                <dd id="take-home-social-insurance" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
                                 <dt class="text-slate-600 dark:text-slate-300">PhilHealth (employee share)</dt>
@@ -423,8 +431,8 @@
                         <h3 class="mt-6 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Employer contributions</h3>
                         <dl class="mt-2 divide-y divide-slate-200 text-sm dark:divide-navy-800">
                             <div class="flex items-center justify-between gap-4 py-2.5">
-                                <dt class="text-slate-600 dark:text-slate-300">SSS (employer share)</dt>
-                                <dd id="take-home-sss-employer" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                                <dt id="take-home-social-insurance-employer-label" class="text-slate-600 dark:text-slate-300">SSS (employer share)</dt>
+                                <dd id="take-home-social-insurance-employer" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
                                 <dt class="text-slate-600 dark:text-slate-300">PhilHealth (employer share)</dt>
@@ -444,14 +452,14 @@
             </div>
 
             <section class="mx-auto mt-10 max-w-3xl rounded-card border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                <p><strong>Estimate only.</strong> Results use published BIR, SSS, PhilHealth and Pag-IBIG tables and do not include company-specific rules, de minimis benefits, or other adjustments. Verify against official agency issuances before using for payroll.</p>
+                <p><strong>Estimate only.</strong> Results use published BIR, SSS, GSIS, PhilHealth and Pag-IBIG tables and do not include company-specific rules, de minimis benefits, or other adjustments. Verify against official agency issuances before using for payroll.</p>
             </section>
         </main>
 
         <footer class="border-t border-slate-200 bg-white/60 py-8 dark:border-navy-800 dark:bg-navy-950/60">
             <div class="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-4 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8 dark:text-slate-400">
                 <p>&copy; {{ date('Y') }} OpenHR PH. Open-source Philippine payroll.</p>
-                <p>BIR TRAIN law &middot; SSS 2025 &middot; PhilHealth 5% &middot; Pag-IBIG 2%</p>
+                <p>BIR TRAIN law &middot; SSS/GSIS &middot; PhilHealth 5% &middot; Pag-IBIG 2%</p>
             </div>
         </footer>
     </div>

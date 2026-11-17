@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Sector;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\CalculateTakeHomePayRequest;
 use App\Http\Requests\Api\CalculateWithholdingTaxRequest;
@@ -49,10 +50,14 @@ class CalculatorController extends Controller
         TakeHomePayCalculator $calculator,
     ): JsonResponse {
         $data = $request->validated();
-        $result = $calculator->compute(self::input($data));
+        $result = $calculator->compute(
+            self::input($data),
+            Sector::fromValue($data['sector'] ?? null),
+        );
 
         return response()->json([
             'data' => [
+                'sector' => $result->sector->value,
                 'period' => $result->period->value,
                 'period_label' => $result->period->label(),
                 'currency' => 'PHP',
@@ -62,9 +67,10 @@ class CalculatorController extends Controller
                 'non_taxable_benefits' => self::amount($result->nonTaxableBenefits),
                 'taxable_compensation_income' => self::amount($result->taxableCompensation),
                 'deductions' => [
-                    'sss' => [
-                        'employee' => self::amount($result->sssEmployee),
-                        'employer' => self::amount($result->sssEmployer),
+                    'social_insurance' => [
+                        'agency' => $result->sector->isGovernment() ? 'GSIS' : 'SSS',
+                        'employee' => self::amount($result->socialInsuranceEmployee),
+                        'employer' => self::amount($result->socialInsuranceEmployer),
                     ],
                     'philhealth' => [
                         'employee' => self::amount($result->philHealthEmployee),
@@ -79,7 +85,7 @@ class CalculatorController extends Controller
                 ],
                 'net_pay' => self::amount($result->netPay),
                 'employer' => [
-                    'sss' => self::amount($result->sssEmployer),
+                    'social_insurance' => self::amount($result->socialInsuranceEmployer),
                     'philhealth' => self::amount($result->philHealthEmployer),
                     'pagibig' => self::amount($result->pagIbigEmployer),
                     'total_contributions' => self::amount($result->totalEmployerContributions),

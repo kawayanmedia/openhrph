@@ -80,8 +80,8 @@ it('computes monthly statutory deductions and net pay', function () {
         'basic_salary' => 30000,
     ])->assertOk()
         ->assertJsonPath('data.gross_pay', 30000)
-        ->assertJsonPath('data.deductions.sss.employee', 1500)
-        ->assertJsonPath('data.deductions.sss.employer', 3030)
+        ->assertJsonPath('data.deductions.social_insurance.employee', 1500)
+        ->assertJsonPath('data.deductions.social_insurance.employer', 3030)
         ->assertJsonPath('data.deductions.philhealth.employee', 750)
         ->assertJsonPath('data.deductions.pagibig.employee', 200)
         ->assertJsonPath('data.deductions.withholding_tax', 1375.05)
@@ -98,7 +98,7 @@ it('prorates statutory contributions for a semi-monthly period', function () {
     ])->assertOk()
         ->assertJsonPath('data.period', 'semi-monthly')
         ->assertJsonPath('data.gross_pay', 15000)
-        ->assertJsonPath('data.deductions.sss.employee', 750)
+        ->assertJsonPath('data.deductions.social_insurance.employee', 750)
         ->assertJsonPath('data.deductions.philhealth.employee', 375)
         ->assertJsonPath('data.deductions.pagibig.employee', 100)
         ->assertJsonPath('data.deductions.withholding_tax', 687.45)
@@ -113,7 +113,7 @@ it('prorates statutory contributions for a weekly period', function () {
         'period' => 'weekly',
         'basic_salary' => 7000,
     ])->assertOk()
-        ->assertJsonPath('data.deductions.sss.employee', 318.18)
+        ->assertJsonPath('data.deductions.social_insurance.employee', 318.18)
         ->assertJsonPath('data.deductions.philhealth.employee', 175)
         ->assertJsonPath('data.deductions.pagibig.employee', 36.36)
         ->assertJsonPath('data.deductions.withholding_tax', 328.8)
@@ -141,10 +141,52 @@ it('returns zero contributions and net pay when there is no compensation', funct
         'period' => 'monthly',
         'basic_salary' => 0,
     ])->assertOk()
-        ->assertJsonPath('data.deductions.sss.employee', 0)
+        ->assertJsonPath('data.deductions.social_insurance.employee', 0)
         ->assertJsonPath('data.deductions.philhealth.employee', 0)
         ->assertJsonPath('data.deductions.pagibig.employee', 0)
         ->assertJsonPath('data.net_pay', 0);
+});
+
+it('uses GSIS instead of SSS for the government sector', function () {
+    $this->postJson('/api/calculators/take-home-pay', [
+        'sector' => 'Government',
+        'period' => 'monthly',
+        'basic_salary' => 30000,
+    ])->assertOk()
+        ->assertJsonPath('data.sector', 'Government')
+        ->assertJsonPath('data.deductions.social_insurance.agency', 'GSIS')
+        ->assertJsonPath('data.deductions.social_insurance.employee', 2700)
+        ->assertJsonPath('data.deductions.social_insurance.employer', 3600)
+        ->assertJsonPath('data.deductions.philhealth.employee', 750)
+        ->assertJsonPath('data.deductions.pagibig.employee', 200)
+        ->assertJsonPath('data.deductions.withholding_tax', 1375.05)
+        ->assertJsonPath('data.deductions.total_employee', 5025.05)
+        ->assertJsonPath('data.net_pay', 24974.95)
+        ->assertJsonPath('data.employer.total_contributions', 4550)
+        ->assertJsonPath('data.employer.total_cost', 34550);
+});
+
+it('prorates GSIS contributions for a semi-monthly government period', function () {
+    $this->postJson('/api/calculators/take-home-pay', [
+        'sector' => 'government',
+        'period' => 'semi-monthly',
+        'basic_salary' => 15000,
+    ])->assertOk()
+        ->assertJsonPath('data.sector', 'Government')
+        ->assertJsonPath('data.deductions.social_insurance.agency', 'GSIS')
+        ->assertJsonPath('data.deductions.social_insurance.employee', 1350)
+        ->assertJsonPath('data.deductions.social_insurance.employer', 1800)
+        ->assertJsonPath('data.deductions.total_employee', 2512.45)
+        ->assertJsonPath('data.net_pay', 12487.55);
+});
+
+it('defaults to the private sector', function () {
+    $this->postJson('/api/calculators/take-home-pay', [
+        'period' => 'monthly',
+        'basic_salary' => 30000,
+    ])->assertOk()
+        ->assertJsonPath('data.sector', 'Private')
+        ->assertJsonPath('data.deductions.social_insurance.agency', 'SSS');
 });
 
 it('rejects invalid take-home pay input', function () {
@@ -158,4 +200,11 @@ it('rejects invalid take-home pay input', function () {
         'basic_salary' => -10,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors('basic_salary');
+
+    $this->postJson('/api/calculators/take-home-pay', [
+        'sector' => 'Foo',
+        'period' => 'monthly',
+        'basic_salary' => 30000,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('sector');
 });

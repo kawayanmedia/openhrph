@@ -196,23 +196,28 @@ setupCalculator({
     resultId: 'take-home-result',
     endpoint: '/api/calculators/take-home-pay',
     buildPayload: (form) => ({
+        sector: form.querySelector('[name="sector"]')?.value ?? 'Private',
         period: form.querySelector('[name="period"]')?.value ?? 'monthly',
         ...collectAmounts(form),
     }),
     render: (data) => {
+        const agency = data.deductions.social_insurance.agency;
+
         setText('take-home-net', currency.format(data.net_pay));
-        setText('take-home-period-label', `${data.period_label} payroll period`);
+        setText('take-home-period-label', `${data.sector} · ${data.period_label} payroll period`);
         setText('take-home-gross', currency.format(data.gross_pay));
         setText('take-home-regular', currency.format(data.regular_compensation));
         setText('take-home-supplementary', currency.format(data.supplementary_compensation));
         setText('take-home-non-taxable', currency.format(data.non_taxable_benefits));
         setText('take-home-taxable', currency.format(data.taxable_compensation_income));
-        setText('take-home-sss', currency.format(data.deductions.sss.employee));
+        setText('take-home-social-insurance-label', `${agency} (employee share)`);
+        setText('take-home-social-insurance', currency.format(data.deductions.social_insurance.employee));
         setText('take-home-philhealth', currency.format(data.deductions.philhealth.employee));
         setText('take-home-pagibig', currency.format(data.deductions.pagibig.employee));
         setText('take-home-tax', currency.format(data.deductions.withholding_tax));
         setText('take-home-total-deductions', currency.format(data.deductions.total_employee));
-        setText('take-home-sss-employer', currency.format(data.employer.sss));
+        setText('take-home-social-insurance-employer-label', `${agency} (employer share)`);
+        setText('take-home-social-insurance-employer', currency.format(data.employer.social_insurance));
         setText('take-home-philhealth-employer', currency.format(data.employer.philhealth));
         setText('take-home-pagibig-employer', currency.format(data.employer.pagibig));
         setText('take-home-employer-cost', currency.format(data.employer.total_cost));

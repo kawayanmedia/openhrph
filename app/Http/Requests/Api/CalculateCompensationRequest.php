@@ -19,11 +19,13 @@ abstract class CalculateCompensationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if (! $this->filled('period')) {
+        $value = $this->input('period');
+
+        if (! is_string($value)) {
             return;
         }
 
-        $period = TaxPeriod::fromString((string) $this->input('period'));
+        $period = TaxPeriod::fromString($value);
 
         if ($period !== null) {
             $this->merge(['period' => $period->value]);
