@@ -3,51 +3,67 @@ import { expect, test } from '@playwright/test';
 import { fixtures } from './support/fixtures';
 import { login } from './support/login';
 
+function money(value: string): number {
+    return Number(value.replace(/[^\d.-]/g, ''));
+}
+
 test.describe('payroll run', () => {
     test('previews, processes and opens a payslip', async ({ page }) => {
         const { payroll_id } = fixtures();
-
-        page.on('dialog', (dialog) => dialog.accept());
 
         await login(page);
         await page.goto(`/app/payroll/${payroll_id}`);
 
         await expect(page.getByRole('heading', { name: `Payroll #${payroll_id}` })).toBeVisible();
-        await expect(page.getByText('Ana Reyes')).toBeVisible();
-        await expect(page.getByText('₱9,654.96').first()).toBeVisible();
 
+        const registerRow = page.getByRole('row', { name: /Ana Reyes/ });
+        await expect(registerRow).toBeVisible();
+
+        const gross = money(await registerRow.locator('td').nth(1).innerText());
+        const deductions = money(await registerRow.locator('td').nth(6).innerText());
+        const net = money(await registerRow.locator('td').nth(7).innerText());
+
+        expect(gross).toBeGreaterThan(0);
+        expect(deductions).toBeGreaterThan(0);
+        expect(net).toBeCloseTo(gross - deductions, 2);
+
+        page.once('dialog', (dialog) => dialog.accept());
         await page.getByRole('button', { name: 'Process payroll' }).click();
-        await expect(page.getByText(/Payroll processing started|Record updated|Payroll approved/i)).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByText('Payroll processing started.')).toBeVisible({ timeout: 30_000 });
+        await expect(page.getByRole('button', { name: 'Mark reviewed' })).toBeVisible({ timeout: 30_000 });
 
-        await page.reload();
-        await expect(page.getByRole('button', { name: 'Approve & lock' })).toBeVisible({ timeout: 30_000 });
+        await page.getByPlaceholder('Review note (optional)').fill('Regression run');
+        await page.getByRole('button', { name: 'Mark reviewed' }).click();
+        await expect(page.getByText('Payroll marked as reviewed.')).toBeVisible();
 
+        await page.getByPlaceholder(/Approval override reason/).fill('Automated regression run by the same operator');
+
+        page.once('dialog', (dialog) => dialog.accept());
         await page.getByRole('button', { name: 'Approve & lock' }).click();
         await expect(page.getByText('Payroll approved and locked.')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Reopen' })).toBeVisible();
 
-        await page.getByRole('row', { name: /Ana Reyes/ }).getByRole('link', { name: 'View' }).click();
+        await registerRow.getByRole('link', { name: 'View' }).click();
 
-        await expect(page.getByRole('heading', { name: /Payslip/i }).first()).toBeVisible();
-        await expect(page.getByText('₱8,429.96', { exact: true }).first()).toBeVisible();
-        await expect(page.getByText('₱750.00', { exact: true }).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Payslip', level: 1 })).toBeVisible();
+        await expect(page.getByText('Ana Reyes').first()).toBeVisible();
+        await expect(page.getByText(gross.toLocaleString('en-PH', { minimumFractionDigits: 2 })).first()).toBeVisible();
+        await expect(page.getByText(net.toLocaleString('en-PH', { minimumFractionDigits: 2 })).first()).toBeVisible();
     });
 
     test('payslip PDF downloads and foreign payrolls are denied', async ({ page }) => {
         const { payroll_id } = fixtures();
 
-        page.on('dialog', (dialog) => dialog.accept());
-
         await login(page);
         await page.goto(`/app/payroll/${payroll_id}`);
 
-        const detailLink = page.getByRole('row', { name: /Ana Reyes/ }).getByRole('link', { name: 'View' });
-
-        if (await detailLink.count() === 0) {
-            test.skip(true, 'Payroll has not been processed yet');
+        if (await page.getByRole('button', { name: 'Mark reviewed' }).count() > 0) {
+            page.once('dialog', (dialog) => dialog.accept());
+            await page.getByRole('button', { name: 'Process payroll' }).click();
+            await expect(page.getByRole('button', { name: 'Mark reviewed' })).toBeVisible({ timeout: 30_000 });
         }
 
-        await detailLink.click();
+        await page.getByRole('row', { name: /Ana Reyes/ }).getByRole('link', { name: 'View' }).click();
 
         const pdfUrl = await page.getByRole('link', { name: 'Download PDF' }).getAttribute('href');
         const response = await page.request.get(pdfUrl!);

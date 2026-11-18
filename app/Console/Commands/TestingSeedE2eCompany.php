@@ -58,15 +58,7 @@ class TestingSeedE2eCompany extends Command
         $group->forceFill([
             'name' => $prefix.'Admin Group',
             'company_id' => $company->id,
-            'permissions' => [
-                'Company Settings' => true,
-                'Offices' => true,
-                'Employees' => true,
-                'Users' => true,
-                'Departments' => true,
-                'Devices' => true,
-                'Holidays' => true,
-            ],
+            'permissions' => $this->adminPermissions(),
         ])->save();
 
         $user->forceFill(['group_id' => $group->id])->save();
@@ -149,13 +141,84 @@ class TestingSeedE2eCompany extends Command
             'status' => Payroll::STATUS_OPEN,
         ])->save();
 
+        $onboarding = $this->seedOnboardingCompany($prefix);
+
         $this->info(json_encode([
             'company_id' => $company->id,
             'payroll_id' => $payroll->id,
             'payroll_group_id' => $payrollGroup->id,
             'user' => config('payroll.e2e.user_email'),
+            'onboarding' => $onboarding,
         ]));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A bare tenant for the setup journey: only an owner and their group exist,
+     * so the browser test has to create every payroll prerequisite itself.
+     *
+     * @return array{company_id: int, user: string, password: string}
+     */
+    protected function seedOnboardingCompany(string $prefix): array
+    {
+        $user = User::query()->where('email', config('payroll.e2e.onboarding_user_email'))->first() ?? new User;
+
+        $user->forceFill([
+            'company_id' => null,
+            'name' => $prefix.'Onboarding Admin',
+            'first_name' => 'E2E',
+            'last_name' => 'Onboarding',
+            'email' => config('payroll.e2e.onboarding_user_email'),
+            'password' => Hash::make(config('payroll.e2e.onboarding_password')),
+            'owner' => 1,
+            'is_temporary_password' => 0,
+        ])->save();
+
+        $company = new Company;
+        $company->forceFill([
+            'user_id' => $user->id,
+            'name' => $prefix.'Onboarding Co',
+            'code' => 'E2EOB',
+            'type' => 'Private',
+            'email' => config('payroll.e2e.onboarding_user_email'),
+            'setup_done' => false,
+        ])->save();
+
+        $group = new Group;
+        $group->forceFill([
+            'name' => $prefix.'Onboarding Group',
+            'company_id' => $company->id,
+            'permissions' => $this->adminPermissions(),
+        ])->save();
+
+        $user->forceFill([
+            'company_id' => $company->id,
+            'group_id' => $group->id,
+        ])->save();
+
+        return [
+            'company_id' => $company->id,
+            'user' => config('payroll.e2e.onboarding_user_email'),
+            'password' => config('payroll.e2e.onboarding_password'),
+        ];
+    }
+
+    /**
+     * Permissions the seeded owners need to reach every admin resource.
+     *
+     * @return array<string, bool>
+     */
+    protected function adminPermissions(): array
+    {
+        return [
+            'Company Settings' => true,
+            'Offices' => true,
+            'Employees' => true,
+            'Users' => true,
+            'Departments' => true,
+            'Devices' => true,
+            'Holidays' => true,
+        ];
     }
 }

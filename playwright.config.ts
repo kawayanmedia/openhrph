@@ -20,6 +20,7 @@ export default defineConfig({
     projects: [
         {
             name: 'light',
+            testIgnore: /.*\.dark\.spec\.ts/,
             use: { ...devices['Desktop Chrome'], colorScheme: 'light', viewport: { width: 1440, height: 900 } },
         },
         {

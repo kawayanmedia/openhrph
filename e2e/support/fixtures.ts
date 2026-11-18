@@ -1,11 +1,18 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+export interface E2eOnboardingFixtures {
+    company_id: number;
+    user: string;
+    password: string;
+}
+
 export interface E2eFixtures {
     company_id: number;
     payroll_id: number;
     payroll_group_id: number;
     user: string;
+    onboarding: E2eOnboardingFixtures;
 }
 
 export function fixtures(): E2eFixtures {

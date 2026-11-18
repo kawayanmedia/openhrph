@@ -12,6 +12,7 @@ use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Resource;
 use App\Livewire\Admin\Support\FormData;
 use App\Models\Deduction;
+use App\Models\Employee;
 use Illuminate\Http\Request;
 
 class EmployeeDeduction extends Resource
@@ -38,9 +39,12 @@ class EmployeeDeduction extends Resource
         return [
             ID::make()->sortable(),
 
-            Text::make('Employee', function () {
-                return $this->employee?->fullname;
-            })->onlyOnIndex(),
+            BelongsTo::make('Employee', 'employee')
+                ->options(Employee::employeeList())
+                ->showOnIndex()
+                ->withoutTrashed()
+                ->searchable()
+                ->rules('required'),
 
             BelongsTo::make('Deduction', 'deduction')
                 ->options(Deduction::orderBy('name')->pluck('name', 'id')->toArray())

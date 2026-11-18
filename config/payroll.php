@@ -214,6 +214,8 @@ return [
         'company_prefix' => 'E2E ',
         'user_email' => 'e2e@hris.test',
         'password' => env('E2E_PASSWORD', 'E2ePassword!2345'),
+        'onboarding_user_email' => 'e2e-onboarding@hris.test',
+        'onboarding_password' => env('E2E_ONBOARDING_PASSWORD', 'E2ePassword!2345'),
     ],
 
 ];

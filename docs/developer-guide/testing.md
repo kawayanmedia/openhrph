@@ -72,7 +72,12 @@ Playwright lives in `e2e/`. The global setup runs:
 php artisan testing:seed-e2e-company
 ```
 
-It creates an isolated company, payroll group, employees, attendance, and a draft payroll, then writes `storage/e2e-fixtures.json`. The tests use that isolated company and never touch real payroll data.
+It creates two isolated companies and writes `storage/e2e-fixtures.json`:
+
+- the pre-seeded company with a payroll group, employees, attendance, and a draft payroll used by the login, settings, office, and payroll specs;
+- `E2E Onboarding Co`, a bare tenant with only an owner account, used by `e2e/onboarding-payroll.spec.ts` to exercise the full setup journey.
+
+The onboarding spec creates the office, employment type, department, payroll group, employee, timesheets, recurring allowances, fixed and percentage deductions, a company loan, the payroll run, approval, and the payslip through the browser. The tests never touch real payroll data.
 
 ```bash
 npm run e2e
@@ -80,7 +85,7 @@ npm run e2e:ui
 npm run e2e:dark
 ```
 
-The base URL comes from `E2E_BASE_URL`, then `APP_URL`, then `https://app.hris.test`. The dark project runs only `*.dark.spec.ts`.
+The base URL comes from `E2E_BASE_URL`, then `APP_URL`, then `https://openhrph.test`. The dark project runs only `*.dark.spec.ts`; the light project ignores those files.
 
 Clean up the isolated data:
 
