@@ -5,6 +5,7 @@ use App\Livewire\Admin\Support\Navigation;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Livewire;
 
@@ -43,7 +44,7 @@ it('signs in a user whose group grants admin permissions', function () {
         ->assertHasNoErrors()
         ->assertRedirect(route('admin.dashboard'));
 
-    expect(auth()->guard('web')->check())->toBeTrue();
+    expect(Auth::guard('web')->check())->toBeTrue();
 });
 
 it('allows a company owner to sign in without a group', function () {
@@ -55,7 +56,7 @@ it('allows a company owner to sign in without a group', function () {
         ->call('authenticate')
         ->assertHasNoErrors();
 
-    expect(auth()->guard('web')->user()?->email)->toBe('admin@example.com');
+    expect(Auth::guard('web')->user()?->email)->toBe('admin@example.com');
 });
 
 it('rejects valid credentials without admin access', function () {
@@ -73,7 +74,7 @@ it('rejects valid credentials without admin access', function () {
         ->call('authenticate')
         ->assertHasErrors(['email']);
 
-    expect(auth()->guard('web')->check())->toBeFalse();
+    expect(Auth::guard('web')->check())->toBeFalse();
 });
 
 it('rejects invalid credentials', function () {
@@ -85,7 +86,7 @@ it('rejects invalid credentials', function () {
         ->call('authenticate')
         ->assertHasErrors(['email']);
 
-    expect(auth()->guard('web')->check())->toBeFalse();
+    expect(Auth::guard('web')->check())->toBeFalse();
 });
 
 it('throttles repeated failed attempts', function () {

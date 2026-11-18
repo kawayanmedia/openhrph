@@ -3,6 +3,7 @@
 use App\Models\Employee;
 use App\Services\FaceRecognition;
 use Aws\Rekognition\RekognitionClient;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -11,7 +12,7 @@ use Illuminate\Support\Str;
 // https://docs.aws.amazon.com/rekognition/latest/dg/collections.html
 // https://docs.aws.amazon.com/aws-sdk-php/v3/api/api-rekognition-2016-06-27.html#searchfacesbyimage
 Route::get('/face/recognition', function () {
-    abort_unless(auth()->check() || app()->isLocal(), 403);
+    abort_unless(Auth::check() || app()->isLocal(), 403);
 
     $client = new RekognitionClient(config('rekognition'));
 
@@ -114,13 +115,13 @@ Route::get('/face/recognition', function () {
 });
 
 Route::get('/face/attendance', function () {
-    abort_unless(auth()->check() || app()->isLocal(), 403);
+    abort_unless(Auth::check() || app()->isLocal(), 403);
 
     return view('face');
 });
 
 Route::post('/face/register', function () {
-    abort_unless(auth()->check() || app()->isLocal(), 403);
+    abort_unless(Auth::check() || app()->isLocal(), 403);
 
     $employee = Employee::find(request('employeeId'));
 
@@ -159,7 +160,7 @@ Route::post('/face/register', function () {
 })->name('face_register');
 
 Route::post('/face/check', function () {
-    abort_unless(auth()->check() || app()->isLocal(), 403);
+    abort_unless(Auth::check() || app()->isLocal(), 403);
 
     // https://usefulangle.com/post/352/javascript-capture-image-from-camera
     // https://laracasts.com/discuss/channels/laravel/create-image-from-base64-string-laravel

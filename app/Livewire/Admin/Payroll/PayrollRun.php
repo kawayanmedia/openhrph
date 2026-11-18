@@ -107,12 +107,12 @@ class PayrollRun extends Component
         $attributes = [
             'status' => Payroll::STATUS_RUNNING,
             'failed_reason' => null,
-            'processed_by' => auth()->id(),
+            'processed_by' => Auth::id(),
         ];
 
         if ($missing->isNotEmpty()) {
             $attributes['override_reason'] = trim($this->overrideReason);
-            $attributes['override_by'] = auth()->id();
+            $attributes['override_by'] = Auth::id();
             $attributes['override_at'] = now();
         }
 
@@ -146,7 +146,7 @@ class PayrollRun extends Component
         }
 
         $payroll->forceFill([
-            'reviewed_by' => auth()->id(),
+            'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ])->save();
 
@@ -170,7 +170,7 @@ class PayrollRun extends Component
         }
 
         $needsReview = $payroll->reviewed_by === null;
-        $sameUser = (int) $payroll->processed_by === (int) auth()->id();
+        $sameUser = (int) $payroll->processed_by === (int) Auth::id();
         $selfReview = $payroll->reviewed_by !== null
             && (int) $payroll->reviewed_by === (int) $payroll->processed_by;
 
@@ -194,7 +194,7 @@ class PayrollRun extends Component
         $payroll->forceFill([
             'status' => Payroll::STATUS_APPROVED,
             'approved_at' => now(),
-            'approved_by' => auth()->id(),
+            'approved_by' => Auth::id(),
         ])->save();
 
         app(PayrollJournalService::class)->post($payroll);
@@ -231,7 +231,7 @@ class PayrollRun extends Component
             'reviewed_at' => null,
             'reviewed_by' => null,
             'reopened_at' => now(),
-            'reopened_by' => auth()->id(),
+            'reopened_by' => Auth::id(),
             'reopen_reason' => $reason,
         ])->save();
 

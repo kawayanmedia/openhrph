@@ -14,6 +14,7 @@ use App\Models\Compensation as CompensationModel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class Compensation extends Resource
 {
@@ -68,7 +69,7 @@ class Compensation extends Resource
     protected static function ownsOverride(CompensationModel $model): bool
     {
         $companyId = $model->getAttribute('company_id');
-        $userCompanyId = auth()->user()?->company_id;
+        $userCompanyId = Auth::user()?->company_id;
 
         return $companyId !== null
             && $userCompanyId !== null

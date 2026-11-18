@@ -15,6 +15,7 @@ use App\Models\Timesheet;
 use App\Models\User;
 use App\Services\Payroll\PayrollReadiness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -138,8 +139,8 @@ it('generates the pay schedule from the checklist', function () {
 });
 
 it('redirects guests to the admin login', function () {
-    auth()->guard('web')->logout();
-    auth()->guard('nova')->logout();
+    Auth::guard('web')->logout();
+    Auth::guard('nova')->logout();
 
     $this->get('/app/getting-started')->assertRedirect(route('admin.login'));
 });

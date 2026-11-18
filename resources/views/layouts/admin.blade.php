@@ -77,19 +77,19 @@
                             <details class="relative">
                                 <summary class="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-navy-800 [&::-webkit-details-marker]:hidden">
                                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-800 dark:bg-teal-500/20 dark:text-teal-300">
-                                        {{ strtoupper(substr(auth()->user()->name ?? auth()->user()->email ?? 'U', 0, 1)) }}
+                                        {{ strtoupper(substr(Auth::user()->name ?? Auth::user()->email ?? 'U', 0, 1)) }}
                                     </span>
-                                    <span class="hidden max-w-40 truncate sm:block">{{ auth()->user()->name ?? auth()->user()->email }}</span>
+                                    <span class="hidden max-w-40 truncate sm:block">{{ Auth::user()->name ?? Auth::user()->email }}</span>
                                     <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.6">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                     </svg>
                                 </summary>
                                 <div class="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-panel dark:border-navy-700 dark:bg-navy-900">
                                     <div class="border-b border-slate-100 px-4 py-2 dark:border-navy-800">
-                                        <p class="truncate text-sm font-semibold text-navy-900 dark:text-white">{{ auth()->user()->name ?? auth()->user()->email }}</p>
-                                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ auth()->user()->email }}</p>
+                                        <p class="truncate text-sm font-semibold text-navy-900 dark:text-white">{{ Auth::user()->name ?? Auth::user()->email }}</p>
+                                        <p class="truncate text-xs text-slate-500 dark:text-slate-400">{{ Auth::user()->email }}</p>
                                     </div>
-                                    <a href="{{ route('admin.resource.edit', ['resource' => 'change-password', 'resourceId' => auth()->id()]) }}"
+                                    <a href="{{ route('admin.resource.edit', ['resource' => 'change-password', 'resourceId' => Auth::id()]) }}"
                                        class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-navy-800">Change password</a>
                                     <form method="POST" action="{{ route('admin.logout') }}">
                                         @csrf

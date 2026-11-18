@@ -4,6 +4,7 @@ namespace App\Services\Payroll;
 
 use App\Models\Payroll;
 use App\Models\PayrollAuditEvent;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -25,7 +26,7 @@ class PayrollAudit
             'company_id' => $payroll->company_id,
             'payroll_id' => $payroll->getKey(),
             'event' => $event,
-            'actor_id' => auth()->id(),
+            'actor_id' => Auth::id(),
             'reason' => $reason,
             'engine_version' => $payroll->engine_version,
             'gross_amount' => (int) $payroll->getRawOriginal('gross_amount'),

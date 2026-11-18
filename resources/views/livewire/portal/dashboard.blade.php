@@ -16,8 +16,8 @@
                                 </div>
                                 <div class="mt-4 text-center sm:mt-0 sm:pt-1 sm:text-left">
                                     <p class="text-sm font-medium text-gray-600">Welcome back,</p>
-                                    <p class="text-xl font-bold text-gray-900 sm:text-2xl">{{ auth()->user()->first_name }}</p>
-                                    <p class="text-sm font-medium text-gray-600">{{ auth()->user()->position }}</p>
+                                    <p class="text-xl font-bold text-gray-900 sm:text-2xl">{{ Auth::user()->first_name }}</p>
+                                    <p class="text-sm font-medium text-gray-600">{{ Auth::user()->position }}</p>
                                 </div>
                             </div>
                             <div class="mt-5 flex justify-center sm:mt-0">

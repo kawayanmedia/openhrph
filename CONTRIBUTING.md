@@ -72,6 +72,7 @@ See [Local development](docs/developer-guide/local-development.md) for queues, R
 - Use constructor property promotion where it improves clarity.
 - Use curly braces for all control structures.
 - Prefer PHPDoc array shapes over inline comments for complex data.
+- Prefer facade classes over global helper functions, for example `Auth::user()` instead of `auth()->user()`. Facade class aliases resolve inside Blade views, so `Auth::user()` works there too.
 - Use named routes and the `route()` helper for links.
 - Keep tenant-scoped queries inside the existing tenancy conventions.
 

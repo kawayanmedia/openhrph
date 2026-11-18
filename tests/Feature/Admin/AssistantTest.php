@@ -16,6 +16,7 @@ use App\Services\Assistant\AttendanceHours;
 use App\Services\Assistant\RequestApprovalService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Laravel\Ai\Approvals\PendingApproval;
 use Laravel\Ai\Contracts\Approvable;
@@ -112,7 +113,7 @@ function pendingScheduleRequest(int $companyId = 1, array $overrides = []): int
 }
 
 it('redirects guests away from the assistant page', function () {
-    auth()->logout();
+    Auth::logout();
 
     $this->get(route('admin.assistant'))->assertRedirect(route('admin.login'));
 });

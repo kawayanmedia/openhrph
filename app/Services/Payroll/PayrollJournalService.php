@@ -6,6 +6,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -76,7 +77,7 @@ class PayrollJournalService
                 'entry_date' => optional($payroll->payroll_date)->toDateString() ?? now()->toDateString(),
                 'memo' => 'Payroll #'.$payroll->getKey(),
                 'status' => 'posted',
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             $lines = [
