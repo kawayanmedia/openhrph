@@ -53,15 +53,16 @@ OpenHR PH is a standard Laravel 13 application, so it can run on managed Laravel
    ```
 
 10. Configure a custom domain and HTTPS.
-11. Import the statutory tables, wage orders, and the 2026 holiday calendar:
+11. Seed the system-wide catalogues and import the statutory tables, wage orders, and the 2026 holiday calendar:
 
     ```bash
+    php artisan db:seed --class='Database\Seeders\ReferenceDataSeeder' --force
     php artisan payroll:statutory:import --country=PH
     php artisan payroll:wage-orders:import
     php artisan payroll:holidays:import
     ```
 
-    The imports are idempotent and can be added to the deploy command. `payroll:holidays:import` is company-scoped, so run it after the first company exists.
+    The imports are idempotent and can be added to the deploy command. Skip `payroll:wage-orders:import` for a Government installation: government compensation follows the DBM salary schedule. `payroll:holidays:import` is company-scoped, so run it after the first company exists.
 
 ## Vapor
 

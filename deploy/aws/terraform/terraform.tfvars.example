@@ -33,6 +33,10 @@ domain_name           = ""
 route53_zone_id       = ""
 acm_certificate_arn   = ""
 
+# Runs `openhr:install` on the first boot. Government or Private; empty skips it.
+installation_sector  = ""
+installation_country = "PH"
+
 # Leave empty to derive the URL from the ALB, domain, or Elastic IP.
 app_url = ""
 

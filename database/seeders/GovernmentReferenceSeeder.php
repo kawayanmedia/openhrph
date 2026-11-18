@@ -4,11 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\Government\SalaryGrade;
-use App\Sectors\Catalogues\LeaveTypeCatalogue;
-use App\Support\Installation\Installation;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Artisan;
 
 class GovernmentReferenceSeeder extends Seeder
 {
@@ -54,21 +51,10 @@ class GovernmentReferenceSeeder extends Seeder
 
     public function run(): void
     {
-        $sector = Installation::sectorPolicy();
-
-        $this->runForDemoTenant(function (Company $company) use ($sector): void {
-            LeaveTypeCatalogue::seedDefaults($company->getKey(), $sector->sector());
-
-            // The DBM salary schedule is a Government reference. A private
-            // installation never sees or seeds it.
-            if ($sector->sector()->isGovernment()) {
-                $this->seedSalaryGrades($company);
-            }
-
-            Artisan::call('payroll:holidays:import', [
-                '--year' => 2026,
-                '--company' => $company->getKey(),
-            ]);
+        // Government-only reference data: the DBM salary schedule. DatabaseSeeder
+        // skips this seeder for a Private installation.
+        $this->runForDemoTenant(function (Company $company): void {
+            $this->seedSalaryGrades($company);
         });
     }
 

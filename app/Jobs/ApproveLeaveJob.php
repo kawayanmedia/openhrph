@@ -62,11 +62,17 @@ class ApproveLeaveJob implements ShouldQueue
         $employee = Employee::find($this->leaveRequest->employee_id);
 
         if ($employee) {
-            if ($this->leaveRequest->leave_type_id == 1) {
+            // The codes, not the ids, identify the credited leave types: the
+            // catalogue is shared and a company may override a row under a new id.
+            $leaveCode = strtoupper(trim((string) $this->leaveRequest->leave()
+                ->withoutGlobalScopes()
+                ->value('code')));
+
+            if ($leaveCode === 'VL') {
                 $employee->total_vacation_leave -= $this->leaveRequest->days_with_pay;
             }
 
-            if ($this->leaveRequest->leave_type_id == 2) {
+            if ($leaveCode === 'SL') {
                 $employee->total_sick_leave -= $this->leaveRequest->days_with_pay;
             }
 

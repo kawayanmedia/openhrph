@@ -26,11 +26,18 @@ if [ -n "${OPENHR_SECTOR:-}" ]; then
         --no-interaction || log "installation already configured; continuing"
 fi
 
+log "seeding the default catalogues"
+php artisan db:seed --class='Database\Seeders\ReferenceDataSeeder' --force
+
 log "importing statutory tables for $COUNTRY"
 php artisan payroll:statutory:import --country="$COUNTRY"
 
-log "importing the 2026 wage orders"
-php artisan payroll:wage-orders:import
+if [ "${OPENHR_SECTOR:-}" = "Government" ]; then
+    log "skipping the NWPC wage orders for a government installation"
+else
+    log "importing the 2026 wage orders"
+    php artisan payroll:wage-orders:import
+fi
 
 log "importing the 2026 holiday calendar"
 if ! php artisan payroll:holidays:import; then

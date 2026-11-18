@@ -4,7 +4,7 @@ namespace App\Observers;
 
 use App\Models\Leave;
 use App\Support\Tenancy\TenantCache;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class LeaveObserver
 {
@@ -15,8 +15,7 @@ class LeaveObserver
      */
     public function created(Leave $leave)
     {
-        // Clear cache $request->user()->company_id. '_leave_types'
-        TenantCache::forgetFor($leave->company_id, 'leave_types');
+        $this->forgetCaches($leave);
     }
 
     /**
@@ -26,8 +25,7 @@ class LeaveObserver
      */
     public function updated(Leave $leave)
     {
-        // Clear cache $request->user()->company_id. '_leave_types'
-        TenantCache::forgetFor($leave->company_id, 'leave_types');
+        $this->forgetCaches($leave);
     }
 
     /**
@@ -37,8 +35,29 @@ class LeaveObserver
      */
     public function deleted(Leave $leave)
     {
-        // Clear cache $request->user()->company_id. '_leave_types'
-        TenantCache::forgetFor($leave->company_id, 'leave_types');
+        $this->forgetCaches($leave);
+    }
+
+    /**
+     * A system row changes for every company, so every tenant cache goes.
+     */
+    private function forgetCaches(Leave $leave): void
+    {
+        TenantCache::forget('leave_types');
+
+        $companyId = $leave->getAttribute('company_id');
+
+        if ($companyId !== null) {
+            TenantCache::forgetFor((int) $companyId, 'leave_types');
+
+            return;
+        }
+
+        TenantCache::forgetFor(null, 'leave_types');
+
+        DB::table('companies')->orderBy('id')->pluck('id')->each(function ($id): void {
+            TenantCache::forgetFor((int) $id, 'leave_types');
+        });
     }
 
     /**

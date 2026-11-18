@@ -49,6 +49,9 @@ DB_PORT="$(read_env DB_PORT)"
 DB_DATABASE="$(read_env DB_DATABASE)"
 DB_USERNAME="$(read_env DB_USERNAME)"
 DB_PASSWORD="$(read_env DB_PASSWORD)"
+SECTOR="$(read_env OPENHR_SECTOR || true)"
+COUNTRY="$(read_env OPENHR_COUNTRY || true)"
+COUNTRY="${COUNTRY:-PH}"
 PHP_VERSION="$(ls /etc/php | sort -V | tail -n 1)"
 
 if [ -z "$DB_HOST" ] || [ -z "$DB_DATABASE" ] || [ -z "$DB_USERNAME" ]; then
@@ -90,11 +93,27 @@ if [ "$migrated" -ne 1 ]; then
     exit 1
 fi
 
+if [ -n "$SECTOR" ]; then
+    log "configuring the installation sector and country"
+    runuser -u www-data -- php "$APP_DIR/artisan" openhr:install \
+        --sector="$SECTOR" \
+        --country="$COUNTRY" \
+        --skip-statutory \
+        --no-interaction || log "installation already configured; continuing"
+fi
+
+log "seeding the default catalogues"
+runuser -u www-data -- php "$APP_DIR/artisan" db:seed --class='Database\Seeders\ReferenceDataSeeder' --force
+
 log "importing statutory tables"
 runuser -u www-data -- php "$APP_DIR/artisan" payroll:statutory:import
 
-log "importing the 2026 wage orders"
-runuser -u www-data -- php "$APP_DIR/artisan" payroll:wage-orders:import
+if [ "$SECTOR" = "Government" ]; then
+    log "skipping the NWPC wage orders for a government installation"
+else
+    log "importing the 2026 wage orders"
+    runuser -u www-data -- php "$APP_DIR/artisan" payroll:wage-orders:import
+fi
 
 log "importing the 2026 holiday calendar"
 if ! runuser -u www-data -- php "$APP_DIR/artisan" payroll:holidays:import; then

@@ -23,12 +23,13 @@ final class SectorCatalogue
      */
     public static function seedForCompany(int $companyId, Sector|string|null $sector = null): array
     {
-        $policy = app(SectorManager::class)->for($sector);
+        $catalogueSector = self::resolveSector($sector);
+        $policy = app(SectorManager::class)->for($catalogueSector);
         $country = Installation::countryCode();
 
         return [
             'employment_types' => EmploymentTypeCatalogue::seedDefaults($companyId, $policy->sector()),
-            'leave_types' => LeaveTypeCatalogue::seedDefaults($companyId, $policy->sector()),
+            'leave_types' => LeaveTypeCatalogue::sync(null, $catalogueSector),
             'deductions' => DeductionCatalogue::seedDefaults($companyId, $country, $policy->sector()),
             'loans' => LoanCatalogue::seedDefaults($companyId, $country, $policy->sector()),
             'compensations' => CompensationCatalogue::sync(null, $policy->sector()),
@@ -40,26 +41,39 @@ final class SectorCatalogue
      */
     public static function seedAll(Sector|string|null $sector = null): array
     {
-        $policy = app(SectorManager::class)->for($sector);
+        $catalogueSector = self::resolveSector($sector);
+        $policy = app(SectorManager::class)->for($catalogueSector);
         $totals = [
             'companies' => 0,
             'employment_types' => 0,
-            'leave_types' => 0,
+            'leave_types' => LeaveTypeCatalogue::sync(null, $catalogueSector),
             'deductions' => 0,
             'loans' => 0,
             'compensations' => CompensationCatalogue::sync(null, $policy->sector()),
         ];
 
-        DB::table('companies')->orderBy('id')->pluck('id')->each(function ($companyId) use ($policy, &$totals): void {
-            $counts = self::seedForCompany((int) $companyId, $policy->sector());
+        DB::table('companies')->orderBy('id')->pluck('id')->each(function ($companyId) use ($catalogueSector, &$totals): void {
+            $counts = self::seedForCompany((int) $companyId, $catalogueSector);
 
             $totals['companies']++;
             $totals['employment_types'] += $counts['employment_types'];
-            $totals['leave_types'] += $counts['leave_types'];
             $totals['deductions'] += $counts['deductions'];
             $totals['loans'] += $counts['loans'];
         });
 
         return $totals;
+    }
+
+    /**
+     * Resolve the sector to seed. Before the installer runs there is no sector,
+     * so only the catalogue rows both sectors share are seeded.
+     */
+    private static function resolveSector(Sector|string|null $sector): ?Sector
+    {
+        return match (true) {
+            $sector instanceof Sector => $sector,
+            is_string($sector) && trim($sector) !== '' => Sector::fromValue($sector),
+            default => Installation::sectorEnum(),
+        };
     }
 }

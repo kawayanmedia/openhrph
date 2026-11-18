@@ -124,19 +124,30 @@ sudo -u www-data php /var/www/hris/artisan openhr:install \
 ```
 
 Use `--sector=Private` for a private-sector installation. The command marks every existing company
-and every company created later; it also imports the selected country's statutory schedule. If the
-database already contains processed payrolls, changing the country requires `--force` and should be
-treated as a migration project, not a routine deploy.
+and every company created later; it seeds the sector's employment, leave, deduction, loan and
+compensation catalogues and imports the selected country's statutory schedule. If the database
+already contains processed payrolls, changing the country requires `--force` and should be treated
+as a migration project, not a routine deploy.
+
+Leave types and compensations are system-wide catalogues: a shared row has a null `company_id`, and
+a company row is either an override or a type only that company uses. The optional `sector` column
+limits system rows to `Government` or `Private`; an empty value applies to both sectors.
 
 ### Reference data after a migration
 
 ```bash
+sudo -u www-data php /var/www/hris/artisan db:seed --class='Database\Seeders\ReferenceDataSeeder' --force
 sudo -u www-data php /var/www/hris/artisan payroll:statutory:import --country=PH
 sudo -u www-data php /var/www/hris/artisan payroll:wage-orders:import
 sudo -u www-data php /var/www/hris/artisan payroll:holidays:import
 ```
 
-All three imports are idempotent. `payroll:holidays:import` is company-scoped and fails until the first company exists, so run it again after `admin:create` on a fresh installation.
+All four commands are idempotent. `ReferenceDataSeeder` seeds the system-wide leave type and
+compensation catalogues for the configured sector without creating a demo tenant. Leave out the
+wage-order import on a Government installation: government compensation follows the DBM salary
+schedule, and the bootstraps skip the import when `OPENHR_SECTOR=Government`.
+`payroll:holidays:import` is company-scoped and fails until the first company exists, so run it
+again after `admin:create` on a fresh installation.
 
 ### Statutory table refresh
 

@@ -134,6 +134,17 @@ installer and the demo seeders:
 - loan programmes (GSIS vs SSS/Pag-IBIG);
 - the global compensation catalogue, filtered by the `sector` column.
 
+### Global leave type catalogue
+
+Leave types are system-wide, like compensations. `leave_types.company_id` is nullable:
+
+- `NULL` — a shared row every company sees. The optional `sector` column limits a row to `Government` or `Private`; an empty `sector` applies to both.
+- a company id — that company's override of the shared row with the same name, or a leave type only that company uses.
+
+`App\Models\Leave` exposes the catalogue as `effective()` (shared rows not shadowed by a company row, plus the company's rows), `forSector()` (shared rows plus the active sector), `system()` and `overrides()`. Admins manage it under **Leave Management → Leave Types**: shared rows are read-only, an **Override** action copies one into the company, and a company can add its own types. An override can change the allowance, deductibility, deduct-from and active flag; the name, code and legal basis stay with the shared row.
+
+`LeaveTypeCatalogue::sync()` seeds the default catalogue, or the defaults plus one sector when `openhr:install` has locked a sector. The migration merges the legacy per-company copies into shared rows and repoints `leave_requests` and `timesheets` at the surviving row.
+
 `DocumentCatalogue` is read-only: it returns the checklist for
 `payroll:documents`. Uploaded-document storage is not part of this layer.
 

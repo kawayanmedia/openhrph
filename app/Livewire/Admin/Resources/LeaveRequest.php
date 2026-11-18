@@ -55,7 +55,7 @@ class LeaveRequest extends Resource
                 ->sortable(),
 
             BelongsTo::make('Leave Type', 'leave')
-                ->options(Leave::query()->pluck('name', 'id')->toArray())
+                ->options(Leave::selectOptions())
                 ->rules('required'),
 
             Date::make('Date From', 'date_from')

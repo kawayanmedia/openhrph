@@ -25,6 +25,10 @@ acme_email      = ""
 deletion_protection = true
 bucket_force_destroy = false
 
+# Runs `openhr:install` on the first boot. Government or Private; empty skips it.
+installation_sector  = ""
+installation_country = "PH"
+
 # Leave empty to derive the URL from domain_name or the static IP.
 app_url = ""
 

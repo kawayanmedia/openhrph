@@ -24,7 +24,7 @@ flowchart LR
 | --- | --- |
 | `web` | Nginx on port 80. Proxies PHP to `app:9000` and serves built assets. |
 | `app` | PHP-FPM runtime. Runs the application code. |
-| `init` | One-shot bootstrap. Applies migrations and imports the statutory tables, wage orders, and holiday calendar, then exits. |
+| `init` | One-shot bootstrap. Applies migrations, configures the sector when `OPENHR_SECTOR` is set, seeds the default catalogues, imports the statutory tables, the wage orders (private-sector installations only), and the holiday calendar, then exits. |
 | `queue` | `php artisan queue:work` worker. |
 | `scheduler` | `php artisan schedule:work`. |
 | `reverb` | Optional WebSocket server. Enabled with the `reverb` profile. |
@@ -65,6 +65,8 @@ Edit `.env` and set at minimum:
 | `DB_ROOT_PASSWORD` | MySQL root password. Replace the example value. |
 | `MAIL_*` | SMTP settings for invitations, password resets, and payroll mail. |
 | `HRIS_DOMAIN` | Only for the Caddy TLS profile. Set the public host name. |
+| `OPENHR_SECTOR` | `Government` or `Private`. Locks the installation sector and seeds that sector's catalogues on the first boot. Leave empty to seed only the defaults and run `openhr:install` yourself. |
+| `OPENHR_COUNTRY` | ISO 3166-1 alpha-2 country code passed to `openhr:install` (default `PH`). |
 
 Keep `APP_ENV=production`, `APP_DEBUG=false`, `SESSION_SECURE_COOKIE=false` until HTTPS is enabled, and `TRUSTED_PROXIES=*` because only the Compose network reaches PHP-FPM.
 
@@ -86,7 +88,7 @@ The script:
 2. Generates `APP_KEY` when it is empty.
 3. Builds the image (`hris:local` by default).
 4. Starts MySQL and waits for its health check.
-5. Runs the `init` service, which applies `php artisan migrate --force` and imports the statutory tables, the 2026 NWPC wage orders, and the 2026 holiday calendar.
+5. Runs the `init` service, which applies `php artisan migrate --force`, runs `openhr:install` when `OPENHR_SECTOR` is set, seeds the default catalogues, imports the statutory tables, the 2026 NWPC wage orders (private-sector installations only), and the 2026 holiday calendar.
 6. Starts PHP-FPM, Nginx, the queue worker, and the scheduler.
 7. Polls `/up` until the application is healthy.
 
@@ -175,7 +177,7 @@ git pull
 ./scripts/deploy.sh
 ```
 
-Compose recreates services whose image changed. The `init` service applies `php artisan migrate --force` and refreshes the statutory tables, wage orders, and holiday calendar. To force the bootstrap after a configuration-only change:
+Compose recreates services whose image changed. The `init` service applies `php artisan migrate --force`, reseeds the system-wide catalogues, and refreshes the statutory tables, wage orders (private-sector installations), and holiday calendar. To force the bootstrap after a configuration-only change:
 
 ```bash
 docker compose run --rm init

@@ -37,6 +37,10 @@ acme_email = ""
 storage_replication_type = "LRS"
 key_vault_purge_protection = true
 
+# Runs `openhr:install` on the first boot. Government or Private; empty skips it.
+installation_sector  = ""
+installation_country = "PH"
+
 # Leave empty to derive the URL from domain_name or the public IP.
 app_url = ""
 

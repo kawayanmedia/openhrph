@@ -66,7 +66,7 @@ php artisan serve
 
 Open <http://127.0.0.1:8000/app/login> and sign in with the account created by `admin:create`.
 
-> The database is created entirely from the migrations in `database/migrations`. They are guarded with `Schema::hasTable` and `Schema::hasColumn`, so the same command also upgrades an existing installation.
+> The database is created entirely from the migrations in `database/migrations`. They are guarded with `Schema::hasTable` and `Schema::hasColumn`, so the same command also upgrades an existing installation. `openhr:install` seeds the leave type and compensation catalogues, which are system-wide: one set of shared rows plus an optional sector tag, with per-company overrides.
 
 For the full setup, including the payroll engine, queues, Vite dev server, and demo data, read [Local development](docs/developer-guide/local-development.md).
 

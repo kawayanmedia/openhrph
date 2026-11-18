@@ -402,6 +402,8 @@ resource "aws_ssm_parameter" "app_env" {
     aws_region       = var.aws_region
     bucket           = aws_s3_bucket.media.bucket
     app_ref          = var.app_ref
+    openhr_sector    = var.installation_sector
+    openhr_country   = var.installation_country
   })
 
   tags = local.tags

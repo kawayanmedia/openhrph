@@ -179,6 +179,8 @@ resource "google_secret_manager_secret_version" "env" {
     db_password      = random_password.db.result
     bucket           = google_storage_bucket.media.name
     app_ref          = var.app_ref
+    openhr_sector    = var.installation_sector
+    openhr_country   = var.installation_country
   })
 }
 

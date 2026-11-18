@@ -7,9 +7,9 @@ use App\Models\Leave;
 use App\Support\Tenancy\TenantCache;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Auth;
 
 class LeaveCreate extends Component
 {
@@ -52,7 +52,6 @@ class LeaveCreate extends Component
         // ]);
 
         return [
-           
 
             // Forms\Components\MarkdownEditor::make('content'),
             // ...
@@ -62,7 +61,7 @@ class LeaveCreate extends Component
     public function mount(Request $request)
     {
         $this->leaveOptions = TenantCache::rememberForever('leave_types', function () {
-            return Leave::active()->pluck('name', 'id')->toArray();
+            return Leave::selectOptions();
         });
 
         // Select only vacation and sick leave for now

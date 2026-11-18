@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Company;
 use App\Models\Rate;
+use App\Sectors\Catalogues\LeaveTypeCatalogue;
 use App\Sectors\Catalogues\SectorCatalogue;
 use App\Support\Installation\Installation;
 use App\Support\Payroll\CompensationCatalogue;
@@ -16,15 +17,19 @@ class CompensationSeeder extends Seeder
 
     public function run(): void
     {
-        $sector = Installation::sectorPolicy()->sector();
+        // Null until `openhr:install` locks the sector. The catalogues then
+        // seed only the rows both sectors share, and the sector's own rows.
+        $catalogueSector = Installation::sectorEnum();
+        $policySector = Installation::sectorPolicy()->sector();
 
-        // The compensation catalogue is system-wide, so it is seeded once
-        // outside any company context.
-        CompensationCatalogue::sync(null, $sector);
+        // The catalogues are system-wide, so they are seeded once outside any
+        // company context.
+        CompensationCatalogue::sync(null, $policySector);
+        LeaveTypeCatalogue::sync(null, $catalogueSector);
 
-        $this->runForDemoTenant(function (Company $company) use ($sector): void {
+        $this->runForDemoTenant(function (Company $company) use ($catalogueSector): void {
             $this->seedRates($company);
-            SectorCatalogue::seedForCompany($company->getKey(), $sector);
+            SectorCatalogue::seedForCompany($company->getKey(), $catalogueSector);
         });
     }
 

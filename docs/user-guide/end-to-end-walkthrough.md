@@ -142,12 +142,19 @@ Review these company defaults before you run payroll. They apply to the whole co
 
 Open **Leave Management → Leave Settings**. The current admin page has no configurable fields; leave types are managed as records instead.
 
-To add a leave type:
+**Leave Management → Leave Types** lists the system-wide catalogue. Every company shares those rows, and the list is filtered to the installation sector: a shared row applies to both sectors, while a sector-only row (for example Service Incentive Leave for Private) appears only there. Shared rows are read-only.
 
-1. Open **Leave Management → Leave**.
-2. Select **Create Leave Types**.
-3. Enter a **Name**, optional **Code** and **Description**, the **Allow per year**, and turn on **Active**.
-4. Select **Create**.
+To change a shared leave type for your company only:
+
+1. Open the leave type and select **Override**.
+2. Edit the company copy. You can change **Allow per year**, **Deductible**, **Deduct from** and **Active**; the name, code and legal basis stay with the shared row.
+3. Select **Save changes**. Other companies keep the shared values.
+
+To add a leave type only your company uses:
+
+1. Select **Create Leave Types**.
+2. Enter a **Name**, optional **Code** and **Description**, the **Allow per year**, **Deductible**, **Deduct from**, and turn on **Active**.
+3. Select **Create**.
 
 **Expected result for Step 3:** each settings page shows **Settings saved.**, and the values persist for the active company.
 

@@ -102,6 +102,11 @@ domain_name         = "hris.example.com"
 route53_zone_id     = "Z0123456789ABCDEFGHIJ"
 acm_certificate_arn = "arn:aws:acm:ap-southeast-1:123456789012:certificate/..."
 
+# Locks the installation sector on the first boot (Government or Private).
+# Leave empty to seed only the default catalogues and run openhr:install later.
+installation_sector  = "Private"
+installation_country = "PH"
+
 # Leave empty to use Session Manager only
 key_name          = ""
 ssh_allowed_cidrs = []
@@ -139,11 +144,12 @@ Terraform creates the network, database, S3 bucket, IAM role, SSM parameters, an
 2. Writes `/var/www/hris/.env` with mode `0640` and owner `www-data`.
 3. Waits for RDS.
 4. Applies `php artisan migrate --force`, which creates the full schema on a new database and upgrades an existing one in place.
-5. Imports the statutory payroll tables and the 2026 NWPC wage orders.
-6. Imports the 2026 holiday calendar when a company already exists.
-7. Warms config, event, and view caches.
-8. Starts Nginx, PHP-FPM, the queue worker, the scheduler timer, and the backup timer.
-9. Polls `http://127.0.0.1/up` until the app is healthy.
+5. Runs `openhr:install` when `installation_sector` is set, then seeds the system-wide leave type and compensation catalogues.
+6. Imports the statutory payroll tables, plus the 2026 NWPC wage orders for a private-sector installation.
+7. Imports the 2026 holiday calendar when a company already exists.
+8. Warms config, event, and view caches.
+9. Starts Nginx, PHP-FPM, the queue worker, the scheduler timer, and the backup timer.
+10. Polls `http://127.0.0.1/up` until the app is healthy.
 
 The log is at `/var/log/hris-bootstrap.log`.
 

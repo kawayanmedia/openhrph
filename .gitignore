@@ -37,6 +37,7 @@ yarn-error.log
 /.claude
 /.cursor
 /priv
+/actors
 
 # Terraform
 **/.terraform/

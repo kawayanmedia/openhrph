@@ -28,7 +28,7 @@ OpenHR PH can run as a Docker Compose stack, on a golden-image VM in AWS, GCP, o
 
 ## Database migrations
 
-Schema changes ship as Laravel migrations in `database/migrations`; there is no SQL dump to import. Every first boot and in-place deploy runs `php artisan migrate --force`, which creates a new schema or upgrades an existing one in place. The deploy scripts then refresh the statutory tables, the 2026 NWPC wage orders, and the 2026 holiday calendar.
+Schema changes ship as Laravel migrations in `database/migrations`; there is no SQL dump to import. Every first boot and in-place deploy runs `php artisan migrate --force`, which creates a new schema or upgrades an existing one in place. The deploy scripts then seed the system-wide catalogues (leave types and compensations) and refresh the statutory tables, the 2026 NWPC wage orders (private-sector installations), and the 2026 holiday calendar.
 
 The migrations are guarded with `Schema::hasTable` and `Schema::hasColumn`, so databases created before the SQL dumps were retired upgrade cleanly. See [Operations](operations.md#migrations) for the baseline procedure and reference-data commands.
 

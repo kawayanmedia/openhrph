@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Support\Installation\Installation;
+use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -79,6 +81,39 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame(1, (int) $admin->owner);
         $this->assertTrue(Hash::check('password', $admin->password));
         $this->assertSame('demo', DB::table('companies')->where('id', $admin->company_id)->value('slug'));
+    }
+
+    public function test_database_seeder_seeds_government_reference_data_for_a_government_installation(): void
+    {
+        Installation::set(Installation::KEY_SECTOR, Installation::SECTOR_GOVERNMENT);
+
+        $this->seed();
+
+        $this->assertGreaterThan(0, DB::table('salary_grades')->count(), 'Salary grades were not seeded.');
+        $this->assertGreaterThan(0, DB::table('plantilla_items')->count(), 'Plantilla items were not seeded.');
+        $this->assertSame(0, DB::table('leave_types')->whereNotNull('company_id')->count(), 'Leave types must be system-wide.');
+    }
+
+    public function test_database_seeder_skips_government_reference_data_for_a_private_installation(): void
+    {
+        Installation::set(Installation::KEY_SECTOR, Installation::SECTOR_PRIVATE);
+
+        $this->seed();
+
+        $this->assertSame(0, DB::table('salary_grades')->count(), 'Salary grades must not be seeded for a private installation.');
+        $this->assertSame(0, DB::table('plantilla_items')->count(), 'Plantilla items must not be seeded for a private installation.');
+        $this->assertGreaterThan(0, DB::table('leave_types')->whereNull('company_id')->count(), 'Leave types were not seeded.');
+    }
+
+    public function test_reference_data_seeder_seeds_catalogues_without_a_demo_tenant(): void
+    {
+        DB::table('leave_types')->delete();
+
+        $this->seed(ReferenceDataSeeder::class);
+
+        $this->assertSame(0, DB::table('companies')->count(), 'The reference seeder must not create a demo tenant.');
+        $this->assertGreaterThan(0, DB::table('leave_types')->whereNull('company_id')->count(), 'Leave types were not seeded.');
+        $this->assertGreaterThan(0, DB::table('compensations')->whereNull('company_id')->count(), 'Compensations were not seeded.');
     }
 
     public function test_database_seeder_can_run_more_than_once_without_duplicating_rows(): void

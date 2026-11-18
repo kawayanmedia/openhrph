@@ -14,8 +14,9 @@ class StatutorySeeder extends Seeder
 
         Artisan::call('payroll:statutory:import', ['--country' => $country]);
 
-        // Wage orders are the Philippine minimum-wage instrument.
-        if (Installation::statutoryDriver($country) === 'ph') {
+        // Wage orders are the private-sector minimum-wage instrument; Government
+        // compensation follows the DBM salary schedule instead.
+        if (Installation::statutoryDriver($country) === 'ph' && ! Installation::isGovernment()) {
             Artisan::call('payroll:wage-orders:import');
         }
     }

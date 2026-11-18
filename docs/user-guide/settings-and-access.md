@@ -22,7 +22,7 @@ Use **Payroll Management → Payroll Settings** for payroll defaults that apply 
 
 ### Leave settings
 
-Use **Leave Management → Leave Settings** for leave types and leave-related defaults.
+Use **Leave Management → Leave Settings** for leave-related defaults and **Leave Management → Leave Types** for the leave catalogue. The catalogue is system-wide: a company overrides a shared type or adds its own instead of editing the shared row.
 
 ## Reference data
 

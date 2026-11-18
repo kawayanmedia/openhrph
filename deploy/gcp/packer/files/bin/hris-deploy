@@ -40,9 +40,19 @@ run_as_app "make -C payroll-engine build"
 echo "Running migrations"
 run_as_app "php artisan migrate --force"
 
-echo "Importing statutory tables and 2026 wage orders"
+SECTOR="$(grep -E '^OPENHR_SECTOR=' "$APP_DIR/.env" | head -n 1 | cut -d= -f2- || true)"
+
+echo "Seeding the default catalogues"
+run_as_app "php artisan db:seed --class='Database\\Seeders\\ReferenceDataSeeder' --force"
+
+echo "Importing statutory tables"
 run_as_app "php artisan payroll:statutory:import"
-run_as_app "php artisan payroll:wage-orders:import"
+
+if [ "$SECTOR" = "Government" ]; then
+    echo "Skipping the NWPC wage orders for a government installation"
+else
+    run_as_app "php artisan payroll:wage-orders:import"
+fi
 
 if ! run_as_app "php artisan payroll:holidays:import"; then
     echo "Holiday import skipped; run payroll:holidays:import after the first company exists."

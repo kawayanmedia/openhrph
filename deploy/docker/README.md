@@ -15,7 +15,7 @@ cp .env.example .env
 ./scripts/deploy.sh
 ```
 
-The stack listens on `http://localhost:8080` by default. The first boot applies the migrations and imports the statutory tables, wage orders, and holiday calendar. Create the first administrator with:
+The stack listens on `http://localhost:8080` by default. The first boot applies the migrations, configures the installation sector when `OPENHR_SECTOR` is set, seeds the leave type and compensation catalogues, and imports the statutory tables, wage orders (private-sector installations), and holiday calendar. Create the first administrator with:
 
 ```bash
 docker compose exec -u www-data app php artisan admin:create

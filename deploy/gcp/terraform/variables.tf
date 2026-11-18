@@ -122,3 +122,20 @@ variable "tags" {
   description = "Additional labels applied to resources."
   default     = {}
 }
+
+variable "installation_sector" {
+  type        = string
+  description = "Government or Private. The bootstrap runs openhr:install with it on the first boot. Leave empty to skip the installer."
+  default     = ""
+
+  validation {
+    condition     = var.installation_sector == "" || contains(["Government", "Private"], var.installation_sector)
+    error_message = "installation_sector must be Government, Private, or empty."
+  }
+}
+
+variable "installation_country" {
+  type        = string
+  description = "ISO 3166-1 alpha-2 country code passed to openhr:install, for example PH."
+  default     = "PH"
+}

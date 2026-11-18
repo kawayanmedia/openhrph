@@ -130,6 +130,11 @@ domain_name      = "hris.example.com"
 dns_managed_zone = "example-com"
 acme_email       = "ops@example.com"
 
+# Locks the installation sector on the first boot (Government or Private).
+# Leave empty to seed only the default catalogues and run openhr:install later.
+installation_sector  = "Private"
+installation_country = "PH"
+
 # 35.235.240.0/20 enables IAP with OS Login. Leave empty to disable SSH.
 ssh_allowed_cidrs = ["35.235.240.0/20"]
 ```
@@ -172,12 +177,13 @@ Terraform creates the network, firewall, static IP, service account, bucket, sec
 2. Writes `/var/www/hris/.env` with mode `0640` and owner `www-data`.
 3. Starts MySQL and creates the database and application user.
 4. Applies `php artisan migrate --force`, which creates the full schema on a new database and upgrades an existing one in place.
-5. Imports the statutory payroll tables and the 2026 NWPC wage orders.
-6. Imports the 2026 holiday calendar when a company already exists.
-7. Warms config, event, and view caches.
-8. Writes `/etc/caddy/Caddyfile` and reloads Caddy.
-9. Starts Nginx, PHP-FPM, the queue worker, the scheduler timer, and the backup timer.
-10. Polls `http://127.0.0.1:8080/up` until the app is healthy.
+5. Runs `openhr:install` when `installation_sector` is set, then seeds the system-wide leave type and compensation catalogues.
+6. Imports the statutory payroll tables, plus the 2026 NWPC wage orders for a private-sector installation.
+7. Imports the 2026 holiday calendar when a company already exists.
+8. Warms config, event, and view caches.
+9. Writes `/etc/caddy/Caddyfile` and reloads Caddy.
+10. Starts Nginx, PHP-FPM, the queue worker, the scheduler timer, and the backup timer.
+11. Polls `http://127.0.0.1:8080/up` until the app is healthy.
 
 The log is at `/var/log/hris-bootstrap.log`.
 

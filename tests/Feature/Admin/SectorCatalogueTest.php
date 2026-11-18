@@ -7,6 +7,7 @@ use App\Livewire\Admin\Support\Navigation;
 use App\Livewire\Admin\Support\ResourceRegistry;
 use App\Models\Company;
 use App\Models\Compensation;
+use App\Models\Leave;
 use App\Models\User;
 use App\Sectors\SectorManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,8 +39,9 @@ it('seeds the government catalogues and hides private-only rows', function () {
 
     expect(DB::table('employment_types')->where('company_id', $companyId)->where('code', 'PERM')->exists())->toBeTrue()
         ->and(DB::table('employment_types')->where('company_id', $companyId)->where('code', 'REG')->exists())->toBeFalse()
-        ->and(DB::table('leave_types')->where('company_id', $companyId)->where('code', 'VL')->exists())->toBeTrue()
-        ->and(DB::table('leave_types')->where('company_id', $companyId)->where('code', 'SIL')->exists())->toBeFalse()
+        ->and(DB::table('leave_types')->whereNull('company_id')->where('code', 'VL')->exists())->toBeTrue()
+        ->and(DB::table('leave_types')->whereNull('company_id')->where('code', 'MON')->where('sector', 'Government')->exists())->toBeTrue()
+        ->and(Leave::withoutGlobalScopes()->forSector(Sector::Government)->where('code', 'SIL')->exists())->toBeFalse()
         ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-POLICY')->exists())->toBeTrue()
         ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'SSS-SALARY')->exists())->toBeFalse()
         ->and(DB::table('compensations')->whereNull('company_id')->where('code', 'YEAR-END BONUS')->where('sector', 'Government')->exists())->toBeTrue()
@@ -59,8 +61,9 @@ it('seeds the private catalogues and hides government-only rows', function () {
 
     expect(DB::table('employment_types')->where('company_id', $companyId)->where('code', 'REG')->exists())->toBeTrue()
         ->and(DB::table('employment_types')->where('company_id', $companyId)->where('code', 'PERM')->exists())->toBeFalse()
-        ->and(DB::table('leave_types')->where('company_id', $companyId)->where('code', 'SIL')->exists())->toBeTrue()
-        ->and(DB::table('leave_types')->where('company_id', $companyId)->where('code', 'VL')->exists())->toBeTrue()
+        ->and(DB::table('leave_types')->whereNull('company_id')->where('code', 'SIL')->where('sector', 'Private')->exists())->toBeTrue()
+        ->and(DB::table('leave_types')->whereNull('company_id')->where('code', 'VL')->exists())->toBeTrue()
+        ->and(Leave::withoutGlobalScopes()->forSector(Sector::Private)->where('code', 'MON')->exists())->toBeFalse()
         ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'SSS-SALARY')->exists())->toBeTrue()
         ->and(DB::table('loans')->where('company_id', $companyId)->where('code', 'GSIS-POLICY')->exists())->toBeFalse()
         ->and(DB::table('compensations')->whereNull('company_id')->where('code', '13TH MONTH PAY')->where('sector', 'Private')->exists())->toBeTrue()

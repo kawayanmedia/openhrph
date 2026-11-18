@@ -299,6 +299,8 @@ resource "azurerm_key_vault_secret" "env" {
     storage_account   = azurerm_storage_account.media.name
     storage_container = azurerm_storage_container.media.name
     app_ref           = var.app_ref
+    openhr_sector     = var.installation_sector
+    openhr_country    = var.installation_country
   })
   key_vault_id = azurerm_key_vault.main.id
   content_type = "text/plain"

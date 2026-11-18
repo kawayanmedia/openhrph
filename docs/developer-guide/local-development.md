@@ -101,7 +101,17 @@ php artisan admin:create \
 
 Use `--force` to update an existing user with the same email.
 
-The default `db:seed` seeds a demo tenant with an `admin@example.com` / `password` login plus the organization, payroll, government and statutory reference data. The seeders are idempotent, so running `php artisan db:seed --force` again is safe. Use `admin:create` when you need a different owner account.
+The default `db:seed` seeds a demo tenant with an `admin@example.com` / `password` login plus the default organization, payroll and statutory reference data. The seeders are idempotent, so running `php artisan db:seed --force` again is safe.
+
+Sector-specific seeding follows `installation_settings.sector`, which `php artisan openhr:install` writes:
+
+| Sector | What `db:seed` adds |
+| --- | --- |
+| Not configured (default) | The full default data set, including the Government salary schedule and plantilla items, so you can try either sector |
+| `Government` | The same default set plus the DBM salary schedule and plantilla items; the NWPC wage orders are skipped |
+| `Private` | No salary grades or plantilla items; the PH statutory tables and NWPC wage orders are imported |
+
+The shared catalogues (`leave_types`, `compensations`) are seeded once for the whole installation. A company sees the shared rows plus its own overrides; the sector column decides which sector-only rows it sees. Use `admin:create` when you need a different owner account.
 
 ## 5. Build front-end assets
 
@@ -135,7 +145,7 @@ The binary is written to `bin/payroll-engine` (git-ignored). Useful environment 
 | `PAYROLL_ENGINE_INLINE_THRESHOLD` | Employee count below which payroll runs inline (default 50) |
 | `PAYROLL_ENGINE_TIMEOUT` | Process timeout in seconds (default 600) |
 
-`db:seed` imports the effective-dated statutory tables through `payroll:statutory:import`. To refresh them manually, run `php artisan payroll:statutory:import --country=PH` after migrating. Use `--fresh` only when you intend to replace that country's statutory rows. For a country without a built-in driver, import a component definition with `php artisan payroll:statutory:import --country=XX --file=path/to/components.json`.
+`db:seed` imports the effective-dated statutory tables through `payroll:statutory:import` and the 2026 holiday calendar through `payroll:holidays:import`. To refresh them manually, run `php artisan payroll:statutory:import --country=PH` after migrating. Use `--fresh` only when you intend to replace that country's statutory rows. For a country without a built-in driver, import a component definition with `php artisan payroll:statutory:import --country=XX --file=path/to/components.json`.
 
 ## 7. Run the application
 
