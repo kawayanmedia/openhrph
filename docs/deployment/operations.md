@@ -13,6 +13,7 @@ This guide covers the day-two work for the AWS AMI stack: health, logs, deployme
 | Scheduler | `systemctl list-timers hris-scheduler.timer` |
 | Backup timer | `systemctl list-timers hris-backup.timer` |
 | Payroll engine | `sudo -u www-data php /var/www/hris/artisan payroll:engine --check` |
+| Schema verification | `sudo -u www-data php /var/www/hris/artisan db:ensure-schema --check` |
 | ALB target health | `aws elbv2 describe-target-health --target-group-arn <arn>` |
 
 The ALB target group uses `/up` with a 200 matcher. Keep that route healthy; it is the fastest signal that PHP, the database, and the application can serve traffic.
@@ -111,6 +112,23 @@ sudo -u www-data php /var/www/hris/artisan tinker --execute 'DB::table("migratio
 4. Rerun `php artisan migrate --force`.
 
 Never mark a migration as applied unless its tables, columns, and indexes are actually present. Replace the example migration name with the one that failed.
+
+#### Storage engines and character sets
+
+Databases that started from the retired SQL dumps can still contain MyISAM tables and latin1 or utf8mb3 columns. MySQL rejects writes to a non-transactional table inside a transaction when GTID consistency is enforced (Laravel Cloud), MyISAM ignores rollbacks, and the legacy character sets cannot store every UTF-8 character or compare cleanly against the utf8mb4 tables Laravel creates. Two migrations repair this when `php artisan migrate --force` runs:
+
+- `2026_11_19_235252_convert_non_transactional_tables_to_innodb` rebuilds every table with InnoDB.
+- `2026_11_20_000111_convert_tables_to_utf8mb4` converts every table and its character columns to the connection's configured character set and collation (`utf8mb4` / `utf8mb4_unicode_ci` by default).
+
+Both statements copy each table, so take a snapshot first and expect a metadata lock and up to twice the table size in free disk space. On a large database, convert ahead of the deploy from a console so the migrations only have to verify:
+
+```bash
+# List the tables that are not InnoDB or not utf8mb4; exits non-zero when any remain.
+sudo -u www-data php /var/www/hris/artisan db:ensure-schema --check
+
+# Convert them in place.
+sudo -u www-data php /var/www/hris/artisan db:ensure-schema
+```
 
 ### Installation configuration
 
