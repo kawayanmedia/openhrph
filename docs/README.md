@@ -10,6 +10,10 @@ This documentation is split into two paths. Pick the one that matches what you n
 It is also published as a searchable site at [kawayanmedia.github.io/openhrph](https://kawayanmedia.github.io/openhrph/).
 Run it locally from `docs-site/` with `npm start`.
 
+> **Try the demo first.** The [hosted demo](https://openhrph.laravel.cloud) creates an isolated
+> workspace with sample employees, timesheets, and an open payroll. Sign up, verify your email
+> address, and the workspace opens.
+
 ## I use OpenHR PH
 
 For HR officers, payroll staff, administrators, and employees who use the system day to day. No programming knowledge is needed.

@@ -23,7 +23,7 @@ Route::middleware(['web', 'guest:web'])
         Route::get('login', Login::class)->name('login');
     });
 
-Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate')])
+Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.verified'])
     ->prefix($prefix)
     ->name('admin.')
     ->group(function () {

@@ -1,15 +1,10 @@
 <?php
 
-use App\Http\Controllers\NosaController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ServiceRecordController;
 use App\Http\Controllers\SetupController;
-use App\Livewire\Portal\Legislative;
 use App\Livewire\Portal\TestPayroll;
-use App\Models\MinimumWageRate;
 use Bugsnag\BugsnagLaravel\Facades\Bugsnag;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,7 +38,6 @@ require 'gov.php';
 // TODO for reports
 // https://github.com/laracraft-tech/laravel-date-scopes
 
-
 Route::get('sr/{id}/print', [ServiceRecordController::class, 'serviceRecord'])->middleware(['auth:web,nova,portal'])->name('sr.show');
 
 // This is where to process and test payroll
@@ -61,6 +55,9 @@ require 'portal.php';
 
 // Routes for Livewire admin
 require 'admin.php';
+
+// Public demo sign-up and email verification (hidden unless DEMO_MODE=true)
+require 'demo.php';
 
 // APP_PORTAL_SUBDOMAIN
 // 'portal.hris.test'

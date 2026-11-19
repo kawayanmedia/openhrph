@@ -87,6 +87,7 @@ git grep -I -n -E '(api[_-]?key|secret|password|token|private[_-]?key)' $(git re
 - [ ] HTTPS is enforced and cookies are secure.
 - [ ] The database is not publicly accessible.
 - [ ] Default or demo accounts are not created automatically.
+- [ ] Public demo sign-up is off (`DEMO_MODE=false`) unless the deployment is intentionally the public demo.
 - [ ] `admin:create` is the documented path for the first owner account.
 - [ ] Queue workers and the scheduler run under a non-root user.
 - [ ] Backups are encrypted and tested.

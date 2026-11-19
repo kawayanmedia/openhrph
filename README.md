@@ -4,6 +4,9 @@ An open-source Human Resource Information System and Philippine payroll platform
 
 > **Status:** the project is being prepared for public release. Please read [SECURITY.md](SECURITY.md) before deploying it or sharing a fork.
 
+> **Try it:** the hosted demo is at <https://openhrph.laravel.cloud>. Create an account,
+> confirm the email we send you, and your own sample workspace opens with demo employees and payroll.
+
 ## What it does
 
 - **People** — employee profiles, documents, certificates, training, schedules, compensation, loans, allowances, bonuses, and commissions.

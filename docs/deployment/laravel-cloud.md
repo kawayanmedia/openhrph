@@ -64,6 +64,33 @@ OpenHR PH is a standard Laravel 13 application, so it can run on managed Laravel
 
     The imports are idempotent and can be added to the deploy command. Skip `payroll:wage-orders:import` for a Government installation: government compensation follows the DBM salary schedule. `payroll:holidays:import` is company-scoped, so run it after the first company exists.
 
+## Hosted demo
+
+The public demo runs the same application with self-service sign-up enabled:
+
+| Variable | Value |
+| --- | --- |
+| `DEMO_MODE` | `true` |
+| `DEMO_URL` | `https://openhrph.laravel.cloud` |
+| `AUTH_VERIFICATION_EXPIRE` | Minutes a verification link stays valid (default `60`) |
+| `DEMO_REGISTRATIONS_PER_HOUR` | Accounts one IP address may create per hour (default `5`) |
+
+Visitors open `/register`, receive a verification email, and only reach `/app` after selecting the
+link. Each sign-up creates its own company with sample employees, timesheets, and an open payroll,
+so demo accounts never share data.
+
+Before publishing a demo environment:
+
+- Configure a working mail provider (SES, Postmark, Resend, or SMTP). The verification email is the only way in.
+- Keep the queue worker running; the application already relies on queued mail and jobs elsewhere.
+- Set `TRUSTED_PROXIES=*` when Cloudflare or a load balancer fronts the app, so registration
+  throttling sees the real client IP.
+- Leave `DEMO_MODE=false` on any installation that holds real payroll data. With demo mode off,
+  `/register` and the verification routes return 404, and `admin:create` remains the only way in.
+
+Demo companies are not removed automatically. Plan a retention window and delete old demo tenants
+(for example with a scheduled database task) before the demo grows unattended.
+
 ## Vapor
 
 The repository includes a starter `vapor.yml`, but it targets an older PHP runtime. Before using Vapor:

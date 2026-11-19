@@ -77,5 +77,11 @@
                 class="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-navy-800">
             Toggle theme
         </button>
+
+        @if (config('demo.enabled'))
+            <a href="{{ route('demo.register') }}" class="font-medium text-teal-700 hover:text-teal-800 dark:text-teal-400">
+                Create a demo account
+            </a>
+        @endif
     </div>
 </div>

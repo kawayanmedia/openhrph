@@ -8,6 +8,19 @@ This page helps you sign in, find your way around, and set up your account for d
 - Know which company you should be working in if your organisation has more than one.
 - Use a current version of Chrome, Edge, Firefox, or Safari.
 
+## Try the hosted demo
+
+The [hosted demo](https://openhrph.laravel.cloud) gives you a disposable company with sample
+employees, timesheets, and an open payroll.
+
+1. Open [openhrph.laravel.cloud/register](https://openhrph.laravel.cloud/register).
+2. Enter your name, a company name, and your email address, then choose a password.
+3. Open the verification email and select the link. The demo workspace opens after verification.
+4. On later visits, sign in at `/app/login` with the same email address and password.
+
+Every demo sign-up gets its own isolated company, so you can change or delete the sample records
+without affecting other visitors. The demo is not a place for real employee or payroll data.
+
 ## Sign in to the admin workspace
 
 ![Sign in screen](../images/admin-login-light.png)

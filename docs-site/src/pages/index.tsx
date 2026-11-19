@@ -90,10 +90,15 @@ export default function Home(): ReactNode {
             shared source of truth.
           </p>
           <div className="heroButtons">
-            <Link className="button button--primary button--lg" to="/docs/user-guide">
+            <Link
+              className="button button--primary button--lg"
+              href="https://openhrph.laravel.cloud/register">
+              Try the live demo
+            </Link>
+            <Link className="button button--secondary button--lg" to="/docs/user-guide">
               I use OpenHR PH
             </Link>
-            <Link className="button button--secondary button--lg" to="/docs/developer-guide">
+            <Link className="button button--outline button--lg" to="/docs/developer-guide">
               I build or operate OpenHR PH
             </Link>
             <Link className="button button--outline button--lg" to={screensPath}>

@@ -24,9 +24,17 @@ class Login extends Component
 
     public function mount(): void
     {
-        if (Auth::guard('web')->check() && Auth::guard('web')->user()?->can(config('admin.gate'))) {
-            $this->redirectIntended(route('admin.dashboard'), navigate: true);
+        if (! Auth::guard('web')->check() || ! Auth::guard('web')->user()?->can(config('admin.gate'))) {
+            return;
         }
+
+        if ($this->awaitingVerification()) {
+            $this->redirect(route('verification.notice'), navigate: true);
+
+            return;
+        }
+
+        $this->redirectIntended(route('admin.dashboard'), navigate: true);
     }
 
     public function authenticate(): void
@@ -71,7 +79,27 @@ class Login extends Component
             request()->session()->regenerate();
         }
 
+        if ($this->awaitingVerification()) {
+            $this->redirect(route('verification.notice'), navigate: true);
+
+            return;
+        }
+
         $this->redirectIntended(route('admin.dashboard'), navigate: true);
+    }
+
+    /**
+     * Whether the signed-in demo user still has to confirm their email.
+     */
+    private function awaitingVerification(): bool
+    {
+        if (! config('demo.enabled')) {
+            return false;
+        }
+
+        $user = Auth::guard('web')->user();
+
+        return $user instanceof User && ! $user->hasVerifiedEmail();
     }
 
     public function render()

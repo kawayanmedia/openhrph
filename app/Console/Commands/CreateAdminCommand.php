@@ -87,6 +87,7 @@ class CreateAdminCommand extends Command
                     'password' => Hash::make($password),
                     'owner' => 1,
                     'is_temporary_password' => 0,
+                    'email_verified_at' => now(),
                 ]);
 
                 if (! $user->exists) {

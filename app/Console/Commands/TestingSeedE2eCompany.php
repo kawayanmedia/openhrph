@@ -41,6 +41,7 @@ class TestingSeedE2eCompany extends Command
             'password' => Hash::make(config('payroll.e2e.password')),
             'owner' => 1,
             'is_temporary_password' => 0,
+            'email_verified_at' => now(),
         ])->save();
 
         $company = new Company;
@@ -173,6 +174,7 @@ class TestingSeedE2eCompany extends Command
             'password' => Hash::make(config('payroll.e2e.onboarding_password')),
             'owner' => 1,
             'is_temporary_password' => 0,
+            'email_verified_at' => now(),
         ])->save();
 
         $company = new Company;

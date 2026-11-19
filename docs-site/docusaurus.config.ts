@@ -81,6 +81,7 @@ const config: Config = {
         {type: 'doc', docId: 'developer-guide/README', label: 'Developer guide', position: 'left'},
         {type: 'doc', docId: 'deployment/README', label: 'Deployment', position: 'left'},
         {to: '/screens', label: 'Screens', position: 'left'},
+        {href: 'https://openhrph.laravel.cloud', label: 'Live demo', position: 'right'},
         {href: repository, label: 'GitHub', position: 'right'},
       ],
     },
@@ -90,6 +91,7 @@ const config: Config = {
         {
           title: 'Use OpenHR PH',
           items: [
+            {label: 'Live demo', href: 'https://openhrph.laravel.cloud'},
             {label: 'Company to payslip walkthrough', to: '/docs/user-guide/end-to-end-walkthrough'},
             {label: 'Getting started', to: '/docs/user-guide/getting-started'},
             {label: 'Payroll', to: '/docs/user-guide/payroll'},

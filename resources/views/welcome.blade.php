@@ -25,12 +25,18 @@
                 </span>
             </a>
 
-            <button type="button" data-theme-toggle class="ui-btn-secondary" aria-label="Toggle dark mode">
-                <svg data-theme-icon="light" class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-                </svg>
-                <span class="hidden sm:inline">Theme</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="{{ rtrim(config('demo.url'), '/') }}/register" class="ui-btn-secondary hidden sm:inline-flex">
+                    Try the live demo
+                </a>
+
+                <button type="button" data-theme-toggle class="ui-btn-secondary" aria-label="Toggle dark mode">
+                    <svg data-theme-icon="light" class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                    </svg>
+                    <span class="hidden sm:inline">Theme</span>
+                </button>
+            </div>
         </header>
 
         <main class="mx-auto w-full max-w-6xl px-4 pb-20 sm:px-6 lg:px-8">

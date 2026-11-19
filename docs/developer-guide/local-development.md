@@ -191,6 +191,17 @@ php artisan schedule:work
 
 Reverb is optional. To enable broadcasting, configure the `REVERB_*` variables, set `BROADCAST_CONNECTION=reverb`, run `php artisan reverb:start`, and proxy WebSockets through your web server.
 
+## Try the demo sign-up flow locally
+
+Set `DEMO_MODE=true` in `.env` and open
+[http://127.0.0.1:8000/register](http://127.0.0.1:8000/register). The default mailer in
+`.env.example` points at a local Mailpit instance on `127.0.0.1:1025`; run Mailpit (or read
+`storage/logs/laravel.log` when `MAIL_MAILER=log`) to open the verification link.
+
+Each sign-up creates an isolated company with sample employees, timesheets, and an open payroll.
+Leave `DEMO_MODE=false` on any installation that holds real payroll data: with demo mode off,
+`/register` and the verification routes return 404.
+
 ## Tests
 
 ```bash

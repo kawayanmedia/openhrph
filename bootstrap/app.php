@@ -1,8 +1,11 @@
 <?php
 
 use App\Http\Middleware\AuthenticateAttendanceIngest;
+use App\Http\Middleware\EnsureDemoEmailVerified;
+use App\Http\Middleware\EnsureDemoModeEnabled;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\ResolveTenantFromApiKey;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -26,12 +29,24 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Keep signed-in demo visitors on the verification notice instead of
+        // bouncing them to the landing page when they revisit the sign-up page.
+        $middleware->redirectUsersTo(function (Request $request) {
+            $user = $request->user();
+
+            if (config('demo.enabled') && $user instanceof User && ! $user->hasVerifiedEmail()) {
+                return route('verification.notice');
+            }
+
+            return '/';
+        });
+
         $middleware->redirectGuestsTo(function (Request $request) {
             if ($request->is('portal', 'portal/*')) {
                 return route('portal.login');
             }
 
-            if ($request->is(trim(config('admin.path'), '/'), trim(config('admin.path'), '/').'/*')) {
+            if ($request->is(trim(config('admin.path'), '/'), trim(config('admin.path'), '/').'/*', 'email/verify', 'email/verify/*', 'email/verification-notification')) {
                 return route('admin.login');
             }
 
@@ -45,6 +60,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'tenant.api-key' => ResolveTenantFromApiKey::class,
             'attendance.ingest' => AuthenticateAttendanceIngest::class,
+            'demo.enabled' => EnsureDemoModeEnabled::class,
+            'demo.verified' => EnsureDemoEmailVerified::class,
         ]);
 
         $middleware->web(append: [
