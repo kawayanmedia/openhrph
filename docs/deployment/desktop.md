@@ -192,21 +192,35 @@ the background, and applies them on quit. Publish the draft when every platform 
 
 ### Bundled environment
 
-NativePHP copies `.env` into the app, so build-time settings that the app needs at runtime have to be written to that
-file rather than exported to the build process. The workflow installs the Composer and npm dependencies first, because
-every `php artisan` step needs `vendor/autoload.php`.
+NativePHP copies `.env` into the build directory, but **electron-builder drops dotfiles from the package**, so the
+installed app never actually receives it. Without an environment file the app has no `APP_KEY` and every request fails
+with `MissingAppKeyException` behind a plain "500 Server Error" page.
 
-It also pins `APP_ENV=production` and `APP_DEBUG=false` in the bundled file: `.env.example` is a development profile,
-and shipping it unchanged would show debug pages — and stack traces — to users of the packaged app.
+The `desktop:export-env` Artisan command (run by `config/nativephp.php` → `prebuild`, and as an explicit workflow step)
+exports the same settings to `bootstrap/desktop.env` — a regular file that ships — and
+[`bootstrap/app.php`](/Volumes/sdcard/projects/kawayan/openhrph/openhrphmain/bootstrap/app.php) loads it when no `.env`
+is present. The export applies the same cleanup as NativePHP (`cleanup_env_keys`, log channels), and it fails the build
+when `APP_KEY` is missing instead of shipping a broken installer.
+
+The workflow pins `APP_ENV=production` and `APP_DEBUG=false`: `.env.example` is a development profile, and shipping it
+unchanged would point the app at MySQL and the project's own storage.
 
 `APP_DEBUG` has to stay `false` even in a debug build. NativePHP treats `app.debug` as a development run: it then
 keeps the SQLite database, uploads, sessions and logs inside the installed application folder instead of the per-user
 app-data folder, which is read-only on Windows and Linux and replaced on update. The workflow writes a separate
-`DESKTOP_DEBUG` flag into the bundled `.env` instead.
+`DESKTOP_DEBUG` flag into the bundled environment instead.
 
 Set an optional `DESKTOP_APP_KEY` repository secret (generate one with `php artisan key:generate --show`) to use the
 same key for every release. Without it each build generates a new key, and users are signed out after an update
 because their session cookies no longer decrypt.
+
+### Database on first launch
+
+NativePHP runs `php artisan migrate` only when the bundled app version changes. A build shipped under the same version
+as a previous run therefore keeps an empty database, and every page (including the setup wizard) fails on the missing
+`cache` and `users` tables. `DesktopEnvironment::ensureDatabaseIsMigrated()` migrates the database when the `migrations`
+table is absent, and CI builds get a unique prerelease version (`0.0.0-ci.<run number>`) so upgrades always re-run
+pending migrations.
 
 ### Debug builds
 
@@ -253,6 +267,8 @@ Without `CSC_LINK` the workflow sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and pro
 | Symptom | Fix |
 | --- | --- |
 | Window opens to a 500 error | Build with the `debug` input checked to see the exception and stack trace in the window and in DevTools; logs are in `storage/logs` (dev) or the app-data `storage/logs` (packaged). Run `php artisan native:debug` when opening an issue |
+| 500 with no details and `MissingAppKeyException` in `laravel.log` | The packaged app is missing its environment file. Run `php artisan desktop:export-env` and confirm `bootstrap/desktop.env` contains `APP_KEY` before building; the CI step fails when it does not |
+| 500 with `no such table: cache` (or `users`) | The app-data database was never migrated. The bundled version did not change since the last run; build with a new `version` (CI uses `0.0.0-ci.<run number>`), or delete the app-data folder and reopen the app |
 | The setup wizard does not appear | Run `php artisan native:migrate`; the `users` table must exist |
 | Want to start over | `php artisan native:migrate:fresh` in development. In a packaged app, quit and move the app-data folder aside |
 | Build is stale | `php artisan native:reset` then rebuild |

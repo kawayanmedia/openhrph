@@ -35,6 +35,8 @@ class DesktopServiceProvider extends ServiceProvider
         // paths, so a debug build still keeps data out of the app bundle.
         DesktopEnvironment::enableDebug();
 
+        DesktopEnvironment::ensureDatabaseIsMigrated();
+
         if ((string) config('nativephp-internal.secret') === '') {
             return;
         }

@@ -12,7 +12,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -80,3 +80,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();
+
+// electron-builder drops dotfiles from the packaged desktop app, so it never
+// receives the .env NativePHP copies into the build directory. Fall back to the
+// copy `desktop:export-env` writes during the build.
+if (! is_file(dirname(__DIR__).'/.env') && is_file(__DIR__.'/desktop.env')) {
+    $app->loadEnvironmentFrom('bootstrap/desktop.env');
+}
+
+return $app;

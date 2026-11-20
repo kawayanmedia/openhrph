@@ -3,6 +3,8 @@
 use App\Providers\DesktopServiceProvider;
 use App\Services\Desktop\DesktopEnvironment;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Native\Desktop\Http\Middleware\PreventRegularBrowserAccess;
 
 it('leaves the web deployment profile untouched', function () {
@@ -66,6 +68,33 @@ it('keeps error output off when the desktop build is not a debug build', functio
     DesktopEnvironment::enableDebug();
 
     expect(config('app.debug'))->toBeFalse();
+});
+
+it('builds the database schema on a fresh desktop install', function () {
+    config(['nativephp-internal.running' => true]);
+
+    Schema::shouldReceive('hasTable')->once()->with('migrations')->andReturnFalse();
+    Artisan::shouldReceive('call')->once()->with('migrate', ['--force' => true]);
+
+    DesktopEnvironment::ensureDatabaseIsMigrated();
+});
+
+it('does not migrate when the schema already exists', function () {
+    config(['nativephp-internal.running' => true]);
+
+    Schema::shouldReceive('hasTable')->once()->with('migrations')->andReturnTrue();
+    Artisan::shouldReceive('call')->never();
+
+    DesktopEnvironment::ensureDatabaseIsMigrated();
+});
+
+it('never touches the database outside the native runtime', function () {
+    config(['nativephp-internal.running' => false]);
+
+    Schema::shouldReceive('hasTable')->never();
+    Artisan::shouldReceive('call')->never();
+
+    DesktopEnvironment::ensureDatabaseIsMigrated();
 });
 
 it('does not touch debug mode outside the native runtime', function () {

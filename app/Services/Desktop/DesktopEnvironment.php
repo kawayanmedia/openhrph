@@ -2,6 +2,10 @@
 
 namespace App\Services\Desktop;
 
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
+
 /**
  * Runtime profile for the NativePHP desktop build.
  *
@@ -46,6 +50,33 @@ final class DesktopEnvironment
             'logging.channels.daily.level' => 'debug',
             'logging.channels.single.level' => 'debug',
         ]);
+    }
+
+    /**
+     * Create the SQLite schema on a fresh install.
+     *
+     * NativePHP only runs `migrate` when its stored app version changes, so an
+     * existing install that lost its database (or a rebuilt app shipped under
+     * the same version) would serve pages against an empty file. Every page —
+     * and the setup wizard — needs the cache, session and users tables.
+     */
+    public static function ensureDatabaseIsMigrated(): void
+    {
+        if (! self::isRunning()) {
+            return;
+        }
+
+        try {
+            if (Schema::hasTable('migrations')) {
+                return;
+            }
+
+            Artisan::call('migrate', ['--force' => true]);
+        } catch (Throwable $exception) {
+            // Leave the failure in the log; the setup wizard reports it with
+            // the command output when the owner retries the installation.
+            report($exception);
+        }
     }
 
     public static function apply(): void

@@ -52,12 +52,14 @@ jobs:
           fi
 
           if [[ -z "${VERSION}" ]]; then
-            VERSION="0.0.0-ci"
-          fi
+            if [[ "${PUBLISH}" == "true" ]]; then
+              echo "::error::Provide a version when publishing a desktop build."
+              exit 1
+            fi
 
-          if [[ "${PUBLISH}" == "true" && "${VERSION}" == "0.0.0-ci" ]]; then
-            echo "::error::Provide a version when publishing a desktop build."
-            exit 1
+            # NativePHP only re-runs migrations when the bundled version
+            # changes, so every CI build gets its own prerelease version.
+            VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -170,9 +172,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # NativePHP copies .env into the app, so runtime settings have to be in
-      # the file rather than exported to the build. Every `php artisan` call
-      # also needs vendor/autoload.php, so this runs after Composer.
+      # Build-time settings the app needs at runtime are written to .env and
+      # then exported to bootstrap/desktop.env, because electron-builder drops
+      # dotfiles from the package. Every `php artisan` call also needs
+      # vendor/autoload.php, so this runs after Composer.
       - name: Configure the bundled environment
         shell: bash
         env:
@@ -198,6 +201,17 @@ jobs:
           rm -f .env.bak
 
           echo "Bundled .env: $(grep -E '^(APP_ENV|APP_DEBUG|DESKTOP_DEBUG)=' .env | tr '\n' ' ')"
+
+      # electron-builder drops dotfiles, so .env never reaches the installed
+      # app. Export it to a regular file the app boots from, and fail the build
+      # here rather than shipping an app that cannot encrypt sessions.
+      - name: Export the desktop environment
+        shell: bash
+        run: |
+          php artisan desktop:export-env
+          test -s bootstrap/desktop.env
+          grep -q '^APP_KEY=base64:' bootstrap/desktop.env
+          echo "bootstrap/desktop.env: $(wc -l < bootstrap/desktop.env | tr -d ' ') settings"
 
       - name: Install NativePHP
         run: php artisan native:install --no-interaction

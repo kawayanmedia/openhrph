@@ -242,6 +242,9 @@ return [
      */
     'prebuild' => [
         'npm run build',
+        // electron-builder drops dotfiles, so the packaged app has no .env.
+        // This writes the settings it boots from to bootstrap/desktop.env.
+        'php artisan desktop:export-env',
     ],
 
     'postbuild' => [

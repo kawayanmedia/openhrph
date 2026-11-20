@@ -35,6 +35,7 @@ yarn-error.log
 
 # NativePHP desktop
 /nativephp
+/bootstrap/desktop.env
 
 /.ai
 /.claude
