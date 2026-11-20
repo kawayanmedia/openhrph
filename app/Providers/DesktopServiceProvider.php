@@ -12,7 +12,7 @@ class DesktopServiceProvider extends ServiceProvider
 {
     /**
      * Apply the desktop profile before any storage, queue or payroll service
-     * resolves its configuration. Outside Electron this provider does nothing.
+     * resolves its configuration.
      */
     public function register(): void
     {
