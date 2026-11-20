@@ -120,7 +120,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: bcmath, ctype, curl, dom, fileinfo, gd, iconv, intl, mbstring, openssl, pdo_sqlite, simplexml, sqlite3, tokenizer, xml, xmlreader, xmlwriter, zip, zlib
+          # exif is a build-time requirement of spatie/image and
+          # spatie/laravel-medialibrary. The runner images enable it by default
+          # except on Windows, and the bundled PHP binary never has it.
+          extensions: bcmath, ctype, curl, dom, exif, fileinfo, gd, iconv, intl, mbstring, openssl, pdo_sqlite, simplexml, sqlite3, tokenizer, xml, xmlreader, xmlwriter, zip, zlib
           coverage: none
           ini-values: memory_limit=512M
 
@@ -152,22 +155,29 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # Every `php artisan` call needs vendor/autoload.php, so this runs after
-      # Composer. NativePHP bundles .env into the app, so the key must live
-      # there rather than in the process environment.
-      - name: Configure application key
+      # NativePHP copies .env into the app, so runtime settings have to be in
+      # the file rather than exported to the build. Every `php artisan` call
+      # also needs vendor/autoload.php, so this runs after Composer.
+      - name: Configure the bundled environment
         shell: bash
         env:
           # Optional. Set the same key in every release so upgrades keep users
           # signed in. Generate one with `php artisan key:generate --show`.
           DESKTOP_APP_KEY: ${{ secrets.DESKTOP_APP_KEY }}
         run: |
-          if [[ -n "${DESKTOP_APP_KEY}" ]]; then
+          php artisan key:generate --ansi --force
+
+          if [[ -n "${DESKTOP_APP_KEY:-}" ]]; then
             sed -i.bak "s|^APP_KEY=.*|APP_KEY=${DESKTOP_APP_KEY}|" .env
             rm -f .env.bak
-          else
-            php artisan key:generate --ansi --force
           fi
+
+          # .env.example is a development profile; the packaged app is not.
+          sed -i.bak \
+            -e "s|^APP_ENV=.*|APP_ENV=production|" \
+            -e "s|^APP_DEBUG=.*|APP_DEBUG=false|" \
+            .env
+          rm -f .env.bak
 
       - name: Install NativePHP
         run: php artisan native:install --no-interaction
