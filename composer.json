@@ -33,6 +33,7 @@
         "livewire/volt": "^1.11",
         "lorisleiva/laravel-actions": "^2.13",
         "maatwebsite/excel": "^4.0",
+        "nativephp/desktop": "^2.5",
         "phpoffice/phpword": "^1.4.0",
         "predis/predis": "^2.4",
         "rats/zkteco": "^002.0",
@@ -114,6 +115,10 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "native:dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -k -c \"#93c5fd,#c4b5fd\" \"php artisan native:run --no-interaction\" \"npm run dev\" --names=app,vite"
         ]
     },
     "extra": {

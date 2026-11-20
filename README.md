@@ -25,8 +25,9 @@ An open-source Human Resource Information System and Philippine payroll platform
 | Admin UI | Livewire 3, Blade, Tailwind CSS 4, Vite 8 |
 | Optional admin panel | Filament 3 |
 | Payroll engine | Go 1.24 (MySQL-backed, with a PHP fallback) |
-| Data | MySQL 8 (SQLite for tests) |
+| Data | MySQL 8 (SQLite for tests and the desktop build) |
 | Queues and realtime | Database/Redis queues, Laravel Reverb |
+| Desktop | NativePHP Desktop 2 (Electron + bundled PHP + SQLite) |
 | Reporting | Maatwebsite Excel, FPDF/FPDI, PHPWord |
 
 ## Quick start
@@ -133,8 +134,10 @@ Browser tests run against `E2E_BASE_URL` (defaults to `APP_URL`) and use an isol
 - **GCP** — build a golden image with Packer and launch it with Terraform: [GCP deployment](docs/deployment/gcp.md).
 - **Azure** — build a managed image with Packer and launch it with Terraform: [Azure deployment](docs/deployment/azure.md).
 - **Laravel Cloud / Vapor** — see [Laravel Cloud](docs/deployment/laravel-cloud.md) for the managed-hosting path.
+- **Desktop app** — build a standalone macOS, Windows, or Linux app with NativePHP: [Desktop app](docs/deployment/desktop.md).
+  It bundles SQLite, runs the parity-locked PHP payroll driver, and updates from GitHub Releases.
 
-The Go payroll binary must exist on the server. The Docker image and the AWS, GCP, and Azure golden images build it automatically; other deployments must add `make -C payroll-engine build` to their release step.
+The Go payroll binary must exist on the server. The Docker image and the AWS, GCP, and Azure golden images build it automatically; other deployments must add `make -C payroll-engine build` to their release step. The desktop build does not use it.
 
 ## Security
 

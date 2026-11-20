@@ -175,6 +175,21 @@ php artisan optimize:clear
 
 If uploaded files do not appear, check `storage/app/public`, the `public/storage` symlink, and the `FILESYSTEM_DISK`/`MEDIA_DISK` values.
 
+## Desktop build
+
+The repository also ships a [NativePHP desktop build](../deployment/desktop.md). It does not use MySQL, the Go payroll
+binary, or the scheduler/queue commands above. Run it in a native window with:
+
+```bash
+php artisan native:install   # first time only: Electron deps + bundled PHP binary
+php artisan native:run
+```
+
+The desktop runtime uses `database/nativephp.sqlite` in development and applies `App\Services\Desktop\DesktopEnvironment`
+only inside Electron. The first window opens the setup wizard at `/setup`; outside Electron that route returns 404.
+Use `php artisan native:migrate`, `native:migrate:fresh`, and `native:reset` for its database and build files. See
+[Desktop app](../deployment/desktop.md) for packaging, signing, and auto-updates.
+
 ## Queues and realtime
 
 The default queue is the database queue:

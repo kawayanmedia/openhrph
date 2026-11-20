@@ -2,6 +2,17 @@
 
 This page helps you sign in, find your way around, and set up your account for daily use.
 
+## Desktop app
+
+If you installed the OpenHR PH desktop application, the first window is a setup wizard instead of a
+sign-in page. Choose whether the installation serves **Government** or **Private** organisations,
+pick the payroll country, enter your company name, and create the owner account. The wizard installs
+the reference data, statutory tables, and holiday calendar for you, then signs you in.
+
+All data is stored on that computer. To move an installation, close the app and copy its data folder;
+the path for each operating system is listed in [Desktop app](../deployment/desktop.md). Later
+versions update themselves from the application's releases page.
+
 ## Before you start
 
 - Ask your administrator for your email address and temporary password.

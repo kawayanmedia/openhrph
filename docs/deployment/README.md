@@ -14,6 +14,7 @@ OpenHR PH can run as a Docker Compose stack, on a golden-image VM in AWS, GCP, o
 | [GCP image + Terraform](gcp.md) | Teams running on Google Cloud that want a golden image and native MySQL | Single VM; you own patching, backups, and scaling |
 | [Azure image + Terraform](azure.md) | Teams running on Microsoft Azure that want a golden image and native MySQL | Single VM; you own patching, backups, and scaling |
 | [Laravel Cloud](laravel-cloud.md) | Teams that want managed PHP hosting, queues, and databases | Less infrastructure control; the Go payroll binary and some PHP extensions need verification |
+| [Desktop app](desktop.md) | Single-workstation or offline installs that need no server, MySQL, or terminal | Local SQLite data; no multi-device sync; uses the PHP payroll driver |
 | Laravel Vapor | Existing Vapor users | Vapor is Lambda-based; long payroll runs, local binaries, and WebSockets need extra design |
 
 ## Before deploying
@@ -43,4 +44,4 @@ Application secrets are never baked into the image. Terraform writes an encrypte
 
 The Docker path builds the same application once and runs it with Nginx, PHP-FPM, queue workers, a scheduler, and MySQL 8 in Compose.
 
-Continue with [Docker Compose](docker.md), [AWS AMI deployment](aws-ami.md), [GCP deployment](gcp.md), or [Azure deployment](azure.md).
+Continue with [Docker Compose](docker.md), [AWS AMI deployment](aws-ami.md), [GCP deployment](gcp.md), or [Azure deployment](azure.md). For an install that runs on a single workstation without a server, see [Desktop app](desktop.md).

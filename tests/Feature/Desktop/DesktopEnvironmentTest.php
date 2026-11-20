@@ -1,0 +1,62 @@
+<?php
+
+use App\Providers\DesktopServiceProvider;
+use App\Services\Desktop\DesktopEnvironment;
+use Illuminate\Contracts\Http\Kernel;
+use Native\Desktop\Http\Middleware\PreventRegularBrowserAccess;
+
+it('leaves the web deployment profile untouched', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'payroll.engine.driver' => 'go',
+        'demo.enabled' => true,
+        'mail.default' => 'smtp',
+        'filesystems.disks.public.serve' => false,
+    ]);
+
+    expect(DesktopEnvironment::isRunning())->toBeFalse();
+
+    DesktopEnvironment::apply();
+
+    expect(config('payroll.engine.driver'))->toBe('go')
+        ->and(config('demo.enabled'))->toBeTrue()
+        ->and(config('mail.default'))->toBe('smtp')
+        ->and(config('filesystems.disks.public.serve'))->toBeFalse();
+});
+
+it('switches to the offline desktop profile inside the native runtime', function () {
+    config(['nativephp-internal.running' => true]);
+
+    expect(DesktopEnvironment::isRunning())->toBeTrue();
+
+    DesktopEnvironment::apply();
+
+    expect(config('payroll.engine.driver'))->toBe('php')
+        ->and(config('demo.enabled'))->toBeFalse()
+        ->and(config('mail.default'))->toBe('log')
+        ->and(config('broadcasting.default'))->toBe('log')
+        ->and(config('queue.default'))->toBe('database')
+        ->and(config('session.driver'))->toBe('file')
+        ->and(config('telescope.enabled'))->toBeFalse()
+        ->and(config('filesystems.disks.public.serve'))->toBeTrue()
+        ->and(config('filesystems.disks.public.url'))->toBe('/storage');
+});
+
+it('protects the local server with the native secret', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'nativephp-internal.secret' => 'native-secret',
+    ]);
+
+    (new DesktopServiceProvider($this->app))->boot();
+
+    $kernel = $this->app->make(Kernel::class);
+    $middleware = (new ReflectionObject($kernel))->getProperty('middleware');
+    $middleware->setAccessible(true);
+
+    expect($middleware->getValue($kernel))->toContain(PreventRegularBrowserAccess::class);
+});
+
+it('hides the native bridge from web deployments', function () {
+    $this->postJson('/_native/api/events', ['event' => 'anything'])->assertNotFound();
+});

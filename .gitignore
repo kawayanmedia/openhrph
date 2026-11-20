@@ -33,6 +33,9 @@ yarn-error.log
 /storage/playwright-report
 /storage/e2e-fixtures.json
 
+# NativePHP desktop
+/nativephp
+
 /.ai
 /.claude
 /.cursor

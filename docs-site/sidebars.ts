@@ -53,6 +53,7 @@ const sidebars: SidebarsConfig = {
         'deployment/gcp',
         'deployment/azure',
         'deployment/laravel-cloud',
+        'deployment/desktop',
         'deployment/operations',
       ],
     },

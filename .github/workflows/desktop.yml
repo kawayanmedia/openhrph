@@ -1,0 +1,174 @@
+name: Desktop app
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'App version, for example 1.2.0 (required when publishing)'
+        required: false
+      publish:
+        description: 'Upload the builds to a draft GitHub Release'
+        type: boolean
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            PUBLISH="true"
+          else
+            VERSION="${{ inputs.version }}"
+            PUBLISH="${{ inputs.publish }}"
+          fi
+
+          if [[ -z "${VERSION}" ]]; then
+            VERSION="0.0.0-ci"
+          fi
+
+          if [[ "${PUBLISH}" == "true" && "${VERSION}" == "0.0.0-ci" ]]; then
+            echo "::error::Provide a version when publishing a desktop build."
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+
+          gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --repo "${{ github.repository }}" \
+              --draft \
+              --title "OpenHR PH ${{ steps.version.outputs.version }}" \
+              --notes "Desktop build ${{ steps.version.outputs.version }}."
+
+  build:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
+    needs: prepare
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            platform: mac
+            arch: arm64
+          - runner: macos-latest
+            platform: mac
+            arch: x64
+          - runner: windows-latest
+            platform: win
+            arch: x64
+          - runner: ubuntu-latest
+            platform: linux
+            arch: x64
+    env:
+      APP_ENV: production
+      APP_DEBUG: false
+      NATIVEPHP_APP_VERSION: ${{ needs.prepare.outputs.version }}
+      GITHUB_OWNER: kawayanmedia
+      GITHUB_REPO: openhrph
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Signing is optional. Add CSC_LINK/CSC_KEY_PASSWORD (and the Apple or
+      # Azure variables) as repository secrets to sign and notarise builds.
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+      CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+      NATIVEPHP_APPLE_ID: ${{ secrets.NATIVEPHP_APPLE_ID }}
+      NATIVEPHP_APPLE_ID_PASS: ${{ secrets.NATIVEPHP_APPLE_ID_PASS }}
+      NATIVEPHP_APPLE_TEAM_ID: ${{ secrets.NATIVEPHP_APPLE_TEAM_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      NATIVEPHP_AZURE_PUBLISHER_NAME: ${{ secrets.NATIVEPHP_AZURE_PUBLISHER_NAME }}
+      NATIVEPHP_AZURE_ENDPOINT: ${{ secrets.NATIVEPHP_AZURE_ENDPOINT }}
+      NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME: ${{ secrets.NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME }}
+      NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME: ${{ secrets.NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, ctype, curl, dom, fileinfo, gd, iconv, intl, mbstring, openssl, pdo_sqlite, simplexml, sqlite3, tokenizer, xml, xmlreader, xmlwriter, zip, zlib
+          coverage: none
+          ini-values: memory_limit=512M
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Prepare environment
+        shell: bash
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install NativePHP
+        run: php artisan native:install --no-interaction
+
+      - name: Ensure the Electron runtime
+        shell: bash
+        run: node vendor/nativephp/desktop/resources/electron/node_modules/electron/install.js
+
+      - name: Install Linux packaging tools
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools rpm fakeroot
+
+      - name: Build application
+        shell: bash
+        run: |
+          PUBLISH=""
+          if [[ "${{ needs.prepare.outputs.publish }}" == "true" ]]; then
+            PUBLISH="--publish"
+          fi
+
+          php artisan native:build ${{ matrix.platform }} ${{ matrix.arch }} $PUBLISH --no-interaction
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhrph-${{ matrix.platform }}-${{ matrix.arch }}
+          path: nativephp/electron/dist/*
+          if-no-files-found: error
+          retention-days: 14
