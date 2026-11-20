@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'App version, for example 1.2.0 (required when publishing)'
+        description: 'App version, for example 1.0.1 (required when publishing)'
         required: false
       publish:
         description: 'Upload the builds to a draft GitHub Release'
@@ -132,15 +132,42 @@ jobs:
 
       - name: Prepare environment
         shell: bash
-        run: |
-          cp .env.example .env
-          php artisan key:generate --ansi
+        run: cp .env.example .env
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        shell: bash
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php-8.4-
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Install frontend dependencies
         run: npm ci
+
+      # Every `php artisan` call needs vendor/autoload.php, so this runs after
+      # Composer. NativePHP bundles .env into the app, so the key must live
+      # there rather than in the process environment.
+      - name: Configure application key
+        shell: bash
+        env:
+          # Optional. Set the same key in every release so upgrades keep users
+          # signed in. Generate one with `php artisan key:generate --show`.
+          DESKTOP_APP_KEY: ${{ secrets.DESKTOP_APP_KEY }}
+        run: |
+          if [[ -n "${DESKTOP_APP_KEY}" ]]; then
+            sed -i.bak "s|^APP_KEY=.*|APP_KEY=${DESKTOP_APP_KEY}|" .env
+            rm -f .env.bak
+          else
+            php artisan key:generate --ansi --force
+          fi
 
       - name: Install NativePHP
         run: php artisan native:install --no-interaction
