@@ -209,9 +209,9 @@ with `MissingAppKeyException` behind a plain "500 Server Error" page.
 
 The `desktop:export-env` Artisan command (run by `config/nativephp.php` → `prebuild`, and as an explicit workflow step)
 exports the same settings to `bootstrap/desktop.env` — a regular file that ships — and
-[`bootstrap/app.php`](/Volumes/sdcard/projects/kawayan/openhrph/openhrphmain/bootstrap/app.php) loads it when no `.env`
-is present. The export applies the same cleanup as NativePHP (`cleanup_env_keys`, log channels), and it fails the build
-when `APP_KEY` is missing instead of shipping a broken installer.
+`bootstrap/app.php` loads it when no `.env` is present. The export applies the same cleanup as NativePHP
+(`cleanup_env_keys`, log channels), and it fails the build when `APP_KEY` is missing instead of shipping a broken
+installer.
 
 The workflow pins `APP_ENV=production` and `APP_DEBUG=false`: `.env.example` is a development profile, and shipping it
 unchanged would point the app at MySQL and the project's own storage.
