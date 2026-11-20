@@ -2,8 +2,10 @@
 
 namespace App\Services\Desktop;
 
+use App\Models\Company;
 use App\Models\User;
 use App\Sectors\Catalogues\SectorCatalogue;
+use App\Services\Demo\DemoWorkspaceSeeder;
 use App\Support\Installation\Installation;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Support\Facades\Artisan;
@@ -15,10 +17,14 @@ use Throwable;
  *
  * A packaged desktop app has no terminal, so the same steps the deployment
  * scripts run (`openhr:install`, reference data, `admin:create`) are executed
- * from the setup wizard instead.
+ * from the setup wizard instead. The wizard finishes by filling the company
+ * with the same sample records the hosted demo account starts from, so the
+ * tables are populated on first launch.
  */
 final class DesktopInstaller
 {
+    public function __construct(private readonly DemoWorkspaceSeeder $workspace) {}
+
     public function isInstalled(): bool
     {
         try {
@@ -78,6 +84,12 @@ final class DesktopInstaller
         // The company now exists, so the catalogue rows that are scoped to a
         // company (employment types, deductions, loans) can be seeded.
         SectorCatalogue::seedForCompany((int) $user->company_id);
+
+        $company = Company::query()->find($user->company_id);
+
+        if ($company instanceof Company) {
+            $this->workspace->seed($company);
+        }
 
         if (strcasecmp($attributes['sector'], Installation::SECTOR_GOVERNMENT) !== 0) {
             $this->runOptional($warnings, 'payroll:wage-orders:import');

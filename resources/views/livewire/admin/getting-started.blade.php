@@ -7,12 +7,23 @@
             </p>
         </div>
 
-        <button type="button" wire:click="$refresh" class="ui-btn-secondary">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-4.992 4.992 3.181-3.183a8.25 8.25 0 0 0-13.5 6.057M4.5 14.25v4.992h4.992m-4.992 0 3.181-3.183a8.25 8.25 0 0 0 13.5-6.057" />
-            </svg>
-            Refresh status
-        </button>
+        <div class="flex flex-wrap items-center gap-3">
+            @if ($canLoadSampleData)
+                <button type="button"
+                        wire:click="loadSampleData"
+                        wire:confirm="This adds three sample employees, their attendance and a draft payroll to this company. Continue?"
+                        class="ui-btn-secondary">
+                    Load sample data
+                </button>
+            @endif
+
+            <button type="button" wire:click="$refresh" class="ui-btn-secondary">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-4.992 4.992 3.181-3.183a8.25 8.25 0 0 0-13.5 6.057M4.5 14.25v4.992h4.992m-4.992 0 3.181-3.183a8.25 8.25 0 0 0 13.5-6.057" />
+                </svg>
+                Refresh status
+            </button>
+        </div>
     </div>
 
     @php

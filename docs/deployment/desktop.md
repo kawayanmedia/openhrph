@@ -96,13 +96,24 @@ The wizard then runs the same steps as the deployment scripts:
 - `ReferenceDataSeeder` — system-wide leave types and compensation templates;
 - `admin:create` — the company and the owner account;
 - the company's employment types, deductions, and loan programmes;
+- the sample workspace — `Head Office`, the `Human Resources` department, a default 8am–5pm schedule, the
+  `Default Kinsenas Katapusan` semi-monthly payroll group with its pay dates, three sample employees
+  (`D-0001`–`D-0003`), their attendance for the current cutoff, an open draft payroll and the company
+  settings;
 - NWPC wage orders (Private sector) and the holiday calendar.
 
-When it finishes, the owner is signed in and lands on the dashboard. If a step fails, the wizard shows the command
-output and leaves the database untouched by that step so it can be retried.
+When it finishes, the owner is signed in and lands on the dashboard with the same populated tables a demo
+account gets on the hosted site. The sample rows are ordinary records: edit them, or delete the `D-000x`
+employees once you add real ones.
 
 The wizard is only registered for the desktop runtime: outside Electron, `/setup` returns 404. Once an owner exists,
 opening `/setup` redirects to `/app/login`.
+
+### Loading sample data later
+
+An installation created before the sample workspace existed, or one that was emptied on purpose, can be filled from
+**Getting started → Load sample data**. The action is desktop-only, is idempotent, and refuses to run when the
+company already has employees outside the `D-000x` set, so it never mixes sample payroll rows into a real workspace.
 
 ## Where the data lives
 
@@ -270,6 +281,7 @@ Without `CSC_LINK` the workflow sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and pro
 | 500 with no details and `MissingAppKeyException` in `laravel.log` | The packaged app is missing its environment file. Run `php artisan desktop:export-env` and confirm `bootstrap/desktop.env` contains `APP_KEY` before building; the CI step fails when it does not |
 | 500 with `no such table: cache` (or `users`) | The app-data database was never migrated. The bundled version did not change since the last run; build with a new `version` (CI uses `0.0.0-ci.<run number>`), or delete the app-data folder and reopen the app |
 | The setup wizard does not appear | Run `php artisan native:migrate`; the `users` table must exist |
+| Workspace tables are empty after setup | Re-run the sample workspace from **Getting started → Load sample data**, or start over with `php artisan native:migrate:fresh` |
 | Want to start over | `php artisan native:migrate:fresh` in development. In a packaged app, quit and move the app-data folder aside |
 | Build is stale | `php artisan native:reset` then rebuild |
 | Wrong PHP binary | Set `NATIVEPHP_PHP_BINARY_PATH` to a custom binary folder; NativePHP expects `{os}/{arch}/php` |

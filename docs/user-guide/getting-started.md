@@ -7,7 +7,10 @@ This page helps you sign in, find your way around, and set up your account for d
 If you installed the OpenHR PH desktop application, the first window is a setup wizard instead of a
 sign-in page. Choose whether the installation serves **Government** or **Private** organisations,
 pick the payroll country, enter your company name, and create the owner account. The wizard installs
-the reference data, statutory tables, and holiday calendar for you, then signs you in.
+the reference data, statutory tables, and holiday calendar for you, plus a sample workspace (an
+office, a department, a schedule, three sample employees and an open draft payroll), then signs you
+in. Delete the `D-000x` sample employees once you add your own; empty workspaces can be filled later
+from **Getting started → Load sample data**.
 
 All data is stored on that computer. To move an installation, close the app and copy its data folder;
 the path for each operating system is listed in [Desktop app](../deployment/desktop.md). Later

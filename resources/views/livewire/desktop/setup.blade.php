@@ -123,7 +123,9 @@
     </form>
 
     <p class="mt-6 text-xs text-slate-500 dark:text-slate-400">
-        Reference data, statutory tables, and the payroll calendar are installed for you. You can
-        change the company profile and add employees after signing in.
+        Reference data, statutory tables, and the payroll calendar are installed for you, along with a
+        sample workspace: one office, one department, a default schedule, three sample employees
+        (D-0001 to D-0003), their attendance and a draft payroll. Edit or delete those records once you
+        add your own.
     </p>
 </div>

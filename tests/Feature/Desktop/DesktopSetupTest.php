@@ -2,7 +2,17 @@
 
 use App\Livewire\Desktop\Setup;
 use App\Models\Company;
+use App\Models\Department;
+use App\Models\Employee;
+use App\Models\Office;
+use App\Models\Payroll;
+use App\Models\PayrollGroup;
+use App\Models\Schedule;
+use App\Models\Setting;
+use App\Models\Timesheet;
 use App\Models\User;
+use App\Services\Demo\DemoWorkspaceSeeder;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -62,4 +72,31 @@ it('creates the installation, company and owner account', function () {
         'key' => 'country_code',
         'value' => 'PH',
     ]);
+});
+
+it('fills the new company with the demo workspace', function () {
+    Livewire::test(Setup::class)
+        ->set('sector', 'Private')
+        ->set('country', 'PH')
+        ->set('companyName', 'Desktop Company')
+        ->set('name', 'Desktop Owner')
+        ->set('email', 'owner@desktop.test')
+        ->set('password', 'secret-password')
+        ->set('password_confirmation', 'secret-password')
+        ->call('install')
+        ->assertHasNoErrors();
+
+    $owner = User::query()->where('email', 'owner@desktop.test')->firstOrFail();
+    $company = Company::query()->findOrFail($owner->company_id);
+
+    app(TenantContext::class)->run($company, function (): void {
+        expect(Office::query()->where('name', 'Head Office')->exists())->toBeTrue()
+            ->and(Department::query()->where('name', 'Human Resources')->exists())->toBeTrue()
+            ->and(Schedule::query()->where('name', 'Default 8am to 5pm')->exists())->toBeTrue()
+            ->and(PayrollGroup::query()->where('name', 'Default Kinsenas Katapusan')->exists())->toBeTrue()
+            ->and(Employee::query()->whereIn('employee_number', DemoWorkspaceSeeder::SAMPLE_EMPLOYEE_NUMBERS)->count())->toBe(3)
+            ->and(Timesheet::query()->count())->toBeGreaterThan(0)
+            ->and(Payroll::query()->where('status', Payroll::STATUS_OPEN)->count())->toBe(1)
+            ->and(Setting::query()->where('key', 'company_name')->value('value'))->toBe('Desktop Company');
+    });
 });
