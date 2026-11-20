@@ -34,7 +34,7 @@ EXIF rotation is skipped when generating employee thumbnails.
 
 | Tool | Version |
 | --- | --- |
-| PHP | 8.3 or newer with `zip`, `gd`, `intl`, `bcmath`, `pdo_sqlite` |
+| PHP | 8.3 or newer with `zip`, `gd`, `exif`, `intl`, `bcmath`, `pdo_sqlite` |
 | Composer | 2.x |
 | Node.js | 22 or newer |
 | OS | macOS 12+, Windows 10+, or a current Linux distribution |
@@ -183,11 +183,14 @@ the background, and applies them on quit. Publish the draft when every platform 
 - **Manual run** — Actions → *Desktop app* → *Run workflow*. Builds are uploaded as workflow artifacts (14 days).
 - **Tag `v*`** — builds and publishes to a draft GitHub Release.
 
-### Application key
+### Bundled environment
 
-NativePHP bundles `.env` into the app, so each build needs an `APP_KEY` written into that file rather than passed
-through the environment. The workflow installs the Composer and npm dependencies first, because every `php artisan`
-step needs `vendor/autoload.php`.
+NativePHP copies `.env` into the app, so build-time settings that the app needs at runtime have to be written to that
+file rather than exported to the build process. The workflow installs the Composer and npm dependencies first, because
+every `php artisan` step needs `vendor/autoload.php`.
+
+It also pins `APP_ENV=production` and `APP_DEBUG=false` in the bundled file: `.env.example` is a development profile,
+and shipping it unchanged would show Ignition's debug page — and its stack traces — to users of the packaged app.
 
 Set an optional `DESKTOP_APP_KEY` repository secret (generate one with `php artisan key:generate --show`) to use the
 same key for every release. Without it each build generates a new key, and users are signed out after an update
