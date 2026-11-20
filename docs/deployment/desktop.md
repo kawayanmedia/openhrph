@@ -106,14 +106,16 @@ opening `/setup` redirects to `/app/login`.
 
 ## Where the data lives
 
-NativePHP creates an app-data folder named after `nativephp.app_id` (`com.kawayanmedia.openhrph`). In production builds
-the database and storage live there; in development they stay in the project.
+NativePHP creates an app-data folder named after the slug of `APP_NAME` (`openhr-ph`; the development build uses
+`openhr-ph-dev`). In production builds the database and storage live there; in development they stay in the project.
 
 | OS | Path |
 | --- | --- |
-| macOS | `~/Library/Application Support/com.kawayanmedia.openhrph` |
-| Windows | `%APPDATA%\com.kawayanmedia.openhrph` |
-| Linux | `~/.config/com.kawayanmedia.openhrph` |
+| macOS | `~/Library/Application Support/openhr-ph` |
+| Windows | `%APPDATA%\openhr-ph` |
+| Linux | `~/.config/openhr-ph` |
+
+Changing `APP_NAME` creates a new folder; existing data is not moved automatically.
 
 The folder contains:
 
@@ -140,6 +142,9 @@ php artisan native:build mac arm64
 php artisan native:build win x64
 php artisan native:build linux x64
 ```
+
+On macOS, set `CSC_IDENTITY_AUTO_DISCOVERY=false` to skip signing for a quick local build. Without it,
+electron-builder signs with any development certificate it finds and waits on Apple's timestamp service.
 
 Artifacts land in `nativephp/electron/dist` (ignored by Git). `config/nativephp.php` runs `npm run build` before
 packaging, so the Vite manifest is always current.

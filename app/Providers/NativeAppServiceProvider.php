@@ -25,7 +25,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
         );
 
         Window::open()
-            ->route($this->startUri())
+            ->route($this->startRoute())
             ->title(config('app.name'))
             ->width(1360)
             ->height(860)
@@ -37,7 +37,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
     /**
      * Open the setup wizard until an owner account exists, then the login page.
      */
-    private function startUri(): string
+    private function startRoute(): string
     {
         try {
             $installed = app(DesktopInstaller::class)->isInstalled();
@@ -45,7 +45,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
             $installed = false;
         }
 
-        return $installed ? route('admin.login') : route('desktop.setup');
+        return $installed ? 'admin.login' : 'desktop.setup';
     }
 
     /**
