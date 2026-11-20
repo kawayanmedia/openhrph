@@ -3,6 +3,8 @@
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ServiceRecordController;
 use App\Http\Controllers\SetupController;
+use App\Http\Middleware\EnsureDesktopMode;
+use App\Livewire\Desktop\Setup as DesktopSetup;
 use App\Livewire\Portal\TestPayroll;
 use Bugsnag\BugsnagLaravel\Facades\Bugsnag;
 use Illuminate\Support\Facades\Route;
@@ -10,6 +12,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// First-run onboarding for the standalone NativePHP desktop build. The
+// middleware keeps this route out of every web deployment.
+Route::get('setup', DesktopSetup::class)
+    ->middleware(EnsureDesktopMode::class)
+    ->name('desktop.setup');
 
 Route::get('/pds/{employee}/pdf', function ($employee) {
     dd($employee);

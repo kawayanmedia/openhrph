@@ -13,6 +13,10 @@ OpenHR PH is a Laravel 13 application with a first-party Livewire admin, a separ
 
 Laravel 13 requires PHP 8.3+.
 
+The optional [desktop build](../deployment/desktop.md) runs the same application inside Electron with a bundled PHP
+runtime. There NativePHP forces SQLite, so the desktop profile (`App\Providers\DesktopServiceProvider`) selects the PHP
+payroll driver and local-first mail, queue, session, and filesystem settings. The web deployment is unchanged.
+
 ## High-level view
 
 ```mermaid

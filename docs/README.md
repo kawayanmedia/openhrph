@@ -65,6 +65,7 @@ For developers, integrators, and system administrators.
 | [Azure deployment](deployment/azure.md) | Packer managed image and Terraform stack, step by step |
 | [Operations](deployment/operations.md) | Logs, backups, updates, scaling, health checks, and teardown |
 | [Laravel Cloud](deployment/laravel-cloud.md) | Managed hosting with Laravel Cloud or Vapor |
+| [Desktop app](deployment/desktop.md) | Standalone macOS, Windows, and Linux builds with NativePHP, local SQLite, and auto-updates |
 
 ### Release and security
 

@@ -1,20 +1,11 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-fINShNTv.css",
+    "file": "assets/app-LGA1q2nk.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
-    "isEntry": true
-  },
-  "resources/css/filament.css": {
-    "file": "assets/filament-BfoT_V-j.css",
-    "name": "filament",
-    "names": [
-      "filament.css"
-    ],
-    "src": "resources/css/filament.css",
     "isEntry": true
   },
   "resources/js/app.js": {
