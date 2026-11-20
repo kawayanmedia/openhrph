@@ -183,6 +183,16 @@ the background, and applies them on quit. Publish the draft when every platform 
 - **Manual run** — Actions → *Desktop app* → *Run workflow*. Builds are uploaded as workflow artifacts (14 days).
 - **Tag `v*`** — builds and publishes to a draft GitHub Release.
 
+### Application key
+
+NativePHP bundles `.env` into the app, so each build needs an `APP_KEY` written into that file rather than passed
+through the environment. The workflow installs the Composer and npm dependencies first, because every `php artisan`
+step needs `vendor/autoload.php`.
+
+Set an optional `DESKTOP_APP_KEY` repository secret (generate one with `php artisan key:generate --show`) to use the
+same key for every release. Without it each build generates a new key, and users are signed out after an update
+because their session cookies no longer decrypt.
+
 ### Code signing
 
 Unsigned builds run only on the machine that built them (macOS shows a "damaged" warning elsewhere), and macOS
