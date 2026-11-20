@@ -42,6 +42,44 @@ it('switches to the offline desktop profile inside the native runtime', function
         ->and(config('filesystems.disks.public.url'))->toBe('/storage');
 });
 
+it('turns on error output for a packaged debug build', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'desktop.debug' => true,
+        'app.debug' => false,
+        'logging.channels.daily.level' => 'warning',
+    ]);
+
+    (new DesktopServiceProvider($this->app))->boot();
+
+    expect(config('app.debug'))->toBeTrue()
+        ->and(config('logging.channels.daily.level'))->toBe('debug');
+});
+
+it('keeps error output off when the desktop build is not a debug build', function () {
+    config([
+        'nativephp-internal.running' => true,
+        'desktop.debug' => false,
+        'app.debug' => false,
+    ]);
+
+    DesktopEnvironment::enableDebug();
+
+    expect(config('app.debug'))->toBeFalse();
+});
+
+it('does not touch debug mode outside the native runtime', function () {
+    config([
+        'nativephp-internal.running' => false,
+        'desktop.debug' => true,
+        'app.debug' => false,
+    ]);
+
+    DesktopEnvironment::enableDebug();
+
+    expect(config('app.debug'))->toBeFalse();
+});
+
 it('protects the local server with the native secret', function () {
     config([
         'nativephp-internal.running' => true,

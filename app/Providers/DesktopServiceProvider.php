@@ -31,6 +31,10 @@ class DesktopServiceProvider extends ServiceProvider
             return;
         }
 
+        // Runs after NativePHP has resolved its per-user storage and SQLite
+        // paths, so a debug build still keeps data out of the app bundle.
+        DesktopEnvironment::enableDebug();
+
         if ((string) config('nativephp-internal.secret') === '') {
             return;
         }

@@ -21,6 +21,33 @@ final class DesktopEnvironment
         return filter_var(env('NATIVEPHP_RUNNING', false), FILTER_VALIDATE_BOOL);
     }
 
+    public static function debugEnabled(): bool
+    {
+        return (bool) config('desktop.debug', false);
+    }
+
+    /**
+     * Show errors, stack traces and DevTools in a packaged build.
+     *
+     * NativePHP keys its per-user storage and SQLite paths off app.debug, so
+     * this runs after that switch has been read and only flips Laravel's
+     * debug mode for the rest of the request. Development runs already have
+     * app.debug enabled and are left alone.
+     */
+    public static function enableDebug(): void
+    {
+        if (! self::isRunning() || ! self::debugEnabled() || config('app.debug')) {
+            return;
+        }
+
+        config([
+            'app.debug' => true,
+            // NativePHP forces LOG_LEVEL=warning into the bundled .env.
+            'logging.channels.daily.level' => 'debug',
+            'logging.channels.single.level' => 'debug',
+        ]);
+    }
+
     public static function apply(): void
     {
         if (! self::isRunning()) {

@@ -159,6 +159,12 @@ The build copies the project and then removes development-only files and secrets
 
 Keep that list up to date when adding new secrets or development artifacts.
 
+A local build copies your `.env`, which is a development profile (`APP_DEBUG=true`), so it opens DevTools and shows
+error pages. NativePHP's per-user paths only apply when `app.debug` is off, so a local build keeps its database and
+storage inside the bundled app folder — fine for testing, but not for handing to users. Use the GitHub Actions
+workflow (or set `APP_DEBUG=false` and `DESKTOP_DEBUG=true` in `.env`) for an installer that keeps data in the
+per-user app-data folder.
+
 ## Auto-updates and GitHub Releases
 
 The updater uses GitHub Releases (`config/nativephp.php` → `updater`). A release is published in two steps:
@@ -181,7 +187,8 @@ the background, and applies them on quit. Publish the draft when every platform 
 | `ubuntu-latest` | `linux` | `x64` |
 
 - **Manual run** — Actions → *Desktop app* → *Run workflow*. Builds are uploaded as workflow artifacts (14 days).
-- **Tag `v*`** — builds and publishes to a draft GitHub Release.
+  Manual runs are debug builds unless the `debug` input is unchecked (see below).
+- **Tag `v*`** — builds and publishes to a draft GitHub Release. Tag builds are not debug builds.
 
 ### Bundled environment
 
@@ -190,11 +197,32 @@ file rather than exported to the build process. The workflow installs the Compos
 every `php artisan` step needs `vendor/autoload.php`.
 
 It also pins `APP_ENV=production` and `APP_DEBUG=false` in the bundled file: `.env.example` is a development profile,
-and shipping it unchanged would show Ignition's debug page — and its stack traces — to users of the packaged app.
+and shipping it unchanged would show debug pages — and stack traces — to users of the packaged app.
+
+`APP_DEBUG` has to stay `false` even in a debug build. NativePHP treats `app.debug` as a development run: it then
+keeps the SQLite database, uploads, sessions and logs inside the installed application folder instead of the per-user
+app-data folder, which is read-only on Windows and Linux and replaced on update. The workflow writes a separate
+`DESKTOP_DEBUG` flag into the bundled `.env` instead.
 
 Set an optional `DESKTOP_APP_KEY` repository secret (generate one with `php artisan key:generate --show`) to use the
 same key for every release. Without it each build generates a new key, and users are signed out after an update
 because their session cookies no longer decrypt.
+
+### Debug builds
+
+The `debug` workflow input (on by default for manual runs) writes `DESKTOP_DEBUG=true` (`config/desktop.php`), and
+`App\Services\Desktop\DesktopEnvironment::enableDebug()` turns Laravel's debug mode on at runtime, after NativePHP has
+already resolved the per-user storage and SQLite paths. A debug build:
+
+- shows a full exception page — message, class, file, line and stack trace — in the window;
+- opens an Electron DevTools panel next to the window (NativePHP opens it whenever `app.debug` is on);
+- logs to `storage/logs` in the app-data folder at debug level, where NativePHP normally forces `LOG_LEVEL=warning`.
+
+Ignition and Debugbar are `require-dev` and pruned from the bundle (`composer install --no-dev`), so the error page is
+the framework's plain exception page and no debug toolbar is injected.
+
+Tag `v*` builds default to a non-debug build. To publish a debug build, dispatch the workflow manually with *publish*
+and *debug* both checked — the stack traces will be visible to whoever installs that release.
 
 ### Code signing
 
@@ -224,7 +252,7 @@ Without `CSC_LINK` the workflow sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and pro
 
 | Symptom | Fix |
 | --- | --- |
-| Window opens to a 500 error | Run `php artisan native:debug`, then check `storage/logs` (dev) or the app-data `storage/logs` (production) |
+| Window opens to a 500 error | Build with the `debug` input checked to see the exception and stack trace in the window and in DevTools; logs are in `storage/logs` (dev) or the app-data `storage/logs` (packaged). Run `php artisan native:debug` when opening an issue |
 | The setup wizard does not appear | Run `php artisan native:migrate`; the `users` table must exist |
 | Want to start over | `php artisan native:migrate:fresh` in development. In a packaged app, quit and move the app-data folder aside |
 | Build is stale | `php artisan native:reset` then rebuild |

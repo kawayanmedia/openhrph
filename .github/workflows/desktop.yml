@@ -10,6 +10,10 @@ on:
         description: 'Upload the builds to a draft GitHub Release'
         type: boolean
         default: false
+      debug:
+        description: 'Show Laravel error pages, stack traces and DevTools in the built app'
+        type: boolean
+        default: true
   push:
     tags:
       - 'v*'
@@ -29,6 +33,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       publish: ${{ steps.version.outputs.publish }}
+      debug: ${{ steps.version.outputs.debug }}
     steps:
       - name: Resolve version
         id: version
@@ -37,9 +42,13 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
             PUBLISH="true"
+            # Tag pushes are public releases; run the workflow manually to
+            # build (or publish) a debug installer.
+            DEBUG="false"
           else
             VERSION="${{ inputs.version }}"
             PUBLISH="${{ inputs.publish }}"
+            DEBUG="${{ inputs.debug }}"
           fi
 
           if [[ -z "${VERSION}" ]]; then
@@ -53,6 +62,7 @@ jobs:
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "publish=${PUBLISH}" >> "$GITHUB_OUTPUT"
+          echo "debug=${DEBUG}" >> "$GITHUB_OUTPUT"
 
       - name: Create draft release
         if: steps.version.outputs.publish == 'true'
@@ -92,7 +102,12 @@ jobs:
             arch: x64
     env:
       APP_ENV: production
+      # Kept false on purpose: NativePHP treats app.debug as a development run
+      # and would keep the SQLite database, uploads and logs inside the app
+      # bundle instead of the per-user app-data folder. DESKTOP_DEBUG turns on
+      # error pages and DevTools at runtime instead (see config/desktop.php).
       APP_DEBUG: false
+      DESKTOP_DEBUG: ${{ needs.prepare.outputs.debug }}
       NATIVEPHP_APP_VERSION: ${{ needs.prepare.outputs.version }}
       GITHUB_OWNER: kawayanmedia
       GITHUB_REPO: openhrph
@@ -173,11 +188,16 @@ jobs:
           fi
 
           # .env.example is a development profile; the packaged app is not.
+          # APP_DEBUG stays false for the per-user paths; DESKTOP_DEBUG is
+          # toggled by the workflow input so testers see the real error.
           sed -i.bak \
             -e "s|^APP_ENV=.*|APP_ENV=production|" \
             -e "s|^APP_DEBUG=.*|APP_DEBUG=false|" \
+            -e "s|^DESKTOP_DEBUG=.*|DESKTOP_DEBUG=${{ needs.prepare.outputs.debug }}|" \
             .env
           rm -f .env.bak
+
+          echo "Bundled .env: $(grep -E '^(APP_ENV|APP_DEBUG|DESKTOP_DEBUG)=' .env | tr '\n' ' ')"
 
       - name: Install NativePHP
         run: php artisan native:install --no-interaction
