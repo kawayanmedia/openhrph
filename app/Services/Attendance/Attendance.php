@@ -265,12 +265,12 @@ class Attendance
 
     public function setHours($timesheet, $rate, $key) // key rest_day_hours
     {
-        if (isset($this->hours[$timesheet->rate_code][$key]['hours'])) {
-            $this->hours[$timesheet->rate_code][$key]['hours'] += $rate['hours'];
+        if (isset($this->hours[$timesheet->day_rate_code][$key]['hours'])) {
+            $this->hours[$timesheet->day_rate_code][$key]['hours'] += $rate['hours'];
         } else {
-            $this->hours[$timesheet->rate_code][$key]['is_rest_day'] = $rate['is_rest_day'] ?? false;
-            $this->hours[$timesheet->rate_code][$key]['is_holiday'] = $rate['is_holiday'] ?? false;
-            $this->hours[$timesheet->rate_code][$key]['hours'] = $rate['hours'];
+            $this->hours[$timesheet->day_rate_code][$key]['is_rest_day'] = $rate['is_rest_day'] ?? false;
+            $this->hours[$timesheet->day_rate_code][$key]['is_holiday'] = $rate['is_holiday'] ?? false;
+            $this->hours[$timesheet->day_rate_code][$key]['hours'] = $rate['hours'];
         }
 
         // For daily paid
@@ -301,28 +301,28 @@ class Attendance
                 }
 
                 // If regular holiday is not paid then just continue to next timesheet
-                if ($timesheet->rate_code == Timesheet::REGULAR_HOLIDAY) {
+                if ($timesheet->day_rate_code == Timesheet::REGULAR_HOLIDAY) {
                     if ($employee->regular_holiday_pay == false) {
                         continue;
                     }
                 }
 
                 // If special holiday is not paid then just continue to next timesheet
-                if ($timesheet->rate_code == Timesheet::SPECIAL_HOLIDAY) {
+                if ($timesheet->day_rate_code == Timesheet::SPECIAL_HOLIDAY) {
                     if ($employee->special_holiday_pay == false) {
                         continue;
                     }
                 }
 
                 // If double regular holiday is not paid then just continue to next timesheet
-                if ($timesheet->rate_code == Timesheet::DOUBLE_REGULAR_HOLIDAY) {
+                if ($timesheet->day_rate_code == Timesheet::DOUBLE_REGULAR_HOLIDAY) {
                     if ($employee->premium_holiday_pay == false) {
                         continue;
                     }
                 }
 
                 // If regular_holiday_special_holiday is not paid then just continue to next timesheet
-                if ($timesheet->rate_code == Timesheet::REGULAR_HOLIDAY_SPECIAL_HOLIDAY) {
+                if ($timesheet->day_rate_code == Timesheet::REGULAR_HOLIDAY_SPECIAL_HOLIDAY) {
                     if ($employee->regular_holiday_special_holiday_pay == false) {
                         continue;
                     }

@@ -146,10 +146,33 @@ final class Rules
 
     public static function normalize(?string $dayType): string
     {
-        $key = strtolower(trim((string) $dayType));
-        $key = str_replace(['-', ' '], '_', $key);
+        $key = self::storedKey($dayType);
 
         return self::STORED_DAY_CODES[$key] ?? $key;
+    }
+
+    /**
+     * The day classification to pay.
+     *
+     * The attendance screens keep the ordinary/rest-day classification on
+     * `day_type` and write the payable classification (`rh`, `sh`, `rd-sh`,
+     * `pl`, ...) to `day_rate_code`. Prefer that classification when it is one
+     * we recognise so a worked holiday is not paid as an ordinary day.
+     */
+    public static function effectiveDayType(?string $dayType, ?string $rateCode): string
+    {
+        $key = self::storedKey($rateCode);
+
+        if ($key !== '' && isset(self::STORED_DAY_CODES[$key])) {
+            return self::STORED_DAY_CODES[$key];
+        }
+
+        return (string) $dayType;
+    }
+
+    private static function storedKey(?string $code): string
+    {
+        return str_replace(['-', ' '], '_', strtolower(trim((string) $code)));
     }
 
     public static function dailyRate(int $monthly, int $daysPerYear): int

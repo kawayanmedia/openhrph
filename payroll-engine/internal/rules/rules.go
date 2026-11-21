@@ -143,13 +143,33 @@ func IsUnpaidDay(dayType string) bool {
 }
 
 func normalize(dayType string) string {
-	key := strings.ToLower(strings.TrimSpace(dayType))
-	key = strings.ReplaceAll(key, "-", "_")
-	key = strings.ReplaceAll(key, " ", "_")
+	key := normalizeKey(dayType)
 
 	if canonical, ok := storedDayCodes[key]; ok {
 		return canonical
 	}
+
+	return key
+}
+
+// EffectiveDayType returns the classification payroll must pay.
+//
+// Attendance screens keep the ordinary/rest-day classification on day_type and
+// write the payable classification (rh, sh, rd-sh, pl, ...) to day_rate_code.
+// Prefer that classification when it is one we recognise so a worked holiday
+// is not paid as an ordinary day.
+func EffectiveDayType(dayType, rateCode string) string {
+	if _, ok := storedDayCodes[normalizeKey(rateCode)]; ok {
+		return normalize(rateCode)
+	}
+
+	return dayType
+}
+
+func normalizeKey(value string) string {
+	key := strings.ToLower(strings.TrimSpace(value))
+	key = strings.ReplaceAll(key, "-", "_")
+	key = strings.ReplaceAll(key, " ", "_")
 
 	return key
 }

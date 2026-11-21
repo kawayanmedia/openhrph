@@ -51,3 +51,30 @@ func TestStoredCodeClassification(t *testing.T) {
 		t.Error(`IsUnpaidDay("upl") = false, want true`)
 	}
 }
+
+func TestEffectiveDayType(t *testing.T) {
+	cases := []struct {
+		dayType  string
+		rateCode string
+		want     string
+	}{
+		{"regular", "rh", DayRegularHoliday},
+		{"regular", "sh", DaySpecialHoliday},
+		{"rd", "rd-rh", DayRestRegularHoliday},
+		{"rd", "rd-sh", DayRestSpecialHoliday},
+		{"rd", "rd-2rh", DayRestDoubleHoliday},
+		{"regular", "pl", DayPaidLeave},
+		{"regular", "upl", DayUnpaidLeave},
+		{"rd", "regular", "rd"},
+		{"regular", "regular", "regular"},
+		{"regular", "no_log", "regular"},
+		{"regular", "", "regular"},
+		{"absent", "", "absent"},
+	}
+
+	for _, c := range cases {
+		if got := EffectiveDayType(c.dayType, c.rateCode); got != c.want {
+			t.Errorf("EffectiveDayType(%q, %q) = %q, want %q", c.dayType, c.rateCode, got, c.want)
+		}
+	}
+}

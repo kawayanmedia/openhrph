@@ -50,6 +50,8 @@ class EditViewTimeSheet extends Action
         foreach ($models as $model) {
             $before = $this->snapshot($model);
 
+            $model->day_rate_code = $fields['day_type'];
+
             $model->is_paid_leave = $fields['day_type'] == Rate::PAID_LEAVE;
 
             if ($fields['day_type'] == Rate::PAID_LEAVE or $fields['day_type'] == Rate::UNPAID_LEAVE) {
@@ -140,7 +142,7 @@ class EditViewTimeSheet extends Action
     {
         return [
             'day_type' => $timesheet->day_type,
-            'rate_code' => $timesheet->rate_code,
+            'day_rate_code' => $timesheet->day_rate_code,
             'regular' => $timesheet->getRawOriginal('regular'),
             'ot' => $timesheet->getRawOriginal('ot'),
             'nt' => $timesheet->getRawOriginal('nt'),

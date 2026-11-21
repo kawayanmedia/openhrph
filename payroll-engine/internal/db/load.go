@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/model"
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/money"
+	"github.com/kawayanmedia/openhrph-payroll-engine/internal/rules"
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/statutory"
 )
 
@@ -829,11 +831,14 @@ func clampRatio(value float64) float64 {
 
 func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.Employee, index map[int64]int) error {
 	rows, err := db.QueryContext(ctx, `
-		SELECT employee_id, DATE(log_date), COALESCE(day_type, ''), COALESCE(is_absent, 0),
-		       COALESCE(is_leave, 0), COALESCE(is_paid_leave, 0),
+		SELECT employee_id, DATE(log_date), COALESCE(day_type, ''),
+		       COALESCE(day_rate_code, ''),
+		       COALESCE(is_absent, 0), COALESCE(is_leave, 0), COALESCE(is_paid_leave, 0),
 		       COALESCE(actual_regular, 0), COALESCE(actual_ot, 0),
 		       COALESCE(actual_nt, 0), COALESCE(actual_nt_ot, 0),
-		       COALESCE(regular, 0), COALESCE(ot, 0), COALESCE(nt, 0)
+		       COALESCE(regular, 0), COALESCE(ot, 0), COALESCE(nt, 0),
+		       COALESCE(logs, ''), COALESCE(am_login, ''), COALESCE(am_logout, ''),
+		       COALESCE(pm_login, ''), COALESCE(pm_logout, ''), COALESCE(am_out_morning, '')
 		FROM timesheets
 		WHERE deleted_at IS NULL
 		  AND employee_id IN (SELECT id FROM employees WHERE company_id = ? AND payroll_group_id = ? AND deleted_at IS NULL)
@@ -847,23 +852,31 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 
 	for rows.Next() {
 		var (
-			employeeID int64
-			logDate    time.Time
-			dayType    string
-			absent     int
-			leave      int
-			paidLeave  int
-			regHours   float64
-			otHours    float64
-			ntHours    float64
-			ntOTHours  float64
-			regularPay float64
-			otPay      float64
-			ntPay      float64
+			employeeID   int64
+			logDate      time.Time
+			dayType      string
+			rateCode     string
+			absent       int
+			leave        int
+			paidLeave    int
+			regHours     float64
+			otHours      float64
+			ntHours      float64
+			ntOTHours    float64
+			regularPay   float64
+			otPay        float64
+			ntPay        float64
+			logs         string
+			amLogin      string
+			amLogout     string
+			pmLogin      string
+			pmLogout     string
+			amOutMorning string
 		)
 
-		if err := rows.Scan(&employeeID, &logDate, &dayType, &absent, &leave, &paidLeave,
-			&regHours, &otHours, &ntHours, &ntOTHours, &regularPay, &otPay, &ntPay); err != nil {
+		if err := rows.Scan(&employeeID, &logDate, &dayType, &rateCode, &absent, &leave, &paidLeave,
+			&regHours, &otHours, &ntHours, &ntOTHours, &regularPay, &otPay, &ntPay,
+			&logs, &amLogin, &amLogout, &pmLogin, &pmLogout, &amOutMorning); err != nil {
 			return fmt.Errorf("scan timesheet: %w", err)
 		}
 
@@ -881,10 +894,28 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 		// Legacy rows stored premium-equivalent hours in regular/ot/nt rather
 		// than the actual_* buckets. Reconstruct the ordinary hours instead of
 		// reading them as money (which paid ₱8.00 for an 8-hour day).
-		if hours == 0 && overtime == 0 && night == 0 && nightOT == 0 &&
-			(regularPay != 0 || otPay != 0 || ntPay != 0) {
+		if hours == 0 && regularPay != 0 {
 			hours = regularPay / 100
 			legacy = true
+		}
+
+		// Punch-only rows have neither bucket yet. Reconstruct the worked span
+		// from the punch list (or the mirrored am/pm columns) so the day is not
+		// paid as zero before attendance is computed.
+		if hours == 0 && regularPay == 0 {
+			worked := workedHoursFromLogs(logs)
+
+			if worked <= 0 {
+				worked = workedHoursFromColumns(amLogin, amLogout, pmLogin, pmLogout, amOutMorning)
+			}
+
+			if worked > 0 {
+				if overtime == 0 && otPay > 0 {
+					overtime = otPay / 100
+				}
+
+				hours = math.Max(0, worked-overtime)
+			}
 		}
 
 		// Night OT is stored inside actual_nt as well; keep the buckets
@@ -896,7 +927,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 
 		employees[position].Timesheets = append(employees[position].Timesheets, model.TimesheetLine{
 			Date:        logDate.Format("2006-01-02"),
-			DayType:     dayType,
+			DayType:     rules.EffectiveDayType(dayType, rateCode),
 			Hours:       hours,
 			Overtime:    overtime + nightOT,
 			Night:       ordinaryNight,
@@ -909,6 +940,125 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 	}
 
 	return rows.Err()
+}
+
+// workedHoursFromLogs pairs the in/out punches on a timesheet row and returns
+// the hours worked. An out earlier than its in crosses midnight.
+func workedHoursFromLogs(raw string) float64 {
+	if strings.TrimSpace(raw) == "" {
+		return 0
+	}
+
+	var logs []map[string]any
+
+	if err := json.Unmarshal([]byte(raw), &logs); err != nil {
+		return 0
+	}
+
+	minutes := 0.0
+	started := ""
+
+	for _, log := range logs {
+		value, _ := log["time"].(string)
+		clock := timesheetClock(value)
+
+		if clock == "" {
+			continue
+		}
+
+		switch timesheetLogType(log["log_type"]) {
+		case 0:
+			started = clock
+		case 1:
+			if started != "" {
+				minutes += timesheetMinutesBetween(started, clock)
+				started = ""
+			}
+		}
+	}
+
+	return timesheetRoundHours(minutes / 60)
+}
+
+// workedHoursFromColumns mirrors the legacy timesheet calculation for rows
+// recorded before the punch list existed.
+func workedHoursFromColumns(amLogin, amLogout, pmLogin, pmLogout, amOutMorning string) float64 {
+	minutes := 0.0
+
+	for _, pair := range [][2]string{{amLogin, amLogout}, {pmLogin, pmLogout}} {
+		in := timesheetClock(pair[0])
+		out := timesheetClock(pair[1])
+
+		if in != "" && out != "" {
+			minutes += timesheetMinutesBetween(in, out)
+		}
+	}
+
+	pm := timesheetClock(pmLogin)
+	morning := timesheetClock(amOutMorning)
+
+	if pm != "" && morning != "" {
+		minutes += timesheetMinutesBetween(pm, morning)
+	}
+
+	return timesheetRoundHours(minutes / 60)
+}
+
+func timesheetClock(value string) string {
+	parts := strings.SplitN(strings.TrimSpace(value), ":", 3)
+
+	if len(parts) < 2 {
+		return ""
+	}
+
+	hour, hourErr := strconv.Atoi(parts[0])
+	minute, minuteErr := strconv.Atoi(parts[1])
+
+	if hourErr != nil || minuteErr != nil || hour < 0 || hour > 23 || minute < 0 || minute > 59 {
+		return ""
+	}
+
+	return fmt.Sprintf("%02d:%02d", hour, minute)
+}
+
+func timesheetMinutesBetween(from, to string) float64 {
+	fromMinutes := timesheetMinutes(from)
+	toMinutes := timesheetMinutes(to)
+
+	if toMinutes < fromMinutes {
+		toMinutes += 24 * 60
+	}
+
+	return math.Max(0, float64(toMinutes-fromMinutes))
+}
+
+func timesheetMinutes(clock string) int {
+	parts := strings.SplitN(clock, ":", 2)
+	hour, _ := strconv.Atoi(parts[0])
+	minute, _ := strconv.Atoi(parts[1])
+
+	return (hour * 60) + minute
+}
+
+func timesheetLogType(value any) int {
+	switch typed := value.(type) {
+	case float64:
+		return int(typed)
+	case string:
+		parsed, _ := strconv.Atoi(typed)
+
+		return parsed
+	case json.Number:
+		parsed, _ := typed.Int64()
+
+		return int(parsed)
+	}
+
+	return 0
+}
+
+func timesheetRoundHours(value float64) float64 {
+	return math.Round(value*100) / 100
 }
 
 func frequencyApplies(frequency string, run Run, cfg model.Config) bool {

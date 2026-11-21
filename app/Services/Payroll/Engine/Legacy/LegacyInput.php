@@ -11,6 +11,7 @@ use App\Services\Payroll\Computation\Earning;
 use App\Services\Payroll\Computation\Employee;
 use App\Services\Payroll\Computation\Holiday;
 use App\Services\Payroll\Computation\MinimumWage;
+use App\Services\Payroll\Computation\Rules;
 use App\Services\Payroll\Computation\TimesheetLine;
 use App\Services\Payroll\Computation\YtdTotals;
 use App\Services\Payroll\Engine\PayrollEngineException;
@@ -515,9 +516,11 @@ final class LegacyInput
 
         $columns = array_values(array_filter(
             [
-                'employee_id', 'log_date', 'day_type', 'is_absent', 'is_leave', 'is_paid_leave',
+                'employee_id', 'log_date', 'day_type', 'day_rate_code',
+                'is_absent', 'is_leave', 'is_paid_leave',
                 'actual_regular', 'actual_ot', 'actual_nt', 'actual_nt_ot',
                 'regular', 'ot', 'nt',
+                'logs', 'am_login', 'am_logout', 'pm_login', 'pm_logout', 'am_out_morning',
             ],
             static fn (string $column): bool => Schema::hasColumn('timesheets', $column),
         ));
@@ -545,15 +548,38 @@ final class LegacyInput
 
             $legacyRegular = (float) ($row->regular ?? 0);
             $legacyOT = (float) ($row->ot ?? 0);
-            $legacyNight = (float) ($row->nt ?? 0);
 
             // Legacy rows stored premium-equivalent hours in regular/ot/nt
             // rather than the actual_* buckets. Reconstruct the ordinary hours
             // instead of reading them as money.
-            if ($hours === 0.0 && $overtime === 0.0 && $night === 0.0 && $nightOT === 0.0
-                && ($legacyRegular !== 0.0 || $legacyOT !== 0.0 || $legacyNight !== 0.0)) {
+            if ($hours === 0.0 && $legacyRegular !== 0.0) {
                 $hours = $legacyRegular / 100;
                 $legacy = true;
+            }
+
+            // Punch-only rows have neither bucket yet. Reconstruct the worked
+            // span from the punch list (or the mirrored am/pm columns) so the
+            // day is not paid as zero before attendance is computed.
+            if ($hours === 0.0 && $legacyRegular === 0.0) {
+                $worked = WorkedHours::fromLogs(self::decodeLogs($row->logs ?? null));
+
+                if ($worked <= 0.0) {
+                    $worked = WorkedHours::fromColumns(
+                        self::text($row->am_login ?? null),
+                        self::text($row->am_logout ?? null),
+                        self::text($row->pm_login ?? null),
+                        self::text($row->pm_logout ?? null),
+                        self::text($row->am_out_morning ?? null),
+                    );
+                }
+
+                if ($worked > 0.0) {
+                    if ($overtime === 0.0 && $legacyOT > 0.0) {
+                        $overtime = $legacyOT / 100;
+                    }
+
+                    $hours = max(0.0, $worked - $overtime);
+                }
             }
 
             // Night OT is stored inside actual_nt as well; keep the buckets
@@ -562,7 +588,10 @@ final class LegacyInput
 
             $employees[$position]->timesheets[] = new TimesheetLine(
                 date: $date,
-                dayType: (string) ($row->day_type ?? ''),
+                dayType: Rules::effectiveDayType(
+                    (string) ($row->day_type ?? ''),
+                    self::text($row->day_rate_code ?? null),
+                ),
                 hours: $hours,
                 overtime: $overtime + $nightOT,
                 night: $ordinaryNight,
@@ -1428,5 +1457,28 @@ final class LegacyInput
     public static function isDate(string $value): bool
     {
         return (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $value);
+    }
+
+    /**
+     * @return array<int, mixed>|null
+     */
+    private static function decodeLogs(mixed $logs): ?array
+    {
+        if (is_array($logs)) {
+            return $logs;
+        }
+
+        if (! is_string($logs) || trim($logs) === '') {
+            return null;
+        }
+
+        $decoded = json_decode($logs, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private static function text(mixed $value): ?string
+    {
+        return is_string($value) && trim($value) !== '' ? $value : null;
     }
 }

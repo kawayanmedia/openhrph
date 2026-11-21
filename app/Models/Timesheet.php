@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Services\Attendance\TimesheetImport;
+use App\Services\Payroll\Computation\Rules;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -80,6 +81,18 @@ class Timesheet extends Model
         static::created(function (Timesheet $model) {
             set_current_timestamp($model);
         });
+    }
+
+    /**
+     * The canonical payable classification (regular_holiday, special_holiday,
+     * rest_day_regular_holiday, paid_leave, ...).
+     */
+    public function getPaidDayTypeAttribute(): string
+    {
+        return Rules::effectiveDayType(
+            $this->getAttribute('day_type'),
+            $this->getAttribute('day_rate_code'),
+        );
     }
 
     public function regular(): Attribute
@@ -655,7 +668,7 @@ class Timesheet extends Model
         if ($dayType == static::REST_DAY and $fieldRate == Rate::NO_LOG) {
             // Rest day and selected no log then remove all entries
             // and also set the rate code to regular
-            $this->rate_code = static::REGULAR_DAY;
+            $this->day_rate_code = static::REGULAR_DAY;
             $this->day_type = static::REST_DAY;
             $this->logs_rates = null;
         }
@@ -764,7 +777,7 @@ class Timesheet extends Model
     //     if ($fields->day_type == static::REST_DAY and $fields->rate == Rate::NO_LOG) {
     //         // Rest day and selected no log then remove all entries
     //         // and also set the rate code to regular
-    //         $this->rate_code = static::REGULAR_DAY;
+    //         $this->day_rate_code = static::REGULAR_DAY;
     //         $this->day_type = static::REST_DAY;
     //         $this->logs_rates = null;
     //     }

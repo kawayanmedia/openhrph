@@ -54,7 +54,7 @@ class ApproveScheduleJob implements ShouldQueue
 
             if ($this->scheduleRequest->is_rd == true) {
                 $timesheet->day_type = Timesheet::REST_DAY;
-                $timesheet->rate_code = Timesheet::REST_DAY;
+                $timesheet->day_rate_code = Timesheet::REST_DAY;
             } else {
                 $timesheet->schedule_id = $this->scheduleRequest->schedule_id;
             }

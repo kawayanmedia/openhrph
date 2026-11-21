@@ -50,7 +50,7 @@ function todayTimesheet(Employee $employee, array $attributes = []): Timesheet
         'employee_number' => $employee->employee_number,
         'log_date' => '2026-11-12',
         'day_type' => Timesheet::REGULAR_DAY,
-        'rate_code' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => Timesheet::REGULAR_DAY,
     ], $attributes));
 }
 
@@ -255,7 +255,7 @@ it('records an overnight time out on the shift workday', function () {
         'employee_number' => $this->employee->employee_number,
         'log_date' => '2026-11-11',
         'day_type' => Timesheet::REGULAR_DAY,
-        'rate_code' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => Timesheet::REGULAR_DAY,
         'schedule_id' => $schedule->id,
         'am_login' => null,
         'am_logout' => null,

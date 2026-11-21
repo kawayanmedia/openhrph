@@ -6,10 +6,14 @@ use App\Models\Employee;
 use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Services\Attendance\TimesheetImport;
+use App\Services\Payroll\Computation\Rules;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -59,7 +63,7 @@ it('does not overwrite an existing day classification', function () {
         'employee_number' => $this->employee->employee_number,
         'log_date' => '2026-11-10',
         'day_type' => Timesheet::REST_DAY,
-        'rate_code' => Timesheet::REST_DAY,
+        'day_rate_code' => Timesheet::REST_DAY,
         'schedule_id' => $this->schedule->id,
     ]);
 
@@ -91,7 +95,7 @@ it('follows a schedule reassignment without reclassifying the day', function () 
         'employee_number' => $this->employee->employee_number,
         'log_date' => '2026-11-10',
         'day_type' => Timesheet::REGULAR_DAY,
-        'rate_code' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => Timesheet::REGULAR_DAY,
         'schedule_id' => $this->schedule->id,
     ]);
 
@@ -147,4 +151,58 @@ it('imports punches, merges them and reports unmatched employees', function () {
     expect($repeat['duplicates'])->toBe(2);
 
     Storage::disk('local')->delete('logs/import-test.txt');
+});
+
+it('derives the paid day type from the canonical day rate code', function () {
+    $timesheet = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => Timesheet::REGULAR_HOLIDAY,
+    ]);
+
+    expect($timesheet->paid_day_type)->toBe(Rules::DAY_REGULAR_HOLIDAY);
+});
+
+it('reflects a change to the canonical day rate code', function () {
+    $timesheet = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => Timesheet::REGULAR_DAY,
+    ]);
+
+    $timesheet->day_rate_code = Timesheet::SPECIAL_HOLIDAY;
+    $timesheet->save();
+
+    expect($timesheet->fresh()->paid_day_type)->toBe(Rules::DAY_SPECIAL_HOLIDAY);
+});
+
+it('backfills and drops the legacy rate code column', function () {
+    Schema::table('timesheets', function (Blueprint $table): void {
+        $table->string('rate_code', 32)->nullable();
+    });
+
+    $timesheet = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'day_rate_code' => null,
+    ]);
+
+    DB::table('timesheets')->where('id', $timesheet->id)->update(['rate_code' => Timesheet::REGULAR_HOLIDAY]);
+
+    $migration = require database_path('migrations/2026_11_21_000300_drop_rate_code_from_timesheets_table.php');
+    $migration->up();
+
+    expect(DB::table('timesheets')->where('id', $timesheet->id)->value('day_rate_code'))
+        ->toBe(Timesheet::REGULAR_HOLIDAY)
+        ->and(Schema::hasColumn('timesheets', 'rate_code'))
+        ->toBeFalse();
 });

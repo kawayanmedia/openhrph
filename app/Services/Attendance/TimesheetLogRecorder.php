@@ -373,7 +373,7 @@ class TimesheetLogRecorder
         $timesheet->biometric_id = $employee->biometric_id;
         $timesheet->log_date = $day->toDateString();
         $timesheet->day_type = Timesheet::REGULAR_DAY;
-        $timesheet->rate_code = Timesheet::REGULAR_DAY;
+        $timesheet->day_rate_code = Timesheet::REGULAR_DAY;
         $timesheet->schedule_id = $employee->schedule_id;
         $timesheet->office_id = $employee->office_id;
         $timesheet->department_id = $employee->department_id;

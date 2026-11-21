@@ -57,7 +57,7 @@ class GenerateTimesheetGateway
             $logDate = $date->toDateString();
             $timesheet = $existing->get($logDate);
 
-            if ($timesheet !== null && $timesheet->day_type !== null && $timesheet->rate_code !== null) {
+            if ($timesheet !== null && $timesheet->day_type !== null && $timesheet->day_rate_code !== null) {
                 // Keep the classification but follow a schedule reassignment so
                 // overtime and shift rules use the new schedule.
                 if ((int) $timesheet->schedule_id !== $scheduleId) {
@@ -98,7 +98,7 @@ class GenerateTimesheetGateway
                 $timesheet->holiday_code = $holiday->code;
             }
 
-            $timesheet->rate_code = $this->rateCode($isRestDay, $holiday);
+            $timesheet->day_rate_code = $this->rateCode($isRestDay, $holiday);
 
             $timesheet->save();
 
