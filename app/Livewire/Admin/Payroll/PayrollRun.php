@@ -89,8 +89,28 @@ class PayrollRun extends Component
         );
     }
 
+    /**
+     * Approval needs an override reason when no independent review exists or
+     * when the same user processed and approved the run.
+     */
+    public function requiresApprovalOverride(): bool
+    {
+        $payroll = $this->payroll();
+
+        if ($payroll->status !== Payroll::STATUS_PROCESSED) {
+            return false;
+        }
+
+        return $payroll->reviewed_by === null
+            || (int) $payroll->processed_by === (int) Auth::id()
+            || (int) $payroll->reviewed_by === (int) $payroll->processed_by;
+    }
+
     public function process(): void
     {
+        $this->error = null;
+        $this->notice = null;
+
         $this->authorizePayroll($payroll = $this->payroll());
 
         if (in_array($payroll->status, [Payroll::STATUS_APPROVED, Payroll::STATUS_CLOSED], true)) {
@@ -154,6 +174,9 @@ class PayrollRun extends Component
 
     public function review(): void
     {
+        $this->error = null;
+        $this->notice = null;
+
         $payroll = $this->payroll();
         $this->authorizePayroll($payroll);
 
@@ -177,6 +200,9 @@ class PayrollRun extends Component
 
     public function approve(): void
     {
+        $this->error = null;
+        $this->notice = null;
+
         $payroll = $this->payroll();
 
         $this->authorizePayroll($payroll);

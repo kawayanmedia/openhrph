@@ -36,6 +36,23 @@ class PayrollAttendance
         $recorded = Timesheet::query()
             ->whereIn('employee_id', $employees->modelKeys())
             ->whereBetween('log_date', [$payroll->date_from, $payroll->date_to])
+            ->where(function ($query): void {
+                $query->where('actual_regular', '>', 0)
+                    ->orWhere('actual_ot', '>', 0)
+                    ->orWhere('actual_nt', '>', 0)
+                    ->orWhere('is_leave', true)
+                    ->orWhere('is_absent', true)
+                    ->orWhere(function ($query): void {
+                        $query->whereNotNull('logs')
+                            ->whereNotIn('logs', ['', '[]', 'null']);
+                    })
+                    ->orWhere(function ($query): void {
+                        $query->whereNotNull('am_login')->whereNotNull('am_logout');
+                    })
+                    ->orWhere(function ($query): void {
+                        $query->whereNotNull('pm_login')->whereNotNull('pm_logout');
+                    });
+            })
             ->distinct()
             ->pluck('employee_id');
 

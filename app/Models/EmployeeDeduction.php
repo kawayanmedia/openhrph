@@ -30,6 +30,12 @@ class EmployeeDeduction extends Model
         static::created(function (EmployeeDeduction $model) {
             set_current_timestamp($model);
         });
+
+        static::saving(function (EmployeeDeduction $model) {
+            if (! $model->is_recurring) {
+                $model->frequency = null;
+            }
+        });
     }
 
     public function employee()

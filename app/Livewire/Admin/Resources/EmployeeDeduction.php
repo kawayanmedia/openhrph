@@ -63,6 +63,7 @@ class EmployeeDeduction extends Resource
                 ->onlyOnIndex(),
 
             Currency::make('Amount')
+                ->currency(currency_symbol())
                 ->help('Used for fixed deductions. A percentage deduction uses the rate configured on the deduction instead.')
                 ->rules('required')
                 ->sortable(),
@@ -84,6 +85,7 @@ class EmployeeDeduction extends Resource
 
             Select::make('Frequency', 'frequency')
                 ->readonly()
+                ->help('Only used by recurring deductions.')
                 ->options(payment_schemes())
                 ->sortable()
                 ->hideFromIndex()

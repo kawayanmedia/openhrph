@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Metrics;
 
+use App\Models\TimesheetRequest;
 use Illuminate\Http\Request;
 
 class NewAttendanceApplications extends Metric
@@ -10,20 +11,17 @@ class NewAttendanceApplications extends Metric
 
     public function calculate(Request $request): mixed
     {
-        return [
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Tricia Gonzales',
-                'subtitle' => '',
-            ],
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Trudis Santos',
-                'subtitle' => '',
-            ],
-        ];
+        return TimesheetRequest::query()
+            ->with('employee')
+            ->where('status', 'Pending')
+            ->latest('date_filed')
+            ->limit(5)
+            ->get()
+            ->map(fn (TimesheetRequest $row): array => [
+                'title' => trim(($row->employee?->first_name ?? '').' '.($row->employee?->last_name ?? '')),
+                'subtitle' => trim(($row->type ?? 'Correction').' · '.optional($row->log_date)->format('M d')),
+            ])
+            ->all();
     }
 
     public function component(): string

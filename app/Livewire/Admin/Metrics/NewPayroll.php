@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Metrics;
 
+use App\Models\Payroll;
 use Illuminate\Http\Request;
 
 class NewPayroll extends Metric
@@ -10,20 +11,15 @@ class NewPayroll extends Metric
 
     public function calculate(Request $request): mixed
     {
-        return [
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-grey-500',
-                'title' => 'Payrol for the month of May 2017',
-                'subtitle' => 'The payroll is processing...',
-            ],
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Payrol for the month of April 2017',
-                'subtitle' => 'The payroll is already credited to bank account.',
-            ],
-        ];
+        return Payroll::query()
+            ->latest('payroll_date')
+            ->limit(5)
+            ->get()
+            ->map(fn (Payroll $payroll): array => [
+                'title' => '#'.$payroll->getKey().' · '.optional($payroll->payroll_date)->format('M d, Y'),
+                'subtitle' => ucfirst((string) $payroll->status),
+            ])
+            ->all();
     }
 
     public function component(): string

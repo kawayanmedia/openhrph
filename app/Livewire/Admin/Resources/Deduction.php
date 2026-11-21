@@ -9,6 +9,7 @@ use App\Livewire\Admin\Fields\Number;
 use App\Livewire\Admin\Fields\Select;
 use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Resource;
+use App\Livewire\Admin\Support\FormData;
 use App\Support\Installation\Installation;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
@@ -75,7 +76,13 @@ class Deduction extends Resource
 
             Number::make('Rate (%)', 'rate_percent')
                 ->step(0.0001)
-                ->rules('numeric', 'min:0', 'max:100'),
+                ->help('Only used by percentage deductions.')
+                ->rules('nullable', 'numeric', 'min:0', 'max:100')
+                ->dependsOn(['calculation'], function (Number $field, Request $request, FormData $formData) {
+                    if ($formData->calculation === 'percentage') {
+                        $field->rules('required', 'numeric', 'min:0', 'max:100');
+                    }
+                }),
 
             Select::make('Base', 'base')
                 ->options([
@@ -84,7 +91,12 @@ class Deduction extends Resource
                     'period_gross' => 'Period gross',
                     'monthly_gross' => 'Monthly gross',
                     'taxable' => 'Taxable income',
-                ]),
+                ])
+                ->dependsOn(['calculation'], function (Select $field, Request $request, FormData $formData) {
+                    if ($formData->calculation === 'percentage') {
+                        $field->rules('required');
+                    }
+                }),
 
             Boolean::make('Reduces taxable income', 'reduces_taxable_income')
                 ->default(false),

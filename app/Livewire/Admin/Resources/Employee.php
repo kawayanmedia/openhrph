@@ -67,10 +67,12 @@ class Employee extends Resource
             Text::make('Employee Number')
                 ->rules(
                     'required',
+                    'max:10',
                     Rule::unique('employees', 'employee_number')
                         ->where(fn (QueryBuilder $query) => $query->where('company_id', $request->user()->company_id))
                         ->ignore($this->resource?->getKey())
                 )
+                ->withMeta(['extraAttributes' => ['maxlength' => 10]])
                 ->sortable(),
 
             Text::make('Full Name', function () {
@@ -245,6 +247,8 @@ class Employee extends Resource
                 ->hideFromIndex(),
 
             BelongsTo::make('PayrollGroup')
+                ->relation('payrollGroup')
+                ->titleKey('name')
                 ->filterable()
                 ->showCreateRelationButton()
                 ->help('Click + button on the right to add Payroll Group')
@@ -318,15 +322,15 @@ class Employee extends Resource
 
             Heading::make('Benefits'),
 
-            Boolean::make('Timesheet required', 'timesheet')->withMeta(['value' => $this->timesheet ?? true])->hideFromIndex(),
-            Boolean::make('Regular Holiday Pay', 'regular_holiday_pay')->withMeta(['value' => $this->regular_holiday_pay ?? true])->hideFromIndex(),
-            Boolean::make('Special Holiday Pay', 'special_holiday_pay')->withMeta(['value' => $this->special_holiday_pay ?? true])->hideFromIndex(),
-            Boolean::make('Premium Holiday Pay (Double Regular Holiday)', 'premium_holiday_pay')->withMeta(['value' => $this->premium_holiday_pay ?? true])->hideFromIndex(),
-            Boolean::make('Regular Holiday, Special Holiday Pay', 'regular_holiday_special_holiday_pay')->withMeta(['value' => $this->regular_holiday_special_holiday_pay ?? true])->hideFromIndex(),
-            Boolean::make('Rest Day Pay', 'rest_day_pay')->withMeta(['value' => $this->rest_day_pay ?? true])->hideFromIndex(),
-            Boolean::make('Overtime', 'overtime_pay')->withMeta(['value' => $this->overtime_pay ?? true])->hideFromIndex(),
-            Boolean::make('De Minimis', 'deminimis')->withMeta(['value' => $this->deminimis ?? true])->hideFromIndex(),
-            Boolean::make('Night Differential', 'night_differential')->withMeta(['value' => $this->night_differential ?? true])->hideFromIndex(),
+            Boolean::make('Timesheet required', 'timesheet')->default(true)->hideFromIndex(),
+            Boolean::make('Regular Holiday Pay', 'regular_holiday_pay')->default(true)->hideFromIndex(),
+            Boolean::make('Special Holiday Pay', 'special_holiday_pay')->default(true)->hideFromIndex(),
+            Boolean::make('Premium Holiday Pay (Double Regular Holiday)', 'premium_holiday_pay')->default(true)->hideFromIndex(),
+            Boolean::make('Regular Holiday, Special Holiday Pay', 'regular_holiday_special_holiday_pay')->default(true)->hideFromIndex(),
+            Boolean::make('Rest Day Pay', 'rest_day_pay')->default(true)->hideFromIndex(),
+            Boolean::make('Overtime', 'overtime_pay')->default(true)->hideFromIndex(),
+            Boolean::make('De Minimis', 'deminimis')->default(true)->hideFromIndex(),
+            Boolean::make('Night Differential', 'night_differential')->default(true)->hideFromIndex(),
         ];
     }
 

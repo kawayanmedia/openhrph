@@ -236,6 +236,12 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		}
 	}
 
+	if len(employee.Timesheets) > 0 && slip.RegularHours == 0 && slip.OvertimeHours == 0 &&
+		slip.NightHours == 0 && slip.AbsentDays == 0 && slip.UndertimeHours == 0 && !hasPaidLeave(employee.Timesheets) {
+		slip.Warnings = append(slip.Warnings,
+			"timesheets have no recorded hours; verify attendance before relying on this payroll")
+	}
+
 	if monthlyPaid && slip.RegularPay < 0 {
 		slip.RegularPay = 0
 	}
@@ -733,6 +739,16 @@ func entitledDayRate(flags model.BenefitFlags, dayType string, date string) (day
 	}
 
 	return dayPremium{dayRate: multiplier, premiumOnly: multiplier - 1}, ""
+}
+
+func hasPaidLeave(lines []model.TimesheetLine) bool {
+	for _, line := range lines {
+		if line.PaidLeave || rules.IsPaidDay(line.DayType) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func workedOn(lines []model.TimesheetLine, date string) bool {

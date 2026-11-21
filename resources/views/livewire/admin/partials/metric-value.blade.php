@@ -30,6 +30,9 @@
         @endforeach
     </ul>
 @elseif ($component === 'table' && is_array($value))
+    @if (empty($value))
+        <p class="py-2 text-sm text-slate-400">Nothing pending.</p>
+    @endif
     <ul class="divide-y divide-slate-100">
         @foreach ($value as $row)
             @php($row = (array) $row)

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Metrics;
 
+use App\Models\ScheduleAdjustmentRequest;
 use Illuminate\Http\Request;
 
 class NewScheduleApplications extends Metric
@@ -10,20 +11,17 @@ class NewScheduleApplications extends Metric
 
     public function calculate(Request $request): mixed
     {
-        return [
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Tricia Gonzales',
-                'subtitle' => '',
-            ],
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Trudis Santos',
-                'subtitle' => '',
-            ],
-        ];
+        return ScheduleAdjustmentRequest::query()
+            ->with('employee')
+            ->where('status', 'Pending')
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (ScheduleAdjustmentRequest $row): array => [
+                'title' => trim(($row->employee?->first_name ?? '').' '.($row->employee?->last_name ?? '')),
+                'subtitle' => 'Schedule adjustment',
+            ])
+            ->all();
     }
 
     public function component(): string

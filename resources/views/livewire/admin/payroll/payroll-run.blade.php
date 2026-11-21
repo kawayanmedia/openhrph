@@ -87,7 +87,15 @@
                 </div>
 
                 <div>
-                    <input type="text" wire:model="approvalOverrideReason" placeholder="Approval override reason (required without a review or when approving your own run)"
+                    @if ($this->requiresApprovalOverride())
+                        <label for="approval-override-reason" class="mb-1 block text-xs font-semibold text-amber-700 dark:text-amber-300">
+                            Approval override reason <span class="text-rose-600">*</span>
+                            — required because this run has no independent review, or you processed and are approving it yourself.
+                        </label>
+                    @endif
+                    <input id="approval-override-reason" type="text" wire:model="approvalOverrideReason"
+                           placeholder="Approval override reason (required without a review or when approving your own run)"
+                           @if ($this->requiresApprovalOverride()) required @endif
                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-navy-700 dark:bg-navy-900 dark:text-white">
                 </div>
             @endif

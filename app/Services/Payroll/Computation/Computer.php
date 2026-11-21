@@ -252,6 +252,24 @@ final class Computer
             }
         }
 
+        $hasPaidLeave = false;
+        foreach ($employee->timesheets as $line) {
+            if ($line->paidLeave || Rules::isPaidDay($line->dayType)) {
+                $hasPaidLeave = true;
+                break;
+            }
+        }
+
+        if ($employee->timesheets !== []
+            && $slip->regularHours === 0.0
+            && $slip->overtimeHours === 0.0
+            && $slip->nightHours === 0.0
+            && $slip->absentDays === 0.0
+            && $slip->undertimeHours === 0.0
+            && ! $hasPaidLeave) {
+            $slip->warnings[] = 'timesheets have no recorded hours; verify attendance before relying on this payroll';
+        }
+
         if ($monthlyPaid && $slip->regularPay < 0) {
             $slip->regularPay = 0;
         }

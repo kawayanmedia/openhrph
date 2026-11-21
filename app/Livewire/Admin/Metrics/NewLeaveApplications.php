@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Metrics;
 
+use App\Models\LeaveRequest;
 use Illuminate\Http\Request;
 
 class NewLeaveApplications extends Metric
@@ -10,20 +11,17 @@ class NewLeaveApplications extends Metric
 
     public function calculate(Request $request): mixed
     {
-        return [
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Tricia Gonzales',
-                'subtitle' => '',
-            ],
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Trudis Santos',
-                'subtitle' => '',
-            ],
-        ];
+        return LeaveRequest::query()
+            ->with(['employee', 'leave'])
+            ->where('status', LeaveRequest::PENDING)
+            ->latest('date_filed')
+            ->limit(5)
+            ->get()
+            ->map(fn (LeaveRequest $leave): array => [
+                'title' => trim(($leave->employee?->first_name ?? '').' '.($leave->employee?->last_name ?? '')),
+                'subtitle' => trim(($leave->leave?->name ?? 'Leave').' · '.optional($leave->date_from)->format('M d').'–'.optional($leave->date_to)->format('M d')),
+            ])
+            ->all();
     }
 
     public function component(): string

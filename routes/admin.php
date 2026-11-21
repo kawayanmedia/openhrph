@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\PasswordResetController;
 use App\Livewire\Admin\AdminDetail;
 use App\Livewire\Admin\AdminForm;
 use App\Livewire\Admin\AdminIndex;
@@ -21,7 +22,16 @@ Route::middleware(['web', 'guest:web'])
     ->name('admin.')
     ->group(function () {
         Route::get('login', Login::class)->name('login');
+
+        Route::get('password/reset', [PasswordResetController::class, 'requestForm'])->name('password.request');
+        Route::post('password/email', [PasswordResetController::class, 'sendLink'])->name('password.email');
+        Route::post('password/reset', [PasswordResetController::class, 'reset'])->name('password.update');
     });
+
+// Laravel's ResetPassword notification looks for the canonical route name.
+Route::middleware(['web', 'guest:web'])
+    ->get($prefix.'/password/reset/{token}', [PasswordResetController::class, 'resetForm'])
+    ->name('password.reset');
 
 Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.verified'])
     ->prefix($prefix)

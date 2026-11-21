@@ -6,24 +6,11 @@ use Illuminate\Http\Request;
 
 class ChangePasswordMessage extends Metric
 {
-    public string $name = 'New Schedule Applications';
+    public string $name = 'Account security';
 
     public function calculate(Request $request): mixed
     {
-        return [
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Tricia Gonzales',
-                'subtitle' => '',
-            ],
-            [
-                'icon' => 'check-circle',
-                'iconClass' => 'text-green-500',
-                'title' => 'Trudis Santos',
-                'subtitle' => '',
-            ],
-        ];
+        return [];
     }
 
     public function component(): string

@@ -619,6 +619,27 @@ final class LegacyInput
     }
 
     /**
+     * Older rows predate the is_recurring column and are recurring.
+     */
+    private static function deductionIsRecurring(object $row): bool
+    {
+        return ! property_exists($row, 'is_recurring') || (bool) ($row->is_recurring ?? true);
+    }
+
+    /**
+     * A one-time deduction applies in the first run whose period reaches its
+     * effectivity date; every later run skips it.
+     */
+    private static function oneTimeDeductionApplies(string $validFrom, Run $run): bool
+    {
+        if (trim($validFrom) === '' || trim($run->dateFrom) === '') {
+            return true;
+        }
+
+        return substr($validFrom, 0, 10) >= substr($run->dateFrom, 0, 10);
+    }
+
+    /**
      * Load every extra earning from the consolidated employees_compensations
      * table and split it into the payslip bucket named by `compensations.group`.
      *
@@ -767,6 +788,10 @@ final class LegacyInput
 
         $columns = ['ed.employee_id', 'd.name', 'ed.amount', 'ed.frequency', 'ed.valid_date_from', 'ed.valid_date_to'];
 
+        if (Schema::hasColumn('employees_deductions', 'is_recurring')) {
+            $columns[] = 'ed.is_recurring';
+        }
+
         foreach ($deductionColumns as $column => $expression) {
             if (Schema::hasColumn('deductions', $column)) {
                 $columns[] = $expression;
@@ -784,6 +809,12 @@ final class LegacyInput
             $position = $index[(int) $row->employee_id] ?? null;
 
             if ($position === null || ! self::validDates((string) ($row->valid_date_from ?? ''), (string) ($row->valid_date_to ?? ''), $run)) {
+                continue;
+            }
+
+            // A non-recurring deduction is taken once, in the run that covers
+            // its effectivity date.
+            if (! self::deductionIsRecurring($row) && ! self::oneTimeDeductionApplies((string) ($row->valid_date_from ?? ''), $run)) {
                 continue;
             }
 

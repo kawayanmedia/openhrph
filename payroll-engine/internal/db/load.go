@@ -1237,17 +1237,22 @@ func loadDeductions(ctx context.Context, db *sql.DB, run Run, employees []model.
 		}
 	}
 
+	recurringExpr := "1"
+	if columnExists(ctx, db, "employees_deductions", "is_recurring") {
+		recurringExpr = "COALESCE(ed.is_recurring, 0)"
+	}
+
 	rows, err := db.QueryContext(ctx, fmt.Sprintf(`
 		SELECT ed.employee_id, COALESCE(d.name, ''), COALESCE(ed.amount, 0),
 		       COALESCE(ed.frequency, ''),
 		       COALESCE(DATE_FORMAT(ed.valid_date_from, '%%Y-%%m-%%d'), ''),
 		       COALESCE(DATE_FORMAT(ed.valid_date_to, '%%Y-%%m-%%d'), ''),
-		       %s, %s, %s, %s, %s
+		       %s, %s, %s, %s, %s, %s
 		FROM employees_deductions ed
 		LEFT JOIN deductions d ON d.id = ed.deduction_id
 		WHERE ed.deleted_at IS NULL AND ed.company_id = ?
 		  AND ed.employee_id IN (SELECT id FROM employees WHERE company_id = ? AND payroll_group_id = ? AND deleted_at IS NULL)`,
-		codeExpr, calculationExpr, rateExpr, baseExpr, reducesExpr),
+		codeExpr, calculationExpr, rateExpr, baseExpr, reducesExpr, recurringExpr),
 		run.CompanyID, run.CompanyID, run.GroupID)
 	if err != nil {
 		return fmt.Errorf("load deductions: %w", err)
@@ -1268,14 +1273,21 @@ func loadDeductions(ctx context.Context, db *sql.DB, run Run, employees []model.
 			rate        float64
 			basis       string
 			reduces     bool
+			recurring   bool
 		)
 
-		if err := rows.Scan(&employeeID, &name, &amount, &frequency, &from, &to, &code, &calculation, &rate, &basis, &reduces); err != nil {
+		if err := rows.Scan(&employeeID, &name, &amount, &frequency, &from, &to, &code, &calculation, &rate, &basis, &reduces, &recurring); err != nil {
 			return fmt.Errorf("scan deduction: %w", err)
 		}
 
 		position, ok := index[employeeID]
 		if !ok || !validDates(from, to, run) {
+			continue
+		}
+
+		// A non-recurring deduction is taken once, in the run that covers its
+		// effectivity date.
+		if !recurring && !oneTimeApplies(from, run) {
 			continue
 		}
 
@@ -1533,6 +1545,22 @@ func subtractCurrentRunDeMinimis(ctx context.Context, db *sql.DB, run Run, emplo
 	}
 
 	return rows.Err()
+}
+
+// oneTimeApplies reports whether a one-off item with the given effectivity date
+// belongs to this run. validDates already rejects dates after the period end, so
+// a date before the period start means the item was already taken.
+func oneTimeApplies(from string, run Run) bool {
+	if from == "" || run.DateFrom.IsZero() {
+		return true
+	}
+
+	date, err := time.Parse("2006-01-02", from)
+	if err != nil {
+		return true
+	}
+
+	return !date.Before(truncateDay(run.DateFrom))
 }
 
 func validDates(from, to string, run Run) bool {

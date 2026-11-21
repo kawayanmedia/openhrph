@@ -70,10 +70,12 @@ class EmployeeLoan extends Resource
             Date::make('Approved Date'),
 
             Currency::make('Principal Amount', 'amount')
+                ->currency(currency_symbol())
                 ->rules('required')
                 ->sortable(),
 
             Currency::make('Remaining Balance', 'balance')
+                ->currency(currency_symbol())
                 ->rules('required')
                 ->sortable(),
 
@@ -94,6 +96,7 @@ class EmployeeLoan extends Resource
                 ->onlyOnForms(),
 
             Currency::make('Monthly amortization', 'monthly_amortization')
+                ->currency(currency_symbol())
                 ->rules('required')
                 ->sortable(),
 

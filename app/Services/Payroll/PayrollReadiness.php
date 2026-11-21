@@ -378,9 +378,27 @@ class PayrollReadiness
         } elseif ($period === null) {
             $attendanceMeta = 'Waiting for a pay schedule';
         } else {
+            // A generated row with no punch is not attendance evidence.
             $present = Timesheet::query()
                 ->whereIn('employee_id', $tracked->modelKeys())
                 ->whereBetween('log_date', [$period->attendance_date_start, $period->attendance_date_end])
+                ->where(function ($query): void {
+                    $query->where('actual_regular', '>', 0)
+                        ->orWhere('actual_ot', '>', 0)
+                        ->orWhere('actual_nt', '>', 0)
+                        ->orWhere('is_leave', true)
+                        ->orWhere('is_absent', true)
+                        ->orWhere(function ($query): void {
+                            $query->whereNotNull('logs')
+                                ->whereNotIn('logs', ['', '[]', 'null']);
+                        })
+                        ->orWhere(function ($query): void {
+                            $query->whereNotNull('am_login')->whereNotNull('am_logout');
+                        })
+                        ->orWhere(function ($query): void {
+                            $query->whereNotNull('pm_login')->whereNotNull('pm_logout');
+                        });
+                })
                 ->distinct()
                 ->count('employee_id');
 

@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Metrics;
 
 use App\Models\User;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 class TotalUsers extends Metric
@@ -11,6 +12,10 @@ class TotalUsers extends Metric
 
     public function calculate(Request $request): mixed
     {
-        return User::count();
+        $companyId = app(TenantContext::class)->id() ?? $request->user()?->company_id;
+
+        return $companyId === null
+            ? 0
+            : User::query()->where('company_id', $companyId)->count();
     }
 }

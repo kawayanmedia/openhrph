@@ -67,7 +67,10 @@
     <div class="border-t border-white/5 p-3">
         <div class="rounded-xl bg-white/5 px-3 py-3">
             <p class="text-xs font-semibold text-white">Payroll engine</p>
-            <p class="mt-1 text-[0.7rem] leading-relaxed text-slate-400">Go engine · Philippine statutory rates</p>
+            @php($engineDriver = strtolower((string) config('payroll.engine.driver', 'go')))
+            <p class="mt-1 text-[0.7rem] leading-relaxed text-slate-400">
+                {{ $engineDriver === 'go' ? 'Go engine' : 'PHP engine' }} · Philippine statutory rates
+            </p>
         </div>
     </div>
 </aside>
