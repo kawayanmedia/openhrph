@@ -5,7 +5,9 @@ namespace App\Livewire\Portal\Leaves;
 use App\Actions\CreateLeaveAction;
 use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\LeaveLedger;
 use App\Models\PayrollGroup;
+use App\Services\Leave\LeaveLedgerService;
 use App\Support\Tenancy\TenantCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -112,11 +114,7 @@ class LeaveCreate extends Component
             return;
         }
 
-        $balance = match ($code) {
-            'VL' => (float) ($this->employee?->total_vacation_leave ?? 0),
-            'SL' => (float) ($this->employee?->total_sick_leave ?? 0),
-            default => PHP_FLOAT_MAX,
-        };
+        $balance = $this->availableBalance($code);
 
         $paid = min($total, $balance);
 
@@ -155,6 +153,39 @@ class LeaveCreate extends Component
     {
         return view('livewire.portal.leaves.create')
             ->title($this->title)->layout('layouts.portal');
+    }
+
+    /**
+     * Prefer the ledger balance; fall back to the legacy employee column while
+     * a company has not yet posted its opening balances.
+     */
+    private function availableBalance(string $code): float
+    {
+        if ($this->employee === null) {
+            return 0;
+        }
+
+        $companyId = (int) ($this->employee->company_id ?? 0);
+        $year = now()->year;
+
+        $hasLedger = LeaveLedger::query()
+            ->where('company_id', $companyId)
+            ->where('employee_id', $this->employee->getKey())
+            ->where('leave_type_id', $this->leaveTypeId)
+            ->where('period_year', $year)
+            ->exists();
+
+        if ($hasLedger) {
+            return max(0, app(LeaveLedgerService::class)->balance(
+                $companyId, (int) $this->employee->getKey(), (int) $this->leaveTypeId, $year,
+            ));
+        }
+
+        return match ($code) {
+            'VL' => (float) ($this->employee->total_vacation_leave ?? 0),
+            'SL' => (float) ($this->employee->total_sick_leave ?? 0),
+            default => PHP_FLOAT_MAX,
+        };
     }
 
     private function workingDays(CarbonImmutable $from, CarbonImmutable $to): float

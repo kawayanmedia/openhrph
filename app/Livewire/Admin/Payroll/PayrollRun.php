@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Payroll;
 
 use App\Jobs\ProcessPayrollJob;
 use App\Models\Payroll;
+use App\Models\PayrollDate;
 use App\Models\PayrollDetail;
 use App\Services\Attendance\TimesheetPeriodLock;
 use App\Services\HrAudit;
@@ -13,6 +14,7 @@ use App\Services\Payroll\Engine\PayrollEngineException;
 use App\Services\Payroll\PayrollAttendance;
 use App\Services\Payroll\PayrollAudit;
 use App\Services\Payroll\PayrollJournalService;
+use App\Services\Payroll\PayrollPeriodState;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -99,9 +101,17 @@ class PayrollRun extends Component
 
         $attendance = app(PayrollAttendance::class);
         $missing = $attendance->missingEmployees($payroll);
+        $premiumsOff = $attendance->statutoryPremiumsOff($payroll);
 
-        if ($missing->isNotEmpty() && $attendance->paysWithoutTimesheet((int) $payroll->company_id) && trim($this->overrideReason) === '') {
+        if (($missing->isNotEmpty() && $attendance->paysWithoutTimesheet((int) $payroll->company_id))
+            && trim($this->overrideReason) === '') {
             $this->error = $missing->count().' employee(s) have no attendance for this period. Enter an override reason before processing.';
+
+            return;
+        }
+
+        if ($premiumsOff->isNotEmpty() && trim($this->overrideReason) === '') {
+            $this->error = $premiumsOff->count().' employee(s) have every statutory premium switch off (rest day, holiday, overtime, night differential). Turn them on or enter an override reason.';
 
             return;
         }
@@ -123,6 +133,12 @@ class PayrollRun extends Component
         if ($missing->isNotEmpty()) {
             PayrollAudit::record($payroll, 'no_attendance_override', trim($this->overrideReason), [
                 'missing_employees' => $missing->modelKeys(),
+            ]);
+        }
+
+        if ($premiumsOff->isNotEmpty()) {
+            PayrollAudit::record($payroll, 'statutory_premium_override', trim($this->overrideReason), [
+                'employees' => $premiumsOff->modelKeys(),
             ]);
         }
 
@@ -199,6 +215,8 @@ class PayrollRun extends Component
             'approved_by' => Auth::id(),
         ])->save();
 
+        app(PayrollPeriodState::class)->mark($payroll, PayrollDate::STATUS_CLOSED);
+
         $lockedTimesheets = app(TimesheetPeriodLock::class)->lock($payroll);
 
         HrAudit::record((int) $payroll->company_id, 'timesheet_period_locked', null, null, [
@@ -245,6 +263,8 @@ class PayrollRun extends Component
             'reopened_by' => Auth::id(),
             'reopen_reason' => $reason,
         ])->save();
+
+        app(PayrollPeriodState::class)->mark($payroll, PayrollDate::STATUS_OPEN);
 
         app(PayrollJournalService::class)->reverse($payroll, $reason);
 

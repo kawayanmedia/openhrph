@@ -1654,13 +1654,34 @@ Several earlier findings are now closed by code or data:
 | `cd payroll-engine && go test ./...` | Pass. |
 | `php artisan test --compact tests/Unit/Payroll` | Pass, including the new daily-paid, half-day and premium-OT cases. |
 | `php artisan test --compact tests/Feature/Admin/PayrollAndLeaveSafetyTest.php` | Pass (6 tests). |
-| `php artisan test --compact tests/Feature/Admin/{PayrollRunTest,PayrollComplianceTest,PayrollPhpEngineTest,LeaveTypeCatalogueTest,TimesheetAdminTest}.php tests/Feature/Attendance` | Pass (187 tests). |
+| `php artisan test --compact` | Pass (533 tests, 3 skipped). |
 
-### 17.5 Remaining remediation order
+### 17.5 Remaining remediation order (updated after 17.6)
 
-1. Unified timesheet calculator: one writer for `actual_regular/actual_ot/actual_nt/actual_nt_ot`, called after every punch, import, correction and approval.
-2. Undertime, tardiness and overbreak deduction honouring the payroll-group switches.
-3. Retirement pay (RA 7641) and the 13th-month UI. (Separation pay under Arts. 298–299 is fixed.)
-4. Leave ledger, accrual, eligibility, carry-over, expiry and monetization.
-5. Agency remittance files, contribution-base sign-off and the leave-conversion tax split.
-6. Government-sector rules (deferred).
+1. Tardiness and overbreak: store per-day minutes and wire `compute_tardiness` and `compute_overbreak`.
+2. Rest days from the employee's schedule/shift rather than the payroll group.
+3. Leave policy and balance administration screens (the ledger and commands are in place).
+4. Confirm the agency file layouts and the contribution base with the filing channel/CPA.
+5. Government-sector rules (deferred).
+
+### 17.6 Implementation update (21 November 2026, later pass)
+
+| Item | Status | Change |
+| --- | --- | --- |
+| R-10 undertime | **Fixed for approved undertime** | `compute_undertime` now drives a deduction in both engines; hours and amount are stored on `payroll_details` (`undertime_hours`, `undertime_pay`) and shown on the payslip. Daily-paid staff have the reduced hours; monthly-paid staff have the fixed basic reduced by the hourly value. |
+| R-11 retirement | **Fixed** | `separation_reason=retirement` pays RA 7641's 22.5 days per year after five years, with the six-month fraction rounded up. |
+| R-17 automatic NSD/OT | **Fixed** | `App\Services\Attendance\TimesheetCalculator` derives regular, OT, night and night-OT hours from punches, schedule and break, and runs after every portal/API/import/correction punch. |
+| 13th month / final pay / annual adjustment UI | **Fixed** | New **Create special run** action on the payroll list creates the run in the open state; the normal preview/process/approve flow applies. |
+| Final-pay leave conversion | **Fixed** | Up to 12 days of monetized unused VL for a private employee is now excluded from taxable income (all government VL/SL monetization); the excess is taxable. |
+| Leave admin screens | **Added** | **Leave Policies** and the read-only **Leave Balances** projection are available under Leave Management. |
+| Leave ledger | **Added** | `leave_policies`, immutable `leave_ledger` and rebuildable `leave_balances`; approval posts idempotent availment; `leave:accrue`, `leave:carry-over` and `leave:rebuild-balances --opening` commands; portal balance reads the ledger. |
+| Engine default | **Changed** | `.env.example` now defaults `PAYROLL_ENGINE_DRIVER=go` with the binary path; the PHP driver remains the parity-locked fallback. |
+| Payroll period state | **Fixed** | `PayrollDate` moves open → running → closed as the run is processed and approved; the owner's reopen returns it to open. |
+| Statutory premium block | **Fixed** | A run with employees whose rest-day, holiday, overtime and night-differential switches are all off now requires an override reason and writes a `statutory_premium_override` audit event. |
+| Remittance outputs | **Already employee-level** | `payroll:remittance --format=sss|philhealth|pagibig|bir|all` emits employee-level rows and a control total. Confirm the exact agency file layouts with the filing channel. |
+
+Still open after this pass:
+
+- Tardiness and overbreak are not separately stored per day; only approved undertime can be deducted. A schedule-vs-punch tardiness calculation and the `compute_tardiness`/`compute_overbreak` switches remain to be wired.
+- Rest days are still inferred from the payroll group, not the employee's schedule/shift.
+- Government-sector rules.

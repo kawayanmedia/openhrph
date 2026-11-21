@@ -45,6 +45,7 @@ type TimesheetLine struct {
 	Overtime  float64
 	Night     float64
 	NightOT   float64
+	Undertime float64
 	Absent    bool
 	Leave     bool
 	PaidLeave bool
@@ -234,6 +235,10 @@ type Config struct {
 	// holiday that was not worked (Article 94).
 	PayUnworkedRegularHolidays bool
 
+	// ComputeUndertime deducts approved undertime hours from pay. The
+	// payroll group controls this switch.
+	ComputeUndertime bool
+
 	// CountryCode and StatutoryDriver select the statutory rule set. `ph`
 	// uses the built-in agency calculators; any other driver reads Components.
 	CountryCode     string
@@ -285,6 +290,8 @@ type Payslip struct {
 	RestDayPay       money.Centavos
 	AbsentDays       float64
 	AbsentAmount     money.Centavos
+	UndertimeHours   float64
+	UndertimePay     money.Centavos
 	Allowances       money.Centavos
 	Incentives       money.Centavos
 	Compensations    []Earning

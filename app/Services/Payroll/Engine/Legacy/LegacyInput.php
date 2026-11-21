@@ -189,7 +189,7 @@ final class LegacyInput
         }
 
         $groupColumns = array_values(array_filter(
-            ['frequency', 'days_year', 'hours_day', 'sss_schedule', 'phil_health_schedule', 'hdmf_schedule', 'tax_schedule'],
+            ['frequency', 'days_year', 'hours_day', 'sss_schedule', 'phil_health_schedule', 'hdmf_schedule', 'tax_schedule', 'compute_undertime'],
             static fn (string $column): bool => Schema::hasColumn('payroll_groups', $column),
         ));
 
@@ -212,6 +212,7 @@ final class LegacyInput
             $config->philHealthSchedule = ContributionSchedule::fromString($group->phil_health_schedule ?? '')->value;
             $config->pagIbigSchedule = ContributionSchedule::fromString($group->hdmf_schedule ?? '')->value;
             $config->taxSchedule = ContributionSchedule::fromString($group->tax_schedule ?? '')->value;
+            $config->computeUndertime = (bool) ($group->compute_undertime ?? false);
         } else {
             $config->sssSchedule = ContributionSchedule::EVERY_PAY->value;
             $config->philHealthSchedule = ContributionSchedule::EVERY_PAY->value;
@@ -518,7 +519,7 @@ final class LegacyInput
             [
                 'employee_id', 'log_date', 'day_type', 'day_rate_code',
                 'is_absent', 'is_leave', 'is_paid_leave', 'leave_half_day',
-                'actual_regular', 'actual_ot', 'actual_nt', 'actual_nt_ot',
+                'actual_regular', 'actual_ot', 'actual_nt', 'actual_nt_ot', 'ut',
                 'regular', 'ot', 'nt',
                 'logs', 'am_login', 'am_logout', 'pm_login', 'pm_logout', 'am_out_morning',
             ],
@@ -544,6 +545,7 @@ final class LegacyInput
             $overtime = (float) ($row->actual_ot ?? 0) / 100;
             $night = (float) ($row->actual_nt ?? 0) / 100;
             $nightOT = (float) ($row->actual_nt_ot ?? 0) / 100;
+            $undertime = (float) ($row->ut ?? 0) / 100;
             $legacy = false;
 
             $legacyRegular = (float) ($row->regular ?? 0);
@@ -596,6 +598,7 @@ final class LegacyInput
                 overtime: $overtime + $nightOT,
                 night: $ordinaryNight,
                 nightOT: $nightOT,
+                undertime: $undertime,
                 absent: (int) ($row->is_absent ?? 0) === 1,
                 leave: (int) ($row->is_leave ?? 0) === 1,
                 paidLeave: (int) ($row->is_paid_leave ?? 0) === 1,

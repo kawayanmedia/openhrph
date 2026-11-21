@@ -109,7 +109,7 @@ func Write(ctx context.Context, db *sql.DB, run Run, slips []model.Payslip, opti
 			int64(slip.GSISEmployee), int64(slip.GSISEmployer), int64(slip.GSISTotal),
 			slip.RegularHours, int64(slip.RegularPay), slip.OvertimeHours, int64(slip.OvertimePay),
 			slip.NightHours, int64(slip.NightPay), int64(slip.RestDayPay), int64(slip.HolidayPay),
-			slip.AbsentDays, int64(slip.AbsentAmount), int64(slip.Allowances), int64(slip.Incentives),
+			slip.AbsentDays, int64(slip.AbsentAmount), slip.UndertimeHours, int64(slip.UndertimePay), int64(slip.Allowances), int64(slip.Incentives),
 			compensations, int64(slip.Bonus), int64(slip.Commission),
 			int64(slip.ThirteenthMonth), int64(slip.LeaveConversion), int64(slip.SeparationPay),
 			int64(slip.Loans), int64(slip.BasicEarned), int64(slip.BenefitExempt),
@@ -698,9 +698,9 @@ INSERT INTO payroll_details (
 	gsis_employee, gsis_employer, gsis_total,
 	regular_hours, regular_pay, overtime_hours, overtime_pay,
 	night_hours, night_pay, rest_day_pay, holiday_pay,
-	absent_days, absent_days_amount, allowance, incentive,
+	absent_days, absent_days_amount, undertime_hours, undertime_pay, allowance, incentive,
 	compensations, bonus, commission, thirteenth_month, leave_conversion, separation_pay,
 	loans, basic_earned, benefit_exempt, de_minimis_exempt, minimum_wage_exemption, warnings,
 	total_employee, total_employer, total_deductions, net_pay,
 	created_at, updated_at
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`

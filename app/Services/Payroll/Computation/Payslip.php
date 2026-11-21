@@ -34,6 +34,8 @@ final class Payslip
         public int $restDayPay = 0,
         public float $absentDays = 0.0,
         public int $absentAmount = 0,
+        public float $undertimeHours = 0.0,
+        public int $undertimePay = 0,
         public int $allowances = 0,
         public int $incentives = 0,
         public array $compensations = [],
@@ -149,6 +151,8 @@ final class Payslip
         $this->holidayPay = (int) ($data['holiday_pay'] ?? 0);
         $this->restDayPay = (int) ($data['rest_day_pay'] ?? 0);
         $this->absentDays = (float) ($data['absent_days'] ?? 0);
+        $this->undertimeHours = (float) ($data['undertime_hours'] ?? 0);
+        $this->undertimePay = (int) ($data['undertime_pay'] ?? 0);
         $this->absentAmount = (int) ($data['absent_amount'] ?? 0);
         $this->allowances = (int) ($data['allowances'] ?? 0);
         $this->incentives = (int) ($data['incentives'] ?? 0);
@@ -217,6 +221,8 @@ final class Payslip
             'rest_day_pay' => $this->restDayPay,
             'absent_days' => $this->absentDays,
             'absent_amount' => $this->absentAmount,
+            'undertime_hours' => $this->undertimeHours,
+            'undertime_pay' => $this->undertimePay,
             'allowances' => $this->allowances,
             'incentives' => $this->incentives,
             'compensations' => array_map(static fn (Earning $earning): array => $earning->toArray(), $this->compensations),

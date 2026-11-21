@@ -37,6 +37,12 @@ beforeEach(function () {
         'last_name' => 'Reyes',
         'basic_salary' => 3000000,
         'office_id' => null,
+        'rest_day_pay' => true,
+        'regular_holiday_pay' => true,
+        'special_holiday_pay' => true,
+        'premium_holiday_pay' => true,
+        'overtime_pay' => true,
+        'night_differential' => true,
     ]);
 
     $this->payroll = Payroll::factory()->create([

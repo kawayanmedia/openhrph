@@ -72,6 +72,13 @@
                             <dd class="font-medium tabular-nums text-navy-900 dark:text-white">{{ currency_symbol() }}{{ number_format($amount, 2) }}</dd>
                         </div>
                     @endforeach
+                    @if ((float) ($detail->undertime_pay ?? 0) > 0)
+                        <div class="flex items-center justify-between py-1">
+                            <dt class="text-slate-600 dark:text-slate-300">Undertime ({{ rtrim(rtrim(number_format((float) $detail->undertime_hours, 2), '0'), '.') }} h)</dt>
+                            <dd class="font-medium tabular-nums text-rose-600">-{{ currency_symbol() }}{{ number_format($detail->undertime_pay / 100, 2) }}</dd>
+                        </div>
+                    @endif
+
                     @if ((float) $detail->absent_days_amount > 0)
                         <div class="flex items-center justify-between gap-4">
                             <dt class="text-slate-600 dark:text-slate-300">Absences ({{ rtrim(rtrim(number_format($detail->absent_days, 2), '0'), '.') }} days)</dt>

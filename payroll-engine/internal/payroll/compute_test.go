@@ -322,3 +322,62 @@ func TestPremiumDayOvertimeUsesThirtyPercentPremium(t *testing.T) {
 		t.Fatalf("overtime pay = %s, want 2457.00", slip.OvertimePay)
 	}
 }
+
+func TestUndertimeDeductionHonoursThePayrollGroupSwitch(t *testing.T) {
+	cfg := semiMonthlyConfig()
+	cfg.ComputeUndertime = true
+
+	// PKR 26,100 monthly = PKR 1,200 daily / PKR 150 hourly.
+	monthly := model.Employee{
+		ID:           12,
+		PaymentType:  model.PaymentMonthly,
+		MonthlyBasic: money.FromPesos(26100),
+		Benefits:     allBenefits(),
+		Timesheets: []model.TimesheetLine{
+			{Date: "2026-01-05", DayType: rules.DayRegular, Hours: 8, Undertime: 2},
+		},
+	}
+
+	slip, err := Compute(cfg, monthly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.RegularPay != money.FromPesos(12750) {
+		t.Fatalf("monthly regular pay = %s, want 12750.00", slip.RegularPay)
+	}
+
+	if slip.UndertimePay != money.FromPesos(300) || slip.UndertimeHours != 2 {
+		t.Fatalf("undertime = %s / %v h, want 300.00 / 2h", slip.UndertimePay, slip.UndertimeHours)
+	}
+
+	daily := model.Employee{
+		ID:           13,
+		PaymentType:  model.PaymentDaily,
+		MonthlyBasic: money.FromPesos(26100),
+		DailyRate:    money.FromPesos(1200),
+		Benefits:     allBenefits(),
+		Timesheets: []model.TimesheetLine{
+			{Date: "2026-01-05", DayType: rules.DayRegular, Hours: 8, Undertime: 2},
+		},
+	}
+
+	slip, err = Compute(cfg, daily)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.RegularPay != money.FromPesos(900) {
+		t.Fatalf("daily regular pay = %s, want 900.00", slip.RegularPay)
+	}
+
+	cfg.ComputeUndertime = false
+	slip, err = Compute(cfg, monthly)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.RegularPay != money.FromPesos(13050) || slip.UndertimeHours != 0 {
+		t.Fatalf("switch off: regular pay = %s, undertime = %v, want 13050.00 / 0", slip.RegularPay, slip.UndertimeHours)
+	}
+}

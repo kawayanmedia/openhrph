@@ -212,6 +212,8 @@ type fxPayslip struct {
 	RestDayPay         int64       `json:"rest_day_pay"`
 	AbsentDays         float64     `json:"absent_days"`
 	AbsentAmount       int64       `json:"absent_amount"`
+	UndertimeHours     float64     `json:"undertime_hours"`
+	UndertimePay       int64       `json:"undertime_pay"`
 	Allowances         int64       `json:"allowances"`
 	Incentives         int64       `json:"incentives"`
 	Compensations      []fxEarning `json:"compensations"`
@@ -534,6 +536,7 @@ func toFxPayslip(slip model.Payslip) fxPayslip {
 		NightHours: slip.NightHours, NightPay: money64(slip.NightPay), NightOTPay: money64(slip.NightOTPay),
 		HolidayPay: money64(slip.HolidayPay), RestDayPay: money64(slip.RestDayPay),
 		AbsentDays: slip.AbsentDays, AbsentAmount: money64(slip.AbsentAmount),
+		UndertimeHours: slip.UndertimeHours, UndertimePay: money64(slip.UndertimePay),
 		Allowances: money64(slip.Allowances), Incentives: money64(slip.Incentives),
 		Compensations: toFxEarnings(slip.Compensations),
 		Bonus:         money64(slip.Bonus), Commission: money64(slip.Commission),

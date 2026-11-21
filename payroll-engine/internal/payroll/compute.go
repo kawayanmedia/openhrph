@@ -85,6 +85,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 			slip.Warnings = append(slip.Warnings, "no attendance recorded; paid on basic salary")
 		} else {
 			slip.RegularPay = 0
+			slip.BasicEarned = 0
 			slip.Warnings = append(slip.Warnings, "no attendance recorded; nothing paid")
 		}
 	}
@@ -141,9 +142,34 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 			slip.Warnings = append(slip.Warnings, note)
 		}
 
-		regularPay := hourly.Mul(line.Hours * premium.dayRate)
+		hours := line.Hours
+		undertimePay := money.Zero
+
+		if cfg.ComputeUndertime && line.Undertime > 0 {
+			paidHours := hours - line.Undertime
+			if paidHours < 0 {
+				paidHours = 0
+			}
+
+			if monthlyPaid {
+				// The fixed period basic still pays the day, so remove the
+				// undertime hours from it.
+				undertimePay = hourly.Mul(line.Undertime * premium.dayRate)
+				slip.RegularPay = slip.RegularPay.Sub(undertimePay)
+				slip.BasicEarned = slip.BasicEarned.Sub(undertimePay)
+			} else {
+				undertimePay = hourly.Mul(line.Undertime * premium.dayRate)
+			}
+
+			slip.UndertimeHours += line.Undertime
+			slip.UndertimePay = slip.UndertimePay.Add(undertimePay)
+
+			hours = paidHours
+		}
+
+		regularPay := hourly.Mul(hours * premium.dayRate)
 		if monthlyPaid {
-			regularPay = hourly.Mul(line.Hours * premium.premiumOnly)
+			regularPay = hourly.Mul(hours * premium.premiumOnly)
 		}
 
 		// Article 87 requires the premium-day rate plus at least 30% for work
@@ -183,7 +209,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		}
 
 		if !monthlyPaid {
-			slip.BasicEarned = slip.BasicEarned.Add(hourly.Mul(line.Hours))
+			slip.BasicEarned = slip.BasicEarned.Add(hourly.Mul(hours))
 		}
 
 		slip.RegularPay = slip.RegularPay.Add(regularPay)
@@ -191,7 +217,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		slip.NightPay = slip.NightPay.Add(nightPay)
 		slip.NightOTPay = slip.NightOTPay.Add(nightOTPay)
 
-		slip.RegularHours += line.Hours
+		slip.RegularHours += hours
 		slip.OvertimeHours += line.Overtime
 		slip.NightHours += line.Night + line.NightOT
 
@@ -199,7 +225,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		// above) so the payslip does not show base pay twice.
 		premiumPay := regularPay
 		if !monthlyPaid {
-			premiumPay = regularPay.Sub(hourly.Mul(line.Hours))
+			premiumPay = regularPay.Sub(hourly.Mul(hours))
 		}
 
 		switch {

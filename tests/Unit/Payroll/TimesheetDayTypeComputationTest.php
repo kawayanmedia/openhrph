@@ -83,6 +83,7 @@ function timesheetPayrollLine(
     string $date = '2026-11-02',
     float $leaveFraction = 1.0,
     bool $leave = false,
+    float $undertime = 0.0,
 ): TimesheetLine {
     return new TimesheetLine(
         date: $date,
@@ -95,6 +96,7 @@ function timesheetPayrollLine(
         leave: $leave,
         paidLeave: $paidLeave,
         leaveFraction: $leaveFraction,
+        undertime: $undertime,
     );
 }
 
@@ -500,4 +502,31 @@ it('deducts half a day for unpaid half-day leave from a monthly-paid employee', 
     ));
 
     expect($slip->regularPay)->toBe(1_245_000); // PHP 13,050.00 - PHP 600.00
+});
+
+it('deducts approved undertime when the payroll group enables it', function () {
+    $cfg = timesheetPayrollConfig(['compute_undertime' => true]);
+
+    $monthly = timesheetPayrollRun(timesheetPayrollEmployee([
+        timesheetPayrollLine('regular', undertime: 2),
+    ], Employee::PAYMENT_MONTHLY), $cfg);
+
+    expect($monthly->regularPay)->toBe(1_275_000) // PHP 13,050.00 - PHP 300.00
+        ->and($monthly->undertimeHours)->toBe(2.0)
+        ->and($monthly->undertimePay)->toBe(30_000)
+        ->and($monthly->regularHours)->toBe(6.0);
+
+    $daily = timesheetPayrollRun(timesheetPayrollEmployee([
+        timesheetPayrollLine('regular', undertime: 2),
+    ], Employee::PAYMENT_DAILY), $cfg);
+
+    expect($daily->regularPay)->toBe(90_000) // 6h x PHP 150.00
+        ->and($daily->undertimePay)->toBe(30_000);
+
+    $ignored = timesheetPayrollRun(timesheetPayrollEmployee([
+        timesheetPayrollLine('regular', undertime: 2),
+    ], Employee::PAYMENT_MONTHLY));
+
+    expect($ignored->regularPay)->toBe(1_305_000)
+        ->and($ignored->undertimeHours)->toBe(0.0);
 });

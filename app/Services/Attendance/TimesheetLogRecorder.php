@@ -283,6 +283,10 @@ class TimesheetLogRecorder
 
         $timesheet->save();
 
+        // Keep the engine's hour buckets in step with every punch, import and
+        // correction, not only when an admin opens the day.
+        app(TimesheetCalculator::class)->compute($timesheet);
+
         return true;
     }
 

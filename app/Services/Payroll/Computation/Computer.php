@@ -103,6 +103,7 @@ final class Computer
                 $slip->warnings[] = 'no attendance recorded; paid on basic salary';
             } else {
                 $slip->regularPay = 0;
+                $slip->basicEarned = 0;
                 $slip->warnings[] = 'no attendance recorded; nothing paid';
             }
         }
@@ -161,10 +162,28 @@ final class Computer
                 $slip->warnings[] = $note;
             }
 
-            $regularPay = Money::mul($hourly, $line->hours * $dayRate);
+            $hours = $line->hours;
+
+            if ($cfg->computeUndertime && $line->undertime > 0) {
+                $paidHours = max(0.0, $hours - $line->undertime);
+                $undertimePay = Money::mul($hourly, $line->undertime * $dayRate);
+
+                if ($monthlyPaid) {
+                    // The fixed period basic still pays the day, so remove the
+                    // undertime hours from it.
+                    $slip->regularPay -= $undertimePay;
+                    $slip->basicEarned -= $undertimePay;
+                }
+
+                $slip->undertimeHours += $line->undertime;
+                $slip->undertimePay += $undertimePay;
+                $hours = $paidHours;
+            }
+
+            $regularPay = Money::mul($hourly, $hours * $dayRate);
 
             if ($monthlyPaid) {
-                $regularPay = Money::mul($hourly, $line->hours * $premiumOnly);
+                $regularPay = Money::mul($hourly, $hours * $premiumOnly);
             }
 
             // Article 87 requires the premium-day rate plus at least 30% for
@@ -206,7 +225,7 @@ final class Computer
             }
 
             if (! $monthlyPaid) {
-                $slip->basicEarned += Money::mul($hourly, $line->hours);
+                $slip->basicEarned += Money::mul($hourly, $hours);
             }
 
             $slip->regularPay += $regularPay;
@@ -214,7 +233,7 @@ final class Computer
             $slip->nightPay += $nightPay;
             $slip->nightOTPay += $nightOTPay;
 
-            $slip->regularHours += $line->hours;
+            $slip->regularHours += $hours;
             $slip->overtimeHours += $line->overtime;
             $slip->nightHours += $line->night + $line->nightOT;
 
@@ -223,7 +242,7 @@ final class Computer
             $premiumPay = $regularPay;
 
             if (! $monthlyPaid) {
-                $premiumPay = $regularPay - Money::mul($hourly, $line->hours);
+                $premiumPay = $regularPay - Money::mul($hourly, $hours);
             }
 
             if (Rules::isHoliday($line->dayType)) {
@@ -676,15 +695,25 @@ final class Computer
         }
 
         $leave = Money::ZERO;
+        $leaveExempt = 0;
 
         if ($leaveDays > 0) {
             $leave = Money::mul($daily, $leaveDays);
+
+            // RR 29-2025: monetized unused VL of private employees is
+            // non-taxable up to 12 days; government VL/SL is non-taxable.
+            $exemptDays = $cfg->isGovernment ? $leaveDays : min($leaveDays, 12);
+            $leaveExempt = Money::mul($daily, $exemptDays);
+            $leaveTaxable = $leave - $leaveExempt;
+        } else {
+            $leaveTaxable = 0;
         }
 
         [$separation, $separationTaxable] = self::separationPay($cfg, $employee, $slip);
 
         $gross = $slip->gross + $thirteenth + $leave + $separation;
-        $taxable = $slip->taxableIncome + $thirteenthTaxable + $leave;
+        $taxable = $slip->taxableIncome + $thirteenthTaxable + $leaveTaxable;
+        $slip->nonTaxable += $leaveExempt;
 
         if ($separationTaxable) {
             $taxable += $separation;
@@ -865,6 +894,11 @@ final class Computer
         }
 
         $reason = strtolower(trim($cfg->meta['separation_reason'] ?? ''));
+
+        if (in_array($reason, ['retirement', 'ra_7641'], true)) {
+            return self::retirementPay($cfg, $employee, $slip);
+        }
+
         $oneMonthMinimum = false;
 
         $monthsPerYear = match ($reason) {
@@ -908,6 +942,37 @@ final class Computer
         }
 
         return [$amount, self::separationIsTaxable($reason)];
+    }
+
+    /**
+     * RA 7641 retirement pay: 22.5 days for every year of service, after at
+     * least five years.
+     *
+     * @return array{0: int, 1: bool}
+     */
+    private static function retirementPay(Config $cfg, Employee $employee, Payslip $slip): array
+    {
+        $years = self::yearsOfService($employee);
+
+        if (isset($cfg->meta['years_of_service'])) {
+            $parsed = filter_var(trim($cfg->meta['years_of_service']), FILTER_VALIDATE_FLOAT);
+
+            if ($parsed !== false) {
+                $years = (float) $parsed;
+            }
+        }
+
+        if ($years < 5) {
+            $slip->warnings[] = 'retirement pay requires at least five years of service';
+
+            return [0, false];
+        }
+
+        $daily = $slip->dailyRate > 0
+            ? $slip->dailyRate
+            : (int) round(self::separationMonthlyPay($cfg, $employee, $slip) / 22);
+
+        return [Money::mul($daily, 22.5 * $years), false];
     }
 
     /**

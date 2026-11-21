@@ -3,8 +3,10 @@
 namespace App\Jobs;
 
 use App\Models\Payroll;
+use App\Models\PayrollDate;
 use App\Services\Payroll\Engine\EngineManager;
 use App\Services\Payroll\Engine\PayrollEngineException;
+use App\Services\Payroll\PayrollPeriodState;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -49,6 +51,8 @@ class ProcessPayrollJob implements ShouldQueue
             'failed_reason' => null,
         ])->save();
 
+        app(PayrollPeriodState::class)->mark($this->payroll, PayrollDate::STATUS_RUNNING);
+
         $employees = $this->payroll->payrollGroup?->employees()->count() ?? 0;
 
         try {
@@ -75,5 +79,7 @@ class ProcessPayrollJob implements ShouldQueue
             'status' => 'failed',
             'failed_reason' => $exception?->getMessage(),
         ])->save();
+
+        app(PayrollPeriodState::class)->mark($this->payroll, PayrollDate::STATUS_OPEN);
     }
 }

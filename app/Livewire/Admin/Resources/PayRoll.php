@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Resources;
 
+use App\Livewire\Admin\Actions\CreateSpecialPayroll;
 use App\Livewire\Admin\Actions\ProcessPayroll;
 use App\Livewire\Admin\Fields\Currency;
 use App\Livewire\Admin\Fields\HasMany;
@@ -75,6 +76,10 @@ class PayRoll extends Resource
 
             Text::make('Payroll Date', function () {
                 return $this->payroll_date?->format('M d, Y');
+            }),
+
+            Text::make('Type', function () {
+                return str_replace('_', ' ', (string) $this->type);
             }),
 
             Text::make('Payroll Period', function () {
@@ -159,6 +164,7 @@ class PayRoll extends Resource
 
         return [
             $processPayroll->onlyOnIndex(),
+            (new CreateSpecialPayroll)->onlyOnIndex(),
         ];
     }
 

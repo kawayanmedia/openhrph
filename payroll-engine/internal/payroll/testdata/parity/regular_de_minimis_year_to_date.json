@@ -1044,6 +1044,8 @@
     "rest_day_pay": 0,
     "absent_days": 0,
     "absent_amount": 0,
+    "undertime_hours": 0,
+    "undertime_pay": 0,
     "allowances": 540000,
     "incentives": 0,
     "compensations": [],

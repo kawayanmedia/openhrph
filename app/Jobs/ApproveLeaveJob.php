@@ -4,9 +4,11 @@ namespace App\Jobs;
 
 use App\Models\Employee;
 use App\Models\Holiday;
+use App\Models\LeaveLedger;
 use App\Models\LeaveRequest;
 use App\Models\PayrollGroup;
 use App\Models\Timesheet;
+use App\Services\Leave\LeaveLedgerService;
 use App\Support\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
@@ -65,7 +67,13 @@ class ApproveLeaveJob implements ShouldQueue
 
         $leave = $this->leaveRequest->leave()->withoutGlobalScopes()->first();
         $code = strtoupper(trim((string) $leave?->code));
-        $isUnpaidType = in_array($code, self::UNPAID_CODES, true);
+
+        $ledger = app(LeaveLedgerService::class);
+        $policy = $ledger->policyFor((int) $this->leaveRequest->company_id, (int) $this->leaveRequest->leave_type_id);
+
+        $isUnpaidType = $policy !== null
+            ? ! $policy->is_paid
+            : in_array($code, self::UNPAID_CODES, true);
 
         $fraction = $this->leaveRequest->is_whole_day ? 1.0 : 0.5;
         $paidRemaining = $this->leaveRequest->days_with_pay !== null
@@ -114,7 +122,23 @@ class ApproveLeaveJob implements ShouldQueue
 
         $this->leaveRequest->save();
 
-        // Credit-bearing company leave types reduce the employee's balance.
+        // Credit-bearing leave draws down the ledger. Event-based statutory
+        // leaves (maternity, paternity, VAWC, ...) do not.
+        if ($paidDaysWritten > 0 && $policy !== null && $policy->accrual !== 'none') {
+            $ledger->post(
+                (int) $this->leaveRequest->company_id,
+                (int) $this->leaveRequest->employee_id,
+                (int) $this->leaveRequest->leave_type_id,
+                (int) CarbonImmutable::parse($this->leaveRequest->date_from)->year,
+                LeaveLedger::MOVEMENT_AVAILMENT,
+                -$paidDaysWritten,
+                'leave_request:'.$this->leaveRequest->getKey(),
+                'Approved leave',
+                $this->leaveRequest->approved_user_id,
+            );
+        }
+
+        // Legacy columns remain in step for screens that still read them.
         $credited = $paidDaysWritten;
 
         if ($credited > 0) {

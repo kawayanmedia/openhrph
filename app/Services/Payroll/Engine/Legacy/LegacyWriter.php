@@ -110,7 +110,7 @@ final class LegacyWriter
             'gsis_employee', 'gsis_employer', 'gsis_total',
             'regular_hours', 'regular_pay', 'overtime_hours', 'overtime_pay',
             'night_hours', 'night_pay', 'rest_day_pay', 'holiday_pay',
-            'absent_days', 'absent_days_amount', 'allowance', 'incentive',
+            'absent_days', 'absent_days_amount', 'undertime_hours', 'undertime_pay', 'allowance', 'incentive',
             'compensations', 'bonus', 'commission', 'thirteenth_month', 'leave_conversion', 'separation_pay',
             'representation_allowance', 'transportation_allowance', 'cola', 'fixed_housing_allowance',
             'other_taxable_regular', 'other_taxable_supplementary', 'profit_sharing', 'fees', 'hazard_pay',
@@ -172,6 +172,8 @@ final class LegacyWriter
             'holiday_pay' => $slip->holidayPay,
             'absent_days' => $slip->absentDays,
             'absent_days_amount' => $slip->absentAmount,
+            'undertime_hours' => $slip->undertimeHours,
+            'undertime_pay' => $slip->undertimePay,
             'allowance' => $slip->allowances,
             'incentive' => $slip->incentives,
             'compensations' => json_encode(array_map(

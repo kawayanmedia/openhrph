@@ -255,28 +255,31 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 	}
 
 	var (
-		frequency   string
-		daysYear    sql.NullInt64
-		hoursDay    sql.NullInt64
-		sssSchedule sql.NullString
-		phSchedule  sql.NullString
-		piSchedule  sql.NullString
-		taxSchedule sql.NullString
+		frequency        string
+		daysYear         sql.NullInt64
+		hoursDay         sql.NullInt64
+		sssSchedule      sql.NullString
+		phSchedule       sql.NullString
+		piSchedule       sql.NullString
+		taxSchedule      sql.NullString
+		computeUndertime bool
 	)
 
 	err := db.QueryRowContext(ctx, `
 		SELECT COALESCE(frequency, 'semi-monthly'), days_year, hours_day,
-		       sss_schedule, phil_health_schedule, hdmf_schedule, tax_schedule
+		       sss_schedule, phil_health_schedule, hdmf_schedule, tax_schedule,
+		       COALESCE(compute_undertime, 0)
 		FROM payroll_groups
 		WHERE id = ? AND company_id = ? AND deleted_at IS NULL`,
 		run.GroupID, run.CompanyID).
-		Scan(&frequency, &daysYear, &hoursDay, &sssSchedule, &phSchedule, &piSchedule, &taxSchedule)
+		Scan(&frequency, &daysYear, &hoursDay, &sssSchedule, &phSchedule, &piSchedule, &taxSchedule, &computeUndertime)
 
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return cfg, fmt.Errorf("load payroll group: %w", err)
 	}
 
 	cfg.Frequency = normalizeFrequency(frequency)
+	cfg.ComputeUndertime = computeUndertime
 	cfg.CountryCode = loadInstallationCountry(ctx, db)
 	cfg.StatutoryDriver = statutoryDriver(cfg.CountryCode)
 
@@ -835,7 +838,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 		       COALESCE(day_rate_code, ''),
 		       COALESCE(is_absent, 0), COALESCE(is_leave, 0), COALESCE(is_paid_leave, 0), COALESCE(leave_half_day, 0),
 		       COALESCE(actual_regular, 0), COALESCE(actual_ot, 0),
-		       COALESCE(actual_nt, 0), COALESCE(actual_nt_ot, 0),
+		       COALESCE(actual_nt, 0), COALESCE(actual_nt_ot, 0), COALESCE(ut, 0),
 		       COALESCE(regular, 0), COALESCE(ot, 0), COALESCE(nt, 0),
 		       COALESCE(logs, ''), COALESCE(am_login, ''), COALESCE(am_logout, ''),
 		       COALESCE(pm_login, ''), COALESCE(pm_logout, ''), COALESCE(am_out_morning, '')
@@ -864,6 +867,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 			otHours      float64
 			ntHours      float64
 			ntOTHours    float64
+			utHours      float64
 			regularPay   float64
 			otPay        float64
 			ntPay        float64
@@ -876,7 +880,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 		)
 
 		if err := rows.Scan(&employeeID, &logDate, &dayType, &rateCode, &absent, &leave, &paidLeave, &leaveHalf,
-			&regHours, &otHours, &ntHours, &ntOTHours, &regularPay, &otPay, &ntPay,
+			&regHours, &otHours, &ntHours, &ntOTHours, &utHours, &regularPay, &otPay, &ntPay,
 			&logs, &amLogin, &amLogout, &pmLogin, &pmLogout, &amOutMorning); err != nil {
 			return fmt.Errorf("scan timesheet: %w", err)
 		}
@@ -938,6 +942,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 			Overtime:      overtime + nightOT,
 			Night:         ordinaryNight,
 			NightOT:       nightOT,
+			Undertime:     utHours / 100,
 			Absent:        absent == 1,
 			Leave:         leave == 1,
 			PaidLeave:     paidLeave == 1,

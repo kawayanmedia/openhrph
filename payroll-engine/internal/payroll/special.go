@@ -130,14 +130,28 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 	}
 
 	leave := money.Zero
+	leaveExempt := money.Zero
+	leaveTaxableAmount := money.Zero
+
 	if leaveDays > 0 {
 		leave = daily.Mul(leaveDays)
+
+		// RR 29-2025: monetized unused VL of private employees is non-taxable
+		// up to 12 days; government VL/SL monetization is non-taxable.
+		exemptDays := leaveDays
+		if !cfg.IsGovernment && exemptDays > 12 {
+			exemptDays = 12
+		}
+
+		leaveExempt = daily.Mul(exemptDays)
+		leaveTaxableAmount = leave.Sub(leaveExempt)
 	}
 
 	separation, separationTaxable := separationPay(cfg, employee, slip)
 
 	gross := slip.Gross.Add(thirteenth).Add(leave).Add(separation)
-	taxable := slip.TaxableIncome.Add(thirteenthTaxable).Add(leave)
+	taxable := slip.TaxableIncome.Add(thirteenthTaxable).Add(leaveTaxableAmount)
+	slip.NonTaxable = slip.NonTaxable.Add(leaveExempt)
 	if separationTaxable {
 		taxable = taxable.Add(separation)
 	}
@@ -326,6 +340,11 @@ func separationPay(cfg model.Config, employee model.Employee, slip model.Payslip
 	}
 
 	reason := strings.ToLower(strings.TrimSpace(cfg.Meta["separation_reason"]))
+
+	if reason == "retirement" || reason == "ra_7641" {
+		return retirementPay(cfg, employee, slip)
+	}
+
 	monthsPerYear := 0.0
 	oneMonthMinimum := false
 
@@ -362,6 +381,34 @@ func separationPay(cfg model.Config, employee model.Employee, slip model.Payslip
 	}
 
 	return amount, separationIsTaxable(reason)
+}
+
+// retirementPay implements RA 7641: 22.5 days of pay for every year of
+// service (15 days + 1/12 of the 13th month + the cash value of up to five
+// days of service incentive leave), after at least five years of service.
+func retirementPay(cfg model.Config, employee model.Employee, slip model.Payslip) (money.Centavos, bool) {
+	years := yearsOfService(employee)
+
+	if value, ok := cfg.Meta["years_of_service"]; ok {
+		if parsed, err := strconv.ParseFloat(strings.TrimSpace(value), 64); err == nil {
+			years = parsed
+		}
+	}
+
+	if years < 5 {
+		slip.Warnings = append(slip.Warnings,
+			"retirement pay requires at least five years of service")
+		return 0, false
+	}
+
+	daily := slip.DailyRate
+	if daily <= 0 {
+		daily = separationMonthlyPay(cfg, employee, slip).Mul(1.0 / 22.0)
+	}
+
+	// Statutory retirement pay is normally exempt; confirm the BIR conditions
+	// with the company's tax adviser.
+	return daily.Mul(22.5 * years), false
 }
 
 // separationMonthlyPay uses the contracted monthly rate. A daily-paid employee

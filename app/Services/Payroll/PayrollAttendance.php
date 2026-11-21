@@ -43,6 +43,30 @@ class PayrollAttendance
     }
 
     /**
+     * Employees whose statutory premium switches are all off.
+     *
+     * @return Collection<int, Employee>
+     */
+    public function statutoryPremiumsOff(Payroll $payroll): Collection
+    {
+        $group = $payroll->payrollGroup;
+
+        if ($group === null) {
+            return collect();
+        }
+
+        return $group->employees()
+            ->where('timesheet', true)
+            ->where('rest_day_pay', false)
+            ->where('regular_holiday_pay', false)
+            ->where('special_holiday_pay', false)
+            ->where('premium_holiday_pay', false)
+            ->where('overtime_pay', false)
+            ->where('night_differential', false)
+            ->get();
+    }
+
+    /**
      * Whether the company pays the period basic when attendance is missing.
      */
     public function paysWithoutTimesheet(?int $companyId = null): bool

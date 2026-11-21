@@ -9,7 +9,7 @@ it('discovers all admin resources', function () {
     $classes = ResourceRegistry::available();
 
     expect($classes)->not->toBeEmpty();
-    expect(count($classes))->toBe(52);
+    expect(count($classes))->toBe(54);
 
     foreach ($classes as $class) {
         expect(is_subclass_of($class, Resource::class))->toBeTrue();

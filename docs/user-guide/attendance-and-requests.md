@@ -72,6 +72,25 @@ Approved requests feed into attendance and payroll calculations. For example:
 
 The exact effect depends on the payroll group, rates, and company settings. Review the payroll preview before approving a payroll run.
 
+## Leave balances, accrual and carry-over
+
+Leave is tracked in a ledger, not just a number on the employee record.
+
+- Opening balances are seeded from the legacy employee columns with
+  `php artisan leave:rebuild-balances 2026 --opening`.
+- Accrue the year with `php artisan leave:accrue 2026`. Credit-based types
+  accrue annually or monthly according to their policy; event-based statutory
+  leaves (maternity, paternity, VAWC, special leave for women, adoption) do not
+  accrue.
+- Close the year with `php artisan leave:carry-over 2026 2027`. The policy's
+  carry-over cap moves forward and the excess expires.
+- Rebuild the balance projection after any manual ledger correction with
+  `php artisan leave:rebuild-balances 2026`.
+
+The portal shows the ledger balance when one exists and falls back to the
+legacy column until opening balances are seeded. Approved leave posts an
+availment once; re-approving the same request cannot double-deduct.
+
 ## Common questions
 
 **An employee says their request is missing.**
