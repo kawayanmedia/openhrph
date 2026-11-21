@@ -22,7 +22,7 @@ class PhilippinesServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        if (Installation::countryCode() !== 'PH') {
+        if (! $this->isPhilippines()) {
             return;
         }
 
@@ -44,6 +44,18 @@ class PhilippinesServiceProvider extends ServiceProvider
             Route::middleware('api')
                 ->prefix('api')
                 ->group($routes);
+        }
+    }
+
+    /**
+     * Resolve the active country without requiring a database during boot.
+     */
+    private function isPhilippines(): bool
+    {
+        try {
+            return Installation::countryCode() === 'PH';
+        } catch (\Throwable) {
+            return strtoupper((string) config('jurisdictions.default', 'PH')) === 'PH';
         }
     }
 }

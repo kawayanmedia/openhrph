@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\Sector;
-use App\Livewire\Admin\Resource;
 use App\Livewire\Admin\Resources\Employee as EmployeeResource;
 use App\Livewire\Admin\Support\Navigation;
 use App\Livewire\Admin\Support\ResourceRegistry;
@@ -13,18 +12,9 @@ use App\Sectors\SectorManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Tests\Fixtures\SectorGatedProbeResource;
 
 uses(RefreshDatabase::class);
-
-class SectorGatedProbeResource extends Resource
-{
-    public static ?string $sector = 'Government';
-
-    public function fields(Request $request): array
-    {
-        return [];
-    }
-}
 
 it('seeds the government catalogues and hides private-only rows', function () {
     $company = Company::factory()->create(['type' => 'Private']);

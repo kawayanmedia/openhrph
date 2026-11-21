@@ -8,6 +8,7 @@ use App\Jurisdictions\Support\JurisdictionManager;
 use App\Models\InstallationSetting;
 use App\Sectors\Contracts\SectorPolicy;
 use App\Sectors\SectorManager;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -46,26 +47,33 @@ final class Installation
      */
     public static function all(): array
     {
-        if (! Schema::hasTable('installation_settings')) {
+        try {
+            if (! Schema::hasTable('installation_settings')) {
+                return [];
+            }
+
+            $load = fn (): array => InstallationSetting::query()
+                ->orderBy('id')
+                ->get(['key', 'value'])
+                ->mapWithKeys(fn (InstallationSetting $setting): array => [(string) $setting->key => $setting->value])
+                ->all();
+
+            // Caching would leak installation settings between tests that roll back
+            // their database transaction, so the test environment reads directly.
+            if (app()->runningUnitTests()) {
+                return $load();
+            }
+
+            /** @var array<string, string|null> $settings */
+            $settings = Cache::rememberForever(self::CACHE_KEY, $load);
+
+            return $settings;
+        } catch (QueryException) {
+            // The application boots before a database may exist, for example
+            // during `composer dump-autoload` / `artisan package:discover` in
+            // CI. Treat an unavailable database as "not configured yet".
             return [];
         }
-
-        $load = fn (): array => InstallationSetting::query()
-            ->orderBy('id')
-            ->get(['key', 'value'])
-            ->mapWithKeys(fn (InstallationSetting $setting): array => [(string) $setting->key => $setting->value])
-            ->all();
-
-        // Caching would leak installation settings between tests that roll back
-        // their database transaction, so the test environment reads directly.
-        if (app()->runningUnitTests()) {
-            return $load();
-        }
-
-        /** @var array<string, string|null> $settings */
-        $settings = Cache::rememberForever(self::CACHE_KEY, $load);
-
-        return $settings;
     }
 
     public static function get(string $key, mixed $default = null): mixed
