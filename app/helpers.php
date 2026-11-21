@@ -264,6 +264,20 @@ if (! function_exists('hour_rates')) {
             $rates[$code] = $ratesOption;
         }
 
+        // A company without rate rows still needs a usable form.
+        if (! isset($rates[$cd])) {
+            $cd = Timesheet::REGULAR_DAY;
+        }
+
+        if (! isset($rates[$cd])) {
+            return [
+                'regular' => 'REG',
+                'ot' => 'OT',
+                'nt' => 'ND',
+                'nt_ot' => 'ND-OT',
+            ];
+        }
+
         // If rd then we can add option as no log
         if ($cd == Timesheet::REST_DAY) {
             $rates[$cd]['options']['no_log'] = 'No Log (Rest Day)';
@@ -288,14 +302,15 @@ if (! function_exists('hour_rates_label')) {
         //     return $rates[$cd]['options_labels'][$rate];
         // }
 
-        return $rates[$cd]['options_labels'];
+        return $rates[$cd]['options_labels'] ?? [];
     }
 }
 
 if (! function_exists('hour_rates_value')) {
     function hour_rates_value($code, $type = 'regular') // can be regular, ot, nt, nt_ot
     {
-        return cache_rates_options()[$code][$type];
+        // Never zero a premium because the row is missing; 1.0 is the neutral factor.
+        return cache_rates_options()[$code][$type] ?? 1.0;
     }
 }
 

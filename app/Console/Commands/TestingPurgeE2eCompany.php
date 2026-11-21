@@ -22,7 +22,16 @@ class TestingPurgeE2eCompany extends Command
         DB::table('journal_entry_lines')->whereIn('company_id', $companies)->delete();
         DB::table('journal_entries')->whereIn('company_id', $companies)->delete();
         DB::table('payroll_audit_events')->whereIn('company_id', $companies)->delete();
+        DB::table('payroll_detail_deductions')->whereIn('company_id', $companies)->delete();
         DB::table('payroll_details')->whereIn('company_id', $companies)->delete();
+        DB::table('employees_deductions')->whereIn('company_id', $companies)->delete();
+        DB::table('employees_loans')->whereIn('company_id', $companies)->delete();
+        DB::table('employees_compensations')->whereIn('company_id', $companies)->delete();
+        DB::table('deductions')->whereIn('company_id', $companies)->delete();
+        DB::table('loans')->whereIn('company_id', $companies)->delete();
+        DB::table('compensations')->whereIn('company_id', $companies)->delete();
+        DB::table('rates')->whereIn('company_id', $companies)->delete();
+        DB::table('schedules')->whereIn('company_id', $companies)->delete();
         DB::table('timesheets')->whereIn('company_id', $companies)->delete();
         DB::table('payrolls')->whereIn('company_id', $companies)->delete();
         DB::table('payroll_dates')->whereIn('company_id', $companies)->delete();

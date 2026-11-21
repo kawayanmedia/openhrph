@@ -70,7 +70,8 @@ is taxable.
 
 An allowance assigned as **special** with a release date is paid only in the payroll period that
 contains that date. A recurring allowance follows its payment schedule (first pay, last pay or
-every pay).
+every pay). A **non-recurring** employee deduction is taken once, in the payroll period that
+reaches its **Valid from** date, so a one-time cash advance is not repeated every cut-off.
 
 A payroll processed before a ceiling change keeps the figures stored with it. Reopen and
 re-process the payroll to recalculate it with the current ceilings.
@@ -148,7 +149,9 @@ When processing finishes, the status becomes **processed**. Review the payroll d
 
 ### 4. Approve and lock
 
-When the run is correct, select **Approve & lock** and confirm.
+When the run is correct, select **Approve & lock** and confirm. If the run has no independent
+review, or you processed and are also approving it, the page marks the **Approval override
+reason** as required; enter the reason and it is stored in the audit trail.
 
 Approved payrolls are locked. This protects the numbers used for payslips and reports. If you need to change an approved payroll, a company owner must enter a **reason** and select **Reopen**. The reason is stored in the payroll audit trail, the journal entry is reversed, and the payroll moves back to **processed** so it can be reviewed and approved again.
 

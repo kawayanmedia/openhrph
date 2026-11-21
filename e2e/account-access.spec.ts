@@ -33,8 +33,6 @@ test.describe('account access', () => {
     });
 
     test('password recovery link opens a reset form', async ({ page }) => {
-        test.fail(true, 'Known defect QA-02: /app/password/reset has no route and returns 404.');
-
         await page.goto('/app/login');
         await page.getByRole('link', { name: 'Forgot password?' }).click();
 

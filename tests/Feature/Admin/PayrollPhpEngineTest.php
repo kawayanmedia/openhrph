@@ -500,3 +500,63 @@ it('pays a recurring allowance only in the pay schedule it was given', function 
 
     expect((int) $detail->allowance)->toBe(0);
 });
+
+it('takes a non-recurring employee deduction only in the period it becomes effective', function () {
+    $first = seedPhpEnginePayroll();
+
+    $deductionId = DB::table('deductions')->insertGetId([
+        'company_id' => 9,
+        'name' => 'One-time cash advance',
+        'calculation' => 'fixed',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('employees_deductions')->insert([
+        'company_id' => 9,
+        'employee_id' => 501,
+        'deduction_id' => $deductionId,
+        'amount' => 50000,
+        'is_recurring' => 0,
+        'frequency' => null,
+        'valid_date_from' => '2026-03-05',
+        'valid_date_to' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($first));
+
+    $firstDeductions = DB::table('payroll_detail_deductions')
+        ->where('payroll_id', $first)
+        ->where('source', 'deduction')
+        ->pluck('employee_centavos')
+        ->map(fn ($amount) => (int) $amount)
+        ->all();
+
+    expect($firstDeductions)->toContain(50000);
+
+    $second = Payroll::factory()->create([
+        'id' => 78,
+        'company_id' => 9,
+        'payroll_group_id' => 1,
+        'status' => 'open',
+        'cut_off' => 'first_pay',
+        'date_from' => '2026-03-16',
+        'date_to' => '2026-03-31',
+        'payroll_date' => '2026-03-31',
+        'type' => 'regular',
+        'meta' => [],
+    ]);
+
+    (new PhpPayrollEngine)->process(phpEnginePayroll($second->getKey()));
+
+    $secondDeductions = DB::table('payroll_detail_deductions')
+        ->where('payroll_id', $second->getKey())
+        ->where('source', 'deduction')
+        ->pluck('employee_centavos')
+        ->map(fn ($amount) => (int) $amount)
+        ->all();
+
+    expect($secondDeductions)->not->toContain(50000);
+});

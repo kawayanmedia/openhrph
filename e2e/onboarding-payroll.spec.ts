@@ -117,6 +117,18 @@ test.describe('new company onboarding', () => {
         await expect(page.getByText('Record created.')).toBeVisible();
         await expect(page.getByRole('heading', { level: 1 })).toContainText('E2E Semi-Monthly');
 
+        await page.goto('/app/resources/schedule/new');
+        await page.locator('#form-name').fill('E2E Day Shift');
+        await page.locator('#form-time-in').fill('08:00');
+        await page.locator('#form-time-out').fill('17:00');
+        await page.locator('#form-break-time-start').fill('12:00');
+        await page.locator('#form-break-time-end').fill('13:00');
+        await page.evaluate(() => {
+            (document.querySelector('#form-is-default') as HTMLInputElement).click();
+        });
+        await page.getByRole('button', { name: 'Create' }).click();
+        await expect(page.getByText('Record created.')).toBeVisible();
+
         const period = await focusPeriod(page);
 
         await page.goto('/app/resources/employee/new');
@@ -129,9 +141,6 @@ test.describe('new company onboarding', () => {
         await page.locator('#form-position').fill('Payroll Clerk');
         await page.locator('#form-basic-salary').fill('30000');
         await page.locator('#form-payroll-group').selectOption({ label: 'E2E Semi-Monthly' });
-        await page.evaluate(() => {
-            (document.querySelector('#form-timesheet') as HTMLInputElement).click();
-        });
         await page.getByRole('button', { name: 'Create' }).click();
         await expect(page.getByText('Record created.')).toBeVisible();
         await expect(page.getByRole('heading', { level: 1 })).toContainText('Onboarding, Olivia');
@@ -246,6 +255,15 @@ test.describe('new company onboarding', () => {
         await actionModal.getByRole('button', { name: 'Run Action' }).click();
         await expect(page.getByRole('cell', { name: 'E2E-OB-01' }).first()).toBeVisible();
 
+        // Generated rows are placeholders. Record one day of real attendance so
+        // the readiness check has evidence the employee was actually at work.
+        const firstRow = page.getByRole('row').filter({ hasText: 'E2E-OB-01' }).first();
+        await firstRow.getByRole('button', { name: 'Time' }).click();
+
+        await page.getByRole('textbox', { name: 'Hours' }).fill('8');
+        await page.getByRole('button', { name: 'Update', exact: true }).click();
+        await expect(page.getByRole('textbox', { name: 'Hours' })).toBeHidden();
+
         await page.goto('/app/getting-started');
         await expect(page.locator('main')).toContainText('8 of 9');
 
@@ -310,8 +328,10 @@ test.describe('new company onboarding', () => {
         expect((await pdf.body()).length).toBeGreaterThan(500);
 
         await page.goto('/app/getting-started');
-        await expect(page.locator('main')).toContainText('9 of 9');
-        await expect(page.getByText('Payroll is ready to run')).toBeVisible();
+        // Approval closes the period, so the checklist moves on to the next
+        // cut-off: the run is done, but that period still has no attendance.
+        await expect(page.locator('main')).toContainText('8 of 9');
+        await expect(page.getByText('Record attendance for the next cut-off')).toBeVisible();
 
         expect(serverErrors, `Unexpected server/page errors:\n${serverErrors.join('\n')}`).toEqual([]);
     });

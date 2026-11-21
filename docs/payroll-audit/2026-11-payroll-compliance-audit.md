@@ -1685,3 +1685,25 @@ Still open after this pass:
 - Tardiness and overbreak are not separately stored per day; only approved undertime can be deducted. A schedule-vs-punch tardiness calculation and the `compute_tardiness`/`compute_overbreak` switches remain to be wired.
 - Rest days are still inferred from the payroll group, not the employee's schedule/shift.
 - Government-sector rules.
+
+### 17.7 Browser QA pass (21 November 2026, later pass)
+
+A real-browser journey from tenant creation to an approved payslip (recorded in `docs/qa/e2e-issues.md`) found defects the unit suite could not see. The payroll-relevant ones are closed here:
+
+| Item | Status | Change |
+| --- | --- | --- |
+| Statutory premium flags defaulted to **No** (R-12) | **Fixed** | The employee form uses `->default(true)`; the schema default is now on for rest day, holidays, overtime and night differential, and existing rows created under the old default were enabled (`2026_11_21_001100`). Companies whose exemptions are deliberate must turn the switch off per employee. |
+| A new company had no day-type rates | **Fixed** | Every company now receives the 12 statutory rate rows on creation (`RateCatalogue`, `CompanyObserver`); `php artisan rates:sync` backfills existing companies. Without this the timesheet editor and premium labels had no rows to resolve. |
+| A non-recurring employee deduction defaulted to `every_pay` | **Fixed** | `employees_deductions.frequency` is nullable, the model clears it for one-time rows, and both engines take a one-time deduction only in the period that reaches its effectivity date. Previously a cash advance could be deducted every period. |
+| A fixed deduction demanded a rate | **Fixed** | The rate is required only when the deduction is a percentage. |
+| Readiness counted blank timesheets as attendance | **Fixed** | Evidence now requires actual hours, leave/absence or punches; a zero-hour timesheet produces a payroll warning. After approval the checklist correctly asks for the next cut-off's attendance. |
+
+Verification in this pass:
+
+| Command | Result |
+| --- | --- |
+| `php artisan test --compact` | Pass (546 tests, 3 skipped, 2348 assertions). |
+| `cd payroll-engine && go test ./...` | Pass. |
+| `npx playwright test --project=light` | Pass (18 tests). |
+| `npx playwright test --project=dark` | Pass (1 test). |
+| `vendor/bin/pint --dirty --format agent` | Pass. |

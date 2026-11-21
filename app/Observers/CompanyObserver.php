@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\Payroll\RateCatalogue;
 
 class CompanyObserver
 {
@@ -13,7 +14,12 @@ class CompanyObserver
      *
      * @return void
      */
-    public function created(Company $company) {}
+    public function created(Company $company)
+    {
+        // A new workspace needs the day-type rates before anyone can record
+        // attendance or compute a premium.
+        RateCatalogue::sync((int) $company->getKey());
+    }
 
     /**
      * Handle the Company "updated" event.
