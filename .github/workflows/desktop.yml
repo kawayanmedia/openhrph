@@ -136,7 +136,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           # exif is a build-time requirement of spatie/image and
           # spatie/laravel-medialibrary. The runner images enable it by default
           # except on Windows, and the bundled PHP binary never has it.
@@ -163,8 +163,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-php-8.4-
+          key: composer-${{ runner.os }}-php-8.5-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php-8.5-
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
