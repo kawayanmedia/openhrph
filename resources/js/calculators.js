@@ -175,16 +175,24 @@ setupCalculator({
     resultId: 'tax-calculator-result',
     endpoint: '/api/calculators/withholding-tax',
     buildPayload: (form) => ({
+        sector: form.querySelector('[name="sector"]')?.value ?? 'Private',
         period: form.querySelector('[name="period"]')?.value ?? 'monthly',
         ...collectAmounts(form),
     }),
     render: (data) => {
+        const agency = data.deductions.social_insurance.agency;
+
         setText('tax-result-withholding', currency.format(data.withholding_tax));
-        setText('tax-result-summary', `${data.period_label} payroll period`);
+        setText('tax-result-summary', `${data.sector} · ${data.period_label} payroll period`);
         setText('tax-result-regular', currency.format(data.regular_compensation));
         setText('tax-result-supplementary', currency.format(data.supplementary_compensation));
         setText('tax-result-gross', currency.format(data.gross_compensation_income));
         setText('tax-result-non-taxable', currency.format(data.non_taxable_benefits));
+        setText('tax-result-social-insurance-label', `${agency} (employee share)`);
+        setText('tax-result-social-insurance', currency.format(data.deductions.social_insurance.employee));
+        setText('tax-result-philhealth', currency.format(data.deductions.philhealth.employee));
+        setText('tax-result-pagibig', currency.format(data.deductions.pagibig.employee));
+        setText('tax-result-contributions', currency.format(data.deductions.total_employee));
         setText('tax-result-taxable', currency.format(data.taxable_compensation_income));
         setText('tax-result-rate', `${(data.effective_tax_rate * 100).toFixed(2)}%`);
     },

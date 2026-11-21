@@ -62,11 +62,19 @@
                         </span>
                         <div>
                             <h2 id="tax-calculator-title" class="text-lg font-bold text-navy-900 dark:text-white">Withholding Tax Calculator</h2>
-                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">BIR TRAIN law brackets for any payroll period. 13th month pay and other benefits are exempt up to &#8369;90,000.</p>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">BIR TRAIN law brackets for any payroll period. Taxable income is after mandatory SSS/GSIS, PhilHealth and Pag-IBIG contributions. 13th month pay and other benefits are exempt up to &#8369;90,000.</p>
                         </div>
                     </div>
 
                     <form id="tax-calculator-form" class="ui-form-card-body flex-1" novalidate>
+                        <div class="sm:col-span-6">
+                            <label class="ui-label" for="tax-sector">Sector <span class="ui-required" aria-hidden="true">*</span></label>
+                            <select id="tax-sector" name="sector" class="ui-select mt-1.5" required>
+                                <option value="Private" selected>Private (SSS)</option>
+                                <option value="Government">Government (GSIS)</option>
+                            </select>
+                        </div>
+
                         <div class="sm:col-span-6">
                             <label class="ui-label" for="tax-period">Payroll period <span class="ui-required" aria-hidden="true">*</span></label>
                             <select id="tax-period" name="period" class="ui-select mt-1.5" required>
@@ -214,6 +222,22 @@
                             <div class="flex items-center justify-between gap-4 py-2.5">
                                 <dt class="text-slate-600 dark:text-slate-300">Non-taxable 13th month &amp; benefits</dt>
                                 <dd id="tax-result-non-taxable" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt id="tax-result-social-insurance-label" class="text-slate-600 dark:text-slate-300">SSS (employee share)</dt>
+                                <dd id="tax-result-social-insurance" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-slate-600 dark:text-slate-300">PhilHealth (employee share)</dt>
+                                <dd id="tax-result-philhealth" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="text-slate-600 dark:text-slate-300">Pag-IBIG (employee share)</dt>
+                                <dd id="tax-result-pagibig" class="font-semibold text-slate-900 dark:text-white">&#8369;0.00</dd>
+                            </div>
+                            <div class="flex items-center justify-between gap-4 py-2.5">
+                                <dt class="font-semibold text-slate-700 dark:text-slate-200">Total mandatory contributions</dt>
+                                <dd id="tax-result-contributions" class="font-bold text-navy-900 dark:text-white">&#8369;0.00</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4 py-2.5">
                                 <dt class="text-slate-600 dark:text-slate-300">Taxable compensation income</dt>

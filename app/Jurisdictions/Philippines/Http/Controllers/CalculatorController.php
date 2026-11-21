@@ -4,6 +4,7 @@ namespace App\Jurisdictions\Philippines\Http\Controllers;
 
 use App\Enums\Sector;
 use App\Http\Controllers\Controller;
+use App\Jurisdictions\Philippines\Calculators\StatutoryContributionCalculator;
 use App\Jurisdictions\Philippines\Calculators\TakeHomePayCalculator;
 use App\Jurisdictions\Philippines\Calculators\WithholdingTaxCalculator;
 use App\Jurisdictions\Philippines\Calculators\WithholdingTaxInput;
@@ -21,12 +22,17 @@ class CalculatorController extends Controller
     public function withholdingTax(
         CalculateWithholdingTaxRequest $request,
         WithholdingTaxCalculator $calculator,
+        StatutoryContributionCalculator $contributions,
     ): JsonResponse {
         $data = $request->validated();
-        $result = $calculator->compute(self::input($data));
+        $sector = Sector::fromValue($data['sector'] ?? null);
+        $input = self::input($data);
+        $contribution = $contributions->compute($input, $sector);
+        $result = $calculator->compute($input, $contribution->totalEmployee());
 
         return response()->json([
             'data' => [
+                'sector' => $sector->value,
                 'period' => $result->period->value,
                 'period_label' => $result->period->label(),
                 'currency' => 'PHP',
@@ -35,6 +41,19 @@ class CalculatorController extends Controller
                 'gross_compensation_income' => self::amount($result->grossCompensation),
                 'non_taxable_benefits' => self::amount($result->nonTaxableBenefits),
                 'taxable_compensation_income' => self::amount($result->taxableCompensation),
+                'deductions' => [
+                    'social_insurance' => [
+                        'agency' => $contribution->agency(),
+                        'employee' => self::amount($contribution->socialInsuranceEmployee),
+                    ],
+                    'philhealth' => [
+                        'employee' => self::amount($contribution->philHealthEmployee),
+                    ],
+                    'pagibig' => [
+                        'employee' => self::amount($contribution->pagIbigEmployee),
+                    ],
+                    'total_employee' => self::amount($contribution->totalEmployee()),
+                ],
                 'withholding_tax' => self::amount($result->withholdingTax),
                 'effective_tax_rate' => round($result->effectiveTaxRate, 4),
                 'breakdown' => self::breakdown($data),

@@ -2,6 +2,7 @@
 
 namespace App\Jurisdictions\Philippines\Http\Requests;
 
+use App\Enums\Sector;
 use App\Jurisdictions\Philippines\Statutory\Bir\TaxPeriod;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,16 +20,24 @@ abstract class CalculateCompensationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $value = $this->input('period');
+        $period = $this->input('period');
 
-        if (! is_string($value)) {
-            return;
+        if (is_string($period)) {
+            $normalized = TaxPeriod::fromString($period);
+
+            if ($normalized !== null) {
+                $this->merge(['period' => $normalized->value]);
+            }
         }
 
-        $period = TaxPeriod::fromString($value);
+        $sector = $this->input('sector');
 
-        if ($period !== null) {
-            $this->merge(['period' => $period->value]);
+        if (is_string($sector)) {
+            $normalized = Sector::tryFromValue($sector);
+
+            if ($normalized !== null) {
+                $this->merge(['sector' => $normalized->value]);
+            }
         }
     }
 
@@ -39,6 +48,7 @@ abstract class CalculateCompensationRequest extends FormRequest
     {
         return [
             'period' => ['required', Rule::enum(TaxPeriod::class)],
+            'sector' => ['nullable', Rule::enum(Sector::class)],
             'basic_salary' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
             'representation_allowance' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
             'transportation_allowance' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],

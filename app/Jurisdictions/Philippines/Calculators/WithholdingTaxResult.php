@@ -18,5 +18,6 @@ final class WithholdingTaxResult
         public int $taxableCompensation,
         public int $withholdingTax,
         public float $effectiveTaxRate,
+        public int $statutoryDeductions = 0,
     ) {}
 }
