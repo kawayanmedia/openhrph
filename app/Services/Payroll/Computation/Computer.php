@@ -63,16 +63,22 @@ final class Computer
         $daysPerYear = $cfg->daysPerYear > 0 ? $cfg->daysPerYear : 261;
         $hoursPerDay = $cfg->hoursPerDay > 0 ? $cfg->hoursPerDay : 8;
 
+        $monthlyPaid = strtolower(trim($employee->paymentType)) === Employee::PAYMENT_MONTHLY;
+
         $daily = $employee->dailyRate;
 
         if ($daily === 0) {
             $daily = Rules::dailyRate($employee->monthlyBasic, $daysPerYear);
         }
 
-        $hourly = Rules::hourlyRate($employee->monthlyBasic, $daysPerYear, $hoursPerDay);
-        $slip->dailyRate = $daily;
+        // Daily-paid employees are contracted at a daily rate. Deriving their
+        // hourly rate from the monthly field would treat the daily rate as a
+        // month's pay and understate the wage by the days-per-year divisor.
+        $hourly = ! $monthlyPaid && $employee->dailyRate > 0
+            ? Rules::hourlyRateFromDaily($employee->dailyRate, $hoursPerDay)
+            : Rules::hourlyRate($employee->monthlyBasic, $daysPerYear, $hoursPerDay);
 
-        $monthlyPaid = strtolower(trim($employee->paymentType)) === Employee::PAYMENT_MONTHLY;
+        $slip->dailyRate = $daily;
         $periods = $cfg->periodsPerMonth();
 
         if ($periods <= 0) {
@@ -120,11 +126,16 @@ final class Computer
                 continue;
             }
 
+            $leaveFraction = $line->leaveFraction > 0 && $line->leaveFraction <= 1
+                ? $line->leaveFraction
+                : 1.0;
+
             if ($line->paidLeave || Rules::isPaidDay($line->dayType)) {
                 if (! $monthlyPaid) {
-                    $slip->regularPay += $daily;
-                    $slip->basicEarned += $daily;
-                    $slip->regularHours += (float) $hoursPerDay;
+                    $paidLeave = Money::mul($daily, $leaveFraction);
+                    $slip->regularPay += $paidLeave;
+                    $slip->basicEarned += $paidLeave;
+                    $slip->regularHours += (float) $hoursPerDay * $leaveFraction;
                 }
 
                 continue;
@@ -132,8 +143,9 @@ final class Computer
 
             if (Rules::isUnpaidDay($line->dayType)) {
                 if ($monthlyPaid) {
-                    $slip->regularPay -= $daily;
-                    $slip->basicEarned -= $daily;
+                    $unpaid = Money::mul($daily, $leaveFraction);
+                    $slip->regularPay -= $unpaid;
+                    $slip->basicEarned -= $unpaid;
                 }
 
                 continue;
@@ -155,7 +167,9 @@ final class Computer
                 $regularPay = Money::mul($hourly, $line->hours * $premiumOnly);
             }
 
-            $overtimeRate = $dayRate * Rules::OVERTIME_MULTIPLIER;
+            // Article 87 requires the premium-day rate plus at least 30% for
+            // work beyond eight hours on a rest day or holiday.
+            $overtimeRate = $dayRate * Rules::overtimeMultiplierFor($dayRate);
 
             if (! $employee->benefits->overtimePay && $line->overtime > 0) {
                 $slip->warnings[] = sprintf(
@@ -180,7 +194,7 @@ final class Computer
             $nightOTPay = Money::ZERO;
 
             if ($line->nightOT > 0) {
-                $base = $dayRate * Rules::OVERTIME_MULTIPLIER;
+                $base = $dayRate * Rules::overtimeMultiplierFor($dayRate);
 
                 if (! $employee->benefits->overtimePay) {
                     $base = $dayRate;
@@ -851,16 +865,26 @@ final class Computer
         }
 
         $reason = strtolower(trim($cfg->meta['separation_reason'] ?? ''));
+        $oneMonthMinimum = false;
 
         $monthsPerYear = match ($reason) {
-            'retrenchment', 'redundancy', 'closure', 'business_closure' => 1.0,
-            'authorised_cause', 'authorized_cause', 'redundancy_half' => 0.5,
+            // Labor Code Art. 298: one month pay or one month per year of
+            // service, whichever is higher.
+            'retrenchment', 'redundancy', 'closure', 'business_closure',
+            'authorised_cause', 'authorized_cause' => 1.0,
+            // Labor Code Art. 299: one-half month pay per year of service.
+            'illness', 'disease', 'sick' => 0.5,
             default => 0.0,
         };
 
         if ($monthsPerYear === 0.0) {
             return [0, false];
         }
+
+        $oneMonthMinimum = in_array($reason, [
+            'retrenchment', 'redundancy', 'closure', 'business_closure',
+            'authorised_cause', 'authorized_cause',
+        ], true);
 
         $years = self::yearsOfService($employee);
 
@@ -872,13 +896,33 @@ final class Computer
             }
         }
 
-        if ($years <= 0) {
+        if ($years < 0) {
             return [0, false];
         }
 
-        $amount = Money::mul($slip->basicMonthly, $years * $monthsPerYear);
+        $monthly = self::separationMonthlyPay($cfg, $employee, $slip);
+        $amount = Money::mul($monthly, $years * $monthsPerYear);
+
+        if ($oneMonthMinimum && $amount < $monthly) {
+            $amount = $monthly;
+        }
 
         return [$amount, self::separationIsTaxable($reason)];
+    }
+
+    /**
+     * The monthly rate used for separation pay. A daily-paid employee stores a
+     * daily rate in the monthly field, so annualise it first.
+     */
+    private static function separationMonthlyPay(Config $cfg, Employee $employee, Payslip $slip): int
+    {
+        if (strtolower(trim($employee->paymentType)) === Employee::PAYMENT_DAILY && $employee->dailyRate > 0) {
+            $days = $cfg->daysPerYear > 0 ? $cfg->daysPerYear : 261;
+
+            return Money::mul($employee->dailyRate, $days / 12);
+        }
+
+        return $slip->basicMonthly;
     }
 
     public static function separationIsTaxable(string $reason): bool
@@ -896,15 +940,19 @@ final class Computer
         ], true);
     }
 
+    /**
+     * Whole years of service; a fraction of at least six months counts as one
+     * whole year (Labor Code Arts. 298-299).
+     */
     private static function yearsOfService(Employee $employee): float
     {
-        try {
-            $start = new DateTimeImmutable($employee->hiredOn);
-        } catch (\Exception) {
+        if ($employee->hiredOn === '') {
             return 0;
         }
 
-        if ($employee->hiredOn === '') {
+        try {
+            $start = new DateTimeImmutable($employee->hiredOn);
+        } catch (\Exception) {
             return 0;
         }
 
@@ -918,10 +966,23 @@ final class Computer
             }
         }
 
-        $days = ($end->getTimestamp() - $start->getTimestamp()) / 86400;
-        $years = $days / 365.25;
+        if ($end < $start) {
+            return 0;
+        }
 
-        return $years < 0 ? 0 : $years;
+        $years = (int) $end->format('Y') - (int) $start->format('Y');
+        $anniversary = $start->modify('+'.$years.' years');
+
+        if ($anniversary > $end) {
+            $years--;
+            $anniversary = $start->modify('+'.$years.' years');
+        }
+
+        if ($end >= $anniversary->modify('+6 months')) {
+            $years++;
+        }
+
+        return max(0, (float) $years);
     }
 
     /**

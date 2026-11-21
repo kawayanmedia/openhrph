@@ -327,11 +327,17 @@ func separationPay(cfg model.Config, employee model.Employee, slip model.Payslip
 
 	reason := strings.ToLower(strings.TrimSpace(cfg.Meta["separation_reason"]))
 	monthsPerYear := 0.0
+	oneMonthMinimum := false
 
 	switch reason {
-	case "retrenchment", "redundancy", "closure", "business_closure":
+	case "retrenchment", "redundancy", "closure", "business_closure",
+		"authorised_cause", "authorized_cause":
+		// Labor Code Art. 298: one month pay or one month pay per year of
+		// service, whichever is higher.
 		monthsPerYear = 1.0
-	case "authorised_cause", "authorized_cause", "redundancy_half":
+		oneMonthMinimum = true
+	case "illness", "disease", "sick":
+		// Labor Code Art. 299: one-half month pay per year of service.
 		monthsPerYear = 0.5
 	default:
 		return 0, false
@@ -344,13 +350,33 @@ func separationPay(cfg model.Config, employee model.Employee, slip model.Payslip
 		}
 	}
 
-	if years <= 0 {
+	if years < 0 {
 		return 0, false
 	}
 
-	amount := slip.BasicMonthly.Mul(years * monthsPerYear)
+	monthly := separationMonthlyPay(cfg, employee, slip)
+
+	amount := monthly.Mul(years * monthsPerYear)
+	if oneMonthMinimum && amount < monthly {
+		amount = monthly
+	}
 
 	return amount, separationIsTaxable(reason)
+}
+
+// separationMonthlyPay uses the contracted monthly rate. A daily-paid employee
+// has a daily rate in the monthly field, so annualise it first.
+func separationMonthlyPay(cfg model.Config, employee model.Employee, slip model.Payslip) money.Centavos {
+	if strings.EqualFold(strings.TrimSpace(employee.PaymentType), model.PaymentDaily) && employee.DailyRate > 0 {
+		days := cfg.DaysPerYear
+		if days <= 0 {
+			days = 261
+		}
+
+		return employee.DailyRate.Mul(float64(days) / 12)
+	}
+
+	return slip.BasicMonthly
 }
 
 func separationIsTaxable(reason string) bool {
@@ -363,6 +389,8 @@ func separationIsTaxable(reason string) bool {
 	}
 }
 
+// yearsOfService counts whole years of service. A fraction of at least six
+// months counts as one whole year (Labor Code Arts. 298-299).
 func yearsOfService(employee model.Employee) float64 {
 	start, err := time.Parse("2006-01-02", employee.HiredOn)
 	if err != nil {
@@ -376,10 +404,25 @@ func yearsOfService(employee model.Employee) float64 {
 		}
 	}
 
-	years := end.Sub(start).Hours() / 24 / 365.25
+	if end.Before(start) {
+		return 0
+	}
+
+	years := end.Year() - start.Year()
+	anniversary := start.AddDate(years, 0, 0)
+
+	if anniversary.After(end) {
+		years--
+		anniversary = start.AddDate(years, 0, 0)
+	}
+
+	if !end.Before(anniversary.AddDate(0, 6, 0)) {
+		years++
+	}
+
 	if years < 0 {
 		return 0
 	}
 
-	return years
+	return float64(years)
 }

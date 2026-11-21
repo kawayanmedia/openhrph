@@ -831,9 +831,9 @@
     "basic_monthly": 2200000,
     "daily_rate": 100000,
     "period_basic": 1100000,
-    "basic_earned": 202304,
+    "basic_earned": 200000,
     "regular_hours": 16,
-    "regular_pay": 202304,
+    "regular_pay": 200000,
     "overtime_hours": 0,
     "overtime_pay": 0,
     "night_hours": 0,
@@ -852,7 +852,7 @@
     "leave_conversion": 0,
     "separation_pay": 0,
     "annual_adjustment": 0,
-    "gross": 202304,
+    "gross": 200000,
     "sss_employee": 50000,
     "sss_provident": 5000,
     "sss_employer": 100000,
@@ -866,7 +866,7 @@
     "gsis_employee": 0,
     "gsis_employer": 0,
     "gsis_total": 0,
-    "taxable_income": 109804,
+    "taxable_income": 107500,
     "non_taxable": 0,
     "benefit_exempt": 0,
     "minimum_wage_exemption": 0,
@@ -877,7 +877,7 @@
     "total_employer_cost": 149000,
     "net_pay": 0,
     "warnings": [
-      "deductions exceed earnings by 63901.96"
+      "deductions exceed earnings by 63925.00"
     ]
   }
 }

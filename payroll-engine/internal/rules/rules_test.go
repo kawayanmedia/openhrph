@@ -52,7 +52,7 @@ func TestLinePayPremiums(t *testing.T) {
 		t.Fatalf("regular holiday pay = %s", got)
 	}
 
-	if got := LinePay(hourly, 1, DayRestSpecialHoliday, true); got != money.FromPesos(187.50) {
+	if got := LinePay(hourly, 1, DayRestSpecialHoliday, true); got != money.FromPesos(195) {
 		t.Fatalf("rest+special OT pay = %s", got)
 	}
 }

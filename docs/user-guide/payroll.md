@@ -78,7 +78,7 @@ re-process the payroll to recalculate it with the current ceilings.
 ## How pay is calculated
 
 - **Monthly-paid employees** receive a fixed period basic (the monthly rate divided by the number of pays). Working fewer or more days in a cut-off does not change it; absences reduce it by the daily rate and premium days add only the premium portion (rest day +30%, regular holiday +100%, and so on).
-- **Daily-paid employees** are paid for attended days, with the full premium for rest days and holidays, 100% for an unworked regular holiday when they worked or were on paid leave the day before, and 125% overtime plus the 10% night differential.
+- **Daily-paid employees** are paid for attended days from their contracted daily rate, with the full premium for rest days and holidays, 100% for an unworked regular holiday when they worked or were on paid leave the day before, 125% overtime on an ordinary day (130% on a rest day or holiday) and the 10% night differential.
 - Allowances, compensations, bonuses, commissions, loans, and other deductions configured for the period are included in gross and net pay.
 - Minimum wage earners are exempt from tax on the statutory minimum wage and on the holiday, overtime and night-shift pay attributable to it.
 
@@ -140,7 +140,7 @@ Processing recalculates the run and writes the payroll details. The status moves
 When processing finishes, the status becomes **processed**. Review the payroll details carefully:
 
 - employee pay and deductions
-- overtime, leave, undertime, and official business effects
+- overtime, paid and unpaid leave, and official business effects
 - loans and other recurring deductions
 - statutory contributions and tax
 - employer contributions

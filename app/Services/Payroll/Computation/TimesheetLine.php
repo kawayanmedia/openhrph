@@ -22,6 +22,7 @@ final class TimesheetLine
         public bool $absent = false,
         public bool $leave = false,
         public bool $paidLeave = false,
+        public float $leaveFraction = 1.0,
         public bool $legacyHours = false,
     ) {}
 
@@ -40,6 +41,7 @@ final class TimesheetLine
             absent: (bool) ($data['absent'] ?? false),
             leave: (bool) ($data['leave'] ?? false),
             paidLeave: (bool) ($data['paid_leave'] ?? false),
+            leaveFraction: (float) ($data['leave_fraction'] ?? 1),
             legacyHours: (bool) ($data['legacy_hours'] ?? false),
         );
     }
@@ -59,6 +61,7 @@ final class TimesheetLine
             'absent' => $this->absent,
             'leave' => $this->leave,
             'paid_leave' => $this->paidLeave,
+            'leave_fraction' => $this->leaveFraction,
             'legacy_hours' => $this->legacyHours,
         ];
     }

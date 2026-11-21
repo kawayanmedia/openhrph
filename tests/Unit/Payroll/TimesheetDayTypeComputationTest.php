@@ -81,6 +81,8 @@ function timesheetPayrollLine(
     bool $absent = false,
     bool $paidLeave = false,
     string $date = '2026-11-02',
+    float $leaveFraction = 1.0,
+    bool $leave = false,
 ): TimesheetLine {
     return new TimesheetLine(
         date: $date,
@@ -90,7 +92,9 @@ function timesheetPayrollLine(
         night: $night,
         nightOT: $nightOT,
         absent: $absent,
+        leave: $leave,
         paidLeave: $paidLeave,
+        leaveFraction: $leaveFraction,
     );
 }
 
@@ -137,16 +141,17 @@ dataset('monthly-paid premium add-on', [
 
 dataset('overtime and night differential on premium days', [
     // day type, regular, overtime, night, night OT, gross
+    // Article 87, par. 2: premium-day OT is the day rate plus 30%.
     'regular day' => ['regular', 120_000, 37_500, 3_000, 3_750, 164_250],
-    'rest day' => ['rd', 156_000, 48_750, 3_900, 4_875, 213_525],
-    'special day' => ['sh', 156_000, 48_750, 3_900, 4_875, 213_525],
-    'special day on rest day' => ['rd-sh', 180_000, 56_250, 4_500, 5_625, 246_375],
-    'regular holiday' => ['rh', 240_000, 75_000, 6_000, 7_500, 328_500],
-    'regular holiday on rest day' => ['rd-rh', 312_000, 97_500, 7_800, 9_750, 427_050],
-    'double regular holiday' => ['2rh', 360_000, 112_500, 9_000, 11_250, 492_750],
-    'double regular holiday on rest day' => ['rd-2rh', 468_000, 146_250, 11_700, 14_625, 640_575],
-    'regular + special holiday' => ['rh-sh', 312_000, 97_500, 7_800, 9_750, 427_050],
-    'regular + special holiday on rest day' => ['rd-rh-sh', 360_000, 112_500, 9_000, 11_250, 492_750],
+    'rest day' => ['rd', 156_000, 50_700, 3_900, 5_070, 215_670],
+    'special day' => ['sh', 156_000, 50_700, 3_900, 5_070, 215_670],
+    'special day on rest day' => ['rd-sh', 180_000, 58_500, 4_500, 5_850, 248_850],
+    'regular holiday' => ['rh', 240_000, 78_000, 6_000, 7_800, 331_800],
+    'regular holiday on rest day' => ['rd-rh', 312_000, 101_400, 7_800, 10_140, 431_340],
+    'double regular holiday' => ['2rh', 360_000, 117_000, 9_000, 11_700, 497_700],
+    'double regular holiday on rest day' => ['rd-2rh', 468_000, 152_100, 11_700, 15_210, 647_010],
+    'regular + special holiday' => ['rh-sh', 312_000, 101_400, 7_800, 10_140, 431_340],
+    'regular + special holiday on rest day' => ['rd-rh-sh', 360_000, 117_000, 9_000, 11_700, 497_700],
 ]);
 
 it('maps every stored day code to its statutory multiplier', function (string $code, float $multiplier) {
@@ -457,3 +462,42 @@ it('prefers a recognised premium rate code over the stored day classification', 
     'missing rate code falls back to day_type' => ['regular', null, 'regular'],
     'blank rate code falls back to day_type' => ['absent', '', 'absent'],
 ]);
+
+it('pays a daily-paid employee from the contracted daily rate', function () {
+    $employee = new Employee(
+        id: 2,
+        number: 'E-0002',
+        name: 'DAILY EMPLOYEE',
+        monthlyBasic: 700_000,   // the admin form stores the daily rate here
+        dailyRate: 700_000,      // PHP 7,000.00 per day
+        paymentType: Employee::PAYMENT_DAILY,
+        benefits: timesheetPayrollBenefits(),
+        timesheets: collect(range(1, 10))->map(fn (int $day) => timesheetPayrollLine(
+            'regular',
+            date: '2026-11-'.str_pad((string) $day, 2, '0', STR_PAD_LEFT),
+        ))->all(),
+    );
+
+    $slip = timesheetPayrollRun($employee);
+
+    expect($slip->regularPay)->toBe(7_000_000) // PHP 70,000.00 for ten days
+        ->and($slip->dailyRate)->toBe(700_000);
+});
+
+it('pays half of the daily rate for a half-day paid leave', function () {
+    $slip = timesheetPayrollRun(timesheetPayrollEmployee([
+        timesheetPayrollLine('regular', paidLeave: true, leave: true, leaveFraction: 0.5),
+    ]));
+
+    expect($slip->regularPay)->toBe(60_000) // PHP 600.00 = half of PHP 1,200.00
+        ->and($slip->regularHours)->toBe(4.0);
+});
+
+it('deducts half a day for unpaid half-day leave from a monthly-paid employee', function () {
+    $slip = timesheetPayrollRun(timesheetPayrollEmployee(
+        [timesheetPayrollLine('upl', hours: 0, leave: true, leaveFraction: 0.5)],
+        Employee::PAYMENT_MONTHLY,
+    ));
+
+    expect($slip->regularPay)->toBe(1_245_000); // PHP 13,050.00 - PHP 600.00
+});

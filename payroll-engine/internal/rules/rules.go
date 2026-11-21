@@ -44,8 +44,23 @@ var storedDayCodes = map[string]string{
 	"upl":      DayUnpaidLeave,
 }
 
-// OvertimeMultiplier is the Labor Code overtime premium (125% of the day rate).
+// OvertimeMultiplier is the Labor Code overtime premium for an ordinary day
+// (125% of the day rate).
 const OvertimeMultiplier = 1.25
+
+// PremiumDayOvertimeMultiplier is the premium for work beyond eight hours on a
+// rest day or holiday: the first-eight-hours rate plus at least 30% (Art. 87).
+const PremiumDayOvertimeMultiplier = 1.30
+
+// OvertimeMultiplierFor returns the multiplier to apply on top of the day rate.
+// A premium day (day rate above 100%) uses 130%; an ordinary day uses 125%.
+func OvertimeMultiplierFor(dayRate float64) float64 {
+	if dayRate > 1 {
+		return PremiumDayOvertimeMultiplier
+	}
+
+	return OvertimeMultiplier
+}
 
 // NightDifferentialRate is the 10% premium for work between 22:00 and 06:00.
 const NightDifferentialRate = 0.10
@@ -201,7 +216,7 @@ func LinePay(hourly money.Centavos, hours float64, dayType string, overtime bool
 
 	rate := DayMultiplier(dayType)
 	if overtime {
-		rate *= OvertimeMultiplier
+		rate *= OvertimeMultiplierFor(rate)
 	}
 
 	return hourly.Mul(hours * rate)

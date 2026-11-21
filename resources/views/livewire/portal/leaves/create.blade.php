@@ -63,12 +63,12 @@
 
                         <div class="col-span-6 sm:col-span-3">
                             <label for="from" class="block text-sm font-medium text-gray-700">With Pay Number of days</label>
-                            <input wire:model.live="daysWithPay" readonly type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <input wire:model.live="daysWithPay" readonly type="number" step="0.5" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         </div>
 
                         <div class="col-span-6 sm:col-span-3">
                             <label for="from" class="block text-sm font-medium text-gray-700">Without Pay Number of days</label>
-                            <input wire:model.live="daysWithoutPay" readonly type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <input wire:model.live="daysWithoutPay" readonly type="number" step="0.5" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
                         </div>
 
 

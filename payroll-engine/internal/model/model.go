@@ -49,6 +49,10 @@ type TimesheetLine struct {
 	Leave     bool
 	PaidLeave bool
 
+	// LeaveFraction is the part of the day covered by leave: 1 for a whole
+	// day and 0.5 for a half-day. Zero is treated as a whole day.
+	LeaveFraction float64
+
 	// LegacyHours is true when the hours were reconstructed from the legacy
 	// premium-equivalent columns (regular/ot/nt) because actual_* was empty.
 	LegacyHours bool

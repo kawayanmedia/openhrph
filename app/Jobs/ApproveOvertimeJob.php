@@ -4,11 +4,13 @@ namespace App\Jobs;
 
 use App\Models\OvertimeRequest;
 use App\Models\Timesheet;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Auth;
 
 class ApproveOvertimeJob implements ShouldQueue
 {
@@ -23,7 +25,7 @@ class ApproveOvertimeJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(OvertimeRequest $overtimeRequest, $employee, $fields)
+    public function __construct(OvertimeRequest $overtimeRequest, $employee, $fields, public ?int $approverId = null)
     {
         $this->overtimeRequest = $overtimeRequest;
 
@@ -37,7 +39,14 @@ class ApproveOvertimeJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->overtimeRequest->approved_user_id = $this->employee->id;
+        app(TenantContext::class)->run((int) $this->overtimeRequest->company_id, function (): void {
+            $this->approve();
+        });
+    }
+
+    private function approve(): void
+    {
+        $this->overtimeRequest->approved_user_id = $this->approverId ?? Auth::id();
         $this->overtimeRequest->approved_at = now();
         $this->overtimeRequest->remarks = $this->fields->remarks;
         $this->overtimeRequest->status = STATUS_APPROVED;
@@ -48,14 +57,15 @@ class ApproveOvertimeJob implements ShouldQueue
             'log_date' => $this->overtimeRequest->date,
         ]);
 
-        $timesheet->addTime(
-            $timesheet->day_type,
-            Timesheet::RATE_OVERTIME,
-            $this->overtimeRequest->hours,
-            $this->overtimeRequest->time_from->format('H:i:s'),
-            $this->overtimeRequest->time_to->format('H:i:s')
-        );
+        if ($timesheet->exists && (bool) $timesheet->is_locked) {
+            return;
+        }
 
+        // Write the hour bucket the payroll engine reads. addTime() wrote the
+        // legacy premium-equivalent column, which the engine only reads as a
+        // fallback.
+        $timesheet->actual_ot = (float) $timesheet->actual_ot + (float) $this->overtimeRequest->hours;
+        $timesheet->day_type ??= Timesheet::REGULAR_DAY;
         $timesheet->save();
 
         $this->overtimeRequest->save();

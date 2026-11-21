@@ -1,6 +1,7 @@
 # Philippine Payroll Compliance Audit — OpenHR PH Payroll Engine
 
 **Audit date:** 4 November 2026
+**21 November 2026 re-review:** the codebase and data have moved since the 4 and 10 November passes. This document is current only to those dates; **Section 17** records the 21 November position, the latest statutory references and the defects found in that pass. Where Section 17 conflicts with an earlier section, Section 17 prevails.
 **2026 full-cycle update:** 10 November 2026
 **2026 remediation implementation:** 10 November 2026
 **Application:** OpenHR PH (Laravel 13.39, PHP 8.4, Laravel Octane) with a Go payroll engine (`payroll-engine`, module `github.com/kawayanmedia/openhrph-payroll-engine`)
@@ -1583,3 +1584,83 @@ Remaining conditions that are not code defects:
 3. Existing 2026 payrolls may change when re-processed (F-25, F-29, F-37). Preview first; processing creates a revision and does not destroy the prior details.
 4. The remittance exports are employee-level working papers, not agency e-filing files. Verify the current form mapping before submission.
 5. `docs/payslip.pdf` is missing, so `--payslips` in the evidence pack only warns; print payslips from the payroll register.
+
+---
+
+## 17. 21 November 2026 re-review — current position
+
+This section supersedes the earlier findings where they conflict. It is based on the current repository code, read-only queries against the development database, and issuances retrieved on 21 November 2026.
+
+### 17.1 What changed since 10 November
+
+Several earlier findings are now closed by code or data:
+
+| Earlier finding | Current position |
+| --- | --- |
+| F-27 — 2026 statutory basis not effective-dated | **Closed.** `statutory_sss_brackets`, `statutory_philhealth`, `statutory_pagibig` and `statutory_tax_brackets` all have 2026-effective rows; `statutory_sources` records the 2026 confirmation. |
+| F-28 — stale regional minimum wage | **Closed for the loaded regions.** `statutory_min_wage` includes NCR-28 (₱718–₱755 effective 26 Sep 2026), Region VII-27 (14 Oct 2026), Region IVA-23 (24 Dec 2026), Region VI-30 (18 Jan 2027) and Region XII-26 (20 Jan 2027). Region and industry are resolved per employee/office. |
+| F-37 — de minimis ceilings | **Closed.** Ceilings now follow BIR **RR No. 29-2025** (22 December 2025), with monthly, semester and annual bases and per-period consumption tracking. |
+| F-33 — 2026 holidays not loaded | **Closed for 2026.** 19 holiday rows are loaded. Verify the signed 2026 proclamation (secondary sources cite Proclamation No. 1006, s. 2025). |
+| F-34 — maker-checker not enforced | **Closed.** Review and approval are separate, with segregation override reasons and audit events. |
+
+### 17.2 Latest references used
+
+- Labor Code (PD 442, as amended), Arts. 83–96 (hours, meal, NSD, OT, rest day, holiday, SIL), 102–119 (payment and deductions), 297–299 (separation). Art. 87, par. 2 requires **+30%** beyond eight hours on a holiday or rest day.
+- RA 7641 — retirement pay, 22.5 days per year.
+- PD 851 as amended by MO 28 — 13th month, 1/12 of basic salary, due 24 December.
+- RA 11210 — 105 days maternity (120 solo mothers; 60 miscarriage), +30 days unpaid optional, employer advance and salary differential.
+- RA 8187 — 7 days paternity, first four deliveries.
+- RA 11861 — 7 working days solo-parent leave after six months.
+- RA 9262 §43 — 10 days VAWC leave, extendible.
+- RA 9710 §18 — two months special leave for women after gynecological surgery.
+- RA 11642 §36 — adoption; maternity/paternity entitlement within one year of the adoption order.
+- RA 10151 — night workers (health assessment, facilities, transfer, scheduling consultation).
+- RA 11199, RA 11223, RA 9679, RA 10963 — SSS, PhilHealth, Pag-IBIG and BIR.
+- SSS contribution table effective January 2025 (the latest retrieved; no 2026 rate circular).
+- PhilHealth 2026 circular index: no 2026 rate-setting circular; 5%, ₱10,000 floor and ₱100,000 ceiling continue.
+- BIR **RR No. 29-2025** — de minimis ceilings, including ₱2,500 rice, ₱8,000 clothing, ₱2,000/semester or ₱333/month medical cash, ₱12,000 actual medical assistance, ₱400 laundry, ₱12,000 achievement awards, ₱6,000 gifts, 30% of regional minimum wage for OT/night meals, ₱12,000 CBA/productivity, and up to 12 days of monetized unused VL for private employees.
+- NWPC NCR-28 (26 Sep 2026) and the regional orders effective through January 2027.
+- DOLE Labor Advisory No. 06-20 (final pay within 30 days) and the DOLE Handbook on Workers' Statutory Benefits (2023). Both must be re-verified with the company's CPA; DOLE blocks automated retrieval.
+
+### 17.3 New findings (21 November 2026)
+
+| ID | Severity | Finding | Evidence | Authority | Status in this change |
+| --- | --- | --- | --- | --- | --- |
+| R-01 | **Critical** | Daily-paid employees were paid from `basic_salary` as if it were a monthly rate. Employee 32 (₱7,000/day) was paid ₱3,500 for 80 hours. | Employee 32; payroll 52; Go `compute.go`; PHP `Computer.php` | Employment contract; RA 6727 | **Fixed** — the hourly rate now comes from `daily_rate`; regression test added. |
+| R-02 | **Critical** | Paid leave never set `is_paid_leave` or a `pl` day code, so daily-paid employees lost statutory paid leave. | 0 `is_paid_leave=1` rows; `ApproveLeaveJob` wrote only `is_leave` | Art. 95; RA 11210; RA 8187; RA 11861; RA 9262; RA 9710 | **Fixed** — approval writes paid/unpaid and the payable day code for working days only. |
+| R-03 | High | Overtime on rest days and holidays used 125% instead of the premium-day rate plus 30%. | `OvertimeMultiplier = 1.25` in Go and PHP; prior matrix marked this PASS | Art. 87, par. 2; DOLE 169/195/260/338/390/507% | **Fixed** — 130% on premium days; tests updated. |
+| R-04 | High | Approved OT/UT wrote the legacy `ot`/`ut` columns while the engine reads `actual_ot`/`actual_nt`. | `EditViewTimeSheet`; `ApproveOvertimeJob`; loader | Correct wage payment | **Partially fixed** — approval now writes `actual_ot`/`ut`; the manual editor still needs the unified calculator. |
+| R-05 | High | Leave days were calendar days and could be arbitrary. | `leave_requests` 27 (7 days for 4 dates) and 23 (12 days for 1 date) | Working-day entitlements | **Fixed** — portal counts scheduled working days; decimal days; half-day support. |
+| R-06 | High | The approver was recorded as the requesting employee. | `leave_requests` 31/32: `approved_user_id = employee_id` | Audit / maker-checker | **Fixed** — approval records the acting user and blocks self-approval. |
+| R-07 | High | Leave approval mutated locked payroll attendance. | `ApproveLeaveJob` had no lock check | Attendance control | **Fixed** — action blocks locked periods; job skips locked rows. |
+| R-08 | High | Maternity allowance was 60 days. | `leave_types` ML `allow_per_year=60` | RA 11210: 105 days (120 solo), 60 miscarriage | **Fixed for system rows** — migration to 105 and new statutory types (SLW, ADOPT). |
+| R-09 | High | Readiness inverted `auto_absent_no_timesheet`. | `PayrollReadiness` vs `PayrollAttendance` and `load.go` | Payroll control | **Fixed** — attendance is pending whenever tracked employees have no timesheet. |
+| R-10 | High | Undertime and tardiness never reduce pay. | `compute_undertime/compute_tardiness/compute_overbreak` unused; `ut` ignored | “No work, no pay”; Art. 88 | **Open** — next payroll phase. |
+| R-11 | High | Separation pay and retirement pay did not follow the statute. | `special.go separationPay`; no RA 7641 computation | Arts. 298–299; RA 7641 | **Separation fixed** — 1 month/year or 1 month (higher) for Art. 298 causes, ½ month/year for Art. 299, 6-month fraction = 1 year. **Retirement pay still open.** |
+| R-12 | High | 5 of 17 employees have every statutory premium switch off. | Read-only query | Arts. 86, 87, 93, 94 | **Mitigated** — readiness and data-quality warnings; blocking control planned. |
+| R-13 | Medium | Bulk “Process Payroll” bypassed the attendance override and approval guard. | `ProcessPayroll` action | Payroll control | **Fixed** — bulk processing blocks no-attendance and approved runs. |
+| R-14 | Medium | Duplicate payroll runs were possible. | No unique key; `payroll_dates.status` never advanced | Payroll integrity | **Fixed** — unique key and creating-time validation; state machine planned. |
+| R-15 | Medium | Leave creation could fatal on the missing Nova class. | `Laravel\Nova\URL` does not exist | Reliability | **Fixed** — observer uses the admin route. |
+| R-16 | Medium | Leave creation fell back to `company_id = 1`. | `CreateLeaveAction` | Tenant isolation | **Fixed** — fails closed when no company/employee. |
+| R-17 | Medium | Night differential is not derived automatically from punches. | Only the manual Time action computes it; `actual_nt` null on some rows | Art. 86 | **Open** — unified calculator. |
+| R-18 | Medium | Rest days are inferred from the payroll group, not the schedule/shift. | `GenerateTimesheetGateway` | Arts. 91–92 | **Open**. |
+| R-19 | Medium | Final-pay leave conversion is fully taxed. | `ComputeFinalPay` | RR 29-2025: up to 12 days of monetized private VL is non-taxable | **Open**. |
+| R-20 | Medium | Web payslip omits government identifiers. | Web view vs PDF | Transparency | **Open**. |
+
+### 17.4 Verification performed in this pass
+
+| Command | Result |
+| --- | --- |
+| `cd payroll-engine && go test ./...` | Pass. |
+| `php artisan test --compact tests/Unit/Payroll` | Pass, including the new daily-paid, half-day and premium-OT cases. |
+| `php artisan test --compact tests/Feature/Admin/PayrollAndLeaveSafetyTest.php` | Pass (6 tests). |
+| `php artisan test --compact tests/Feature/Admin/{PayrollRunTest,PayrollComplianceTest,PayrollPhpEngineTest,LeaveTypeCatalogueTest,TimesheetAdminTest}.php tests/Feature/Attendance` | Pass (187 tests). |
+
+### 17.5 Remaining remediation order
+
+1. Unified timesheet calculator: one writer for `actual_regular/actual_ot/actual_nt/actual_nt_ot`, called after every punch, import, correction and approval.
+2. Undertime, tardiness and overbreak deduction honouring the payroll-group switches.
+3. Retirement pay (RA 7641) and the 13th-month UI. (Separation pay under Arts. 298–299 is fixed.)
+4. Leave ledger, accrual, eligibility, carry-over, expiry and monetization.
+5. Agency remittance files, contribution-base sign-off and the leave-conversion tax split.
+6. Government-sector rules (deferred).

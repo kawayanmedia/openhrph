@@ -191,6 +191,8 @@ it('reports payroll master-data quality issues when strict', function () {
     DB::table('employees')->where('id', 1)->update([
         'office_id' => 1, 'basic_salary' => (int) round(755 * 261 * 100),
         'daily_rate' => 75500, 'is_minimum_wage' => true,
+        'rest_day_pay' => true, 'regular_holiday_pay' => true, 'special_holiday_pay' => true,
+        'premium_holiday_pay' => true, 'overtime_pay' => true, 'night_differential' => true,
     ]);
 
     $this->artisan('payroll:data-quality', ['--company' => 1, '--json' => true, '--strict' => true])

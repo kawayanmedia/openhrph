@@ -32,6 +32,9 @@ class LeaveRequest extends Model
         'date_to' => 'date',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'days_with_pay' => 'float',
+        'days_without_pay' => 'float',
+        'is_whole_day' => 'boolean',
     ];
 
     /**

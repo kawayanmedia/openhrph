@@ -833,7 +833,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 	rows, err := db.QueryContext(ctx, `
 		SELECT employee_id, DATE(log_date), COALESCE(day_type, ''),
 		       COALESCE(day_rate_code, ''),
-		       COALESCE(is_absent, 0), COALESCE(is_leave, 0), COALESCE(is_paid_leave, 0),
+		       COALESCE(is_absent, 0), COALESCE(is_leave, 0), COALESCE(is_paid_leave, 0), COALESCE(leave_half_day, 0),
 		       COALESCE(actual_regular, 0), COALESCE(actual_ot, 0),
 		       COALESCE(actual_nt, 0), COALESCE(actual_nt_ot, 0),
 		       COALESCE(regular, 0), COALESCE(ot, 0), COALESCE(nt, 0),
@@ -859,6 +859,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 			absent       int
 			leave        int
 			paidLeave    int
+			leaveHalf    int
 			regHours     float64
 			otHours      float64
 			ntHours      float64
@@ -874,7 +875,7 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 			amOutMorning string
 		)
 
-		if err := rows.Scan(&employeeID, &logDate, &dayType, &rateCode, &absent, &leave, &paidLeave,
+		if err := rows.Scan(&employeeID, &logDate, &dayType, &rateCode, &absent, &leave, &paidLeave, &leaveHalf,
 			&regHours, &otHours, &ntHours, &ntOTHours, &regularPay, &otPay, &ntPay,
 			&logs, &amLogin, &amLogout, &pmLogin, &pmLogout, &amOutMorning); err != nil {
 			return fmt.Errorf("scan timesheet: %w", err)
@@ -925,17 +926,23 @@ func loadTimesheets(ctx context.Context, db *sql.DB, run Run, employees []model.
 			ordinaryNight = 0
 		}
 
+		leaveFraction := 1.0
+		if leaveHalf == 1 {
+			leaveFraction = 0.5
+		}
+
 		employees[position].Timesheets = append(employees[position].Timesheets, model.TimesheetLine{
-			Date:        logDate.Format("2006-01-02"),
-			DayType:     rules.EffectiveDayType(dayType, rateCode),
-			Hours:       hours,
-			Overtime:    overtime + nightOT,
-			Night:       ordinaryNight,
-			NightOT:     nightOT,
-			Absent:      absent == 1,
-			Leave:       leave == 1,
-			PaidLeave:   paidLeave == 1,
-			LegacyHours: legacy,
+			Date:          logDate.Format("2006-01-02"),
+			DayType:       rules.EffectiveDayType(dayType, rateCode),
+			Hours:         hours,
+			Overtime:      overtime + nightOT,
+			Night:         ordinaryNight,
+			NightOT:       nightOT,
+			Absent:        absent == 1,
+			Leave:         leave == 1,
+			PaidLeave:     paidLeave == 1,
+			LeaveFraction: leaveFraction,
+			LegacyHours:   legacy,
 		})
 	}
 

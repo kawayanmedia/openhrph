@@ -224,9 +224,9 @@ func TestComputePremiumsForStoredDayCodes(t *testing.T) {
 		t.Fatalf("regular pay = %s, want 6720.00", slip.RegularPay)
 	}
 
-	// Rest-day overtime: 150 x 2 x 130% x 125% = 487.50.
-	if slip.OvertimePay != money.FromPesos(487.50) {
-		t.Fatalf("overtime pay = %s, want 487.50", slip.OvertimePay)
+	// Rest-day overtime: 150 x 2 x 130% x 130% = 507.00 (Art. 87).
+	if slip.OvertimePay != money.FromPesos(507) {
+		t.Fatalf("overtime pay = %s, want 507.00", slip.OvertimePay)
 	}
 
 	// Premium components only: rest day 30% = 360, holiday premium
@@ -258,5 +258,67 @@ func TestStatutoryScheduleRespectsCutoff(t *testing.T) {
 
 	if slip.SSSEmployee != 0 {
 		t.Fatalf("sss should not apply on last pay, got %s", slip.SSSEmployee)
+	}
+}
+
+// A daily-paid employee is contracted at a daily rate. The hourly rate must be
+// derived from that daily rate, not from the monthly basic salary field (which
+// stores the same daily figure for these employees).
+func TestDailyPaidUsesContractedDailyRate(t *testing.T) {
+	cfg := semiMonthlyConfig()
+
+	employee := model.Employee{
+		ID:           32,
+		Number:       "E-0032",
+		Name:         "Daily Paid",
+		PaymentType:  model.PaymentDaily,
+		MonthlyBasic: money.FromPesos(7000),
+		DailyRate:    money.FromPesos(7000),
+		Benefits:     allBenefits(),
+	}
+
+	for day := 1; day <= 10; day++ {
+		employee.Timesheets = append(employee.Timesheets, model.TimesheetLine{
+			Date:    "2026-01-" + twoDigits(day),
+			DayType: rules.DayRegular,
+			Hours:   8,
+		})
+	}
+
+	slip, err := Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.RegularPay != money.FromPesos(70000) {
+		t.Fatalf("regular pay = %s, want 70000.00", slip.RegularPay)
+	}
+}
+
+// Labor Code Art. 87, par. 2: overtime on a rest day or holiday is the
+// premium-day rate plus at least 30% — the DOLE 169/260/390% ladder.
+func TestPremiumDayOvertimeUsesThirtyPercentPremium(t *testing.T) {
+	cfg := semiMonthlyConfig()
+	cfg.PayUnworkedRegularHolidays = false
+
+	// PKR 26,100 monthly = PKR 1,200 daily / PKR 150 hourly.
+	slip, err := Compute(cfg, model.Employee{
+		ID:           11,
+		MonthlyBasic: money.FromPesos(26100),
+		Benefits:     allBenefits(),
+		Timesheets: []model.TimesheetLine{
+			{Date: "2026-01-05", DayType: rules.DayRest, Overtime: 2},
+			{Date: "2026-01-06", DayType: rules.DayRegularHoliday, Overtime: 2},
+			{Date: "2026-01-07", DayType: rules.DayDoubleHoliday, Overtime: 2},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2h x 150 x 1.30 x 1.30 = 507; 2h x 150 x 2.00 x 1.30 = 780;
+	// 2h x 150 x 3.00 x 1.30 = 1,170. Total 2,457.
+	if slip.OvertimePay != money.FromPesos(2457) {
+		t.Fatalf("overtime pay = %s, want 2457.00", slip.OvertimePay)
 	}
 }

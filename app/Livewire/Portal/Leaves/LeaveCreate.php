@@ -3,9 +3,11 @@
 namespace App\Livewire\Portal\Leaves;
 
 use App\Actions\CreateLeaveAction;
+use App\Models\Holiday;
 use App\Models\Leave;
+use App\Models\PayrollGroup;
 use App\Support\Tenancy\TenantCache;
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -15,9 +17,12 @@ class LeaveCreate extends Component
 {
     use WithFileUploads;
 
+    /** Leave types that never carry pay. */
+    private const UNPAID_CODES = ['LWP', 'LWOP', 'VLWOP', 'SLWOP'];
+
     public $title = 'Create Leave';
 
-    public $leaveTypeId = 1;
+    public $leaveTypeId;
 
     public $dateFrom;
 
@@ -37,45 +42,18 @@ class LeaveCreate extends Component
 
     public $employee;
 
-    // return Grid::make()
-    // ->schema([
-    //     Forms\Components\TextInput::make('First Name')->required(),
-    //     Forms\Components\TextInput::make('Last Name')->required(),
-    // ]);
-
-    protected function getFormSchema(): array
-    {
-        // return Grid::make()
-        // ->schema([
-        //     Forms\Components\TextInput::make('First Name')->required(),
-        //     Forms\Components\TextInput::make('Last Name')->required(),
-        // ]);
-
-        return [
-
-            // Forms\Components\MarkdownEditor::make('content'),
-            // ...
-        ];
-    }
-
     public function mount(Request $request)
     {
         $this->leaveOptions = TenantCache::rememberForever('leave_types', function () {
             return Leave::selectOptions();
         });
 
-        // Select only vacation and sick leave for now
-        $selectedLeaveOptions = [];
-
-        foreach ($this->leaveOptions as $key => $leaveOption) {
-            if ($leaveOption == 'Vacation Leave' || $leaveOption == 'Sick Leave') {
-                $selectedLeaveOptions[$key] = $leaveOption;
-            }
-        }
-
-        $this->leaveOptions = $selectedLeaveOptions;
+        $this->leaveTypeId = array_key_first($this->leaveOptions);
+        $this->dateFrom = $this->dateTo = now()->toDateString();
 
         $this->employee = Auth::user()->employee;
+
+        $this->computeDays();
     }
 
     public function updatedDateFrom($value)
@@ -88,18 +66,62 @@ class LeaveCreate extends Component
         $this->computeDays();
     }
 
+    public function updatedLeaveTypeId($value)
+    {
+        $this->computeDays();
+    }
+
+    public function updatedIsWholeDay($value)
+    {
+        $this->computeDays();
+    }
+
+    /**
+     * Count scheduled working days, not calendar days, and split them into
+     * paid and unpaid days using the employee's remaining credits.
+     */
     public function computeDays()
     {
-        if ($this->dateFrom != null && $this->dateTo != null) {
-
-            $totalLeave = Carbon::createFromFormat('Y-m-d', $this->dateFrom)->diffInDays(Carbon::createFromFormat('Y-m-d', $this->dateTo)) + 1;
-            // Check if leave is already 0
-            if ($this->leaveTypeId == 1 && $this->employee->total_vacation_leave <= 0) {
-                $this->daysWithoutPay = $totalLeave;
-            } else {
-                $this->daysWithPay = $totalLeave;
-            }
+        if ($this->dateFrom == null || $this->dateTo == null) {
+            return;
         }
+
+        $from = CarbonImmutable::parse($this->dateFrom)->startOfDay();
+        $to = CarbonImmutable::parse($this->dateTo)->startOfDay();
+
+        if ($to->lt($from)) {
+            $this->daysWithPay = null;
+            $this->daysWithoutPay = null;
+
+            return;
+        }
+
+        $total = $this->workingDays($from, $to);
+
+        if ($this->isWholeDay !== 'true') {
+            $total = $from->equalTo($to) && $total > 0 ? 0.5 : $total;
+        }
+
+        $leave = Leave::query()->find($this->leaveTypeId);
+        $code = strtoupper(trim((string) $leave?->code));
+
+        if ($leave === null || in_array($code, self::UNPAID_CODES, true)) {
+            $this->daysWithPay = 0;
+            $this->daysWithoutPay = $total;
+
+            return;
+        }
+
+        $balance = match ($code) {
+            'VL' => (float) ($this->employee?->total_vacation_leave ?? 0),
+            'SL' => (float) ($this->employee?->total_sick_leave ?? 0),
+            default => PHP_FLOAT_MAX,
+        };
+
+        $paid = min($total, $balance);
+
+        $this->daysWithPay = $paid;
+        $this->daysWithoutPay = max(0, $total - $paid);
     }
 
     public function applyLeave(Request $request)
@@ -109,24 +131,60 @@ class LeaveCreate extends Component
         }
 
         $this->validate([
-            'dateFrom' => 'required',
-            'dateTo' => 'required',
-            // 'reason' => 'required',
+            'leaveTypeId' => 'required',
+            'dateFrom' => 'required|date',
+            'dateTo' => 'required|date|after_or_equal:dateFrom',
         ]);
+
+        if ($this->isWholeDay !== 'true' && $this->dateFrom !== $this->dateTo) {
+            $this->addError('dateTo', 'A half-day leave must start and end on the same date.');
+
+            return;
+        }
+
+        $this->computeDays();
 
         $result = CreateLeaveAction::run($request, $this);
 
         if ($result === true) {
             return redirect()->route('portal.leaves');
         }
-
-        // $createLeaveAction = new CreateLeaveAction();
-        // $createLeaveAction->execute();
     }
 
     public function render()
     {
         return view('livewire.portal.leaves.create')
             ->title($this->title)->layout('layouts.portal');
+    }
+
+    private function workingDays(CarbonImmutable $from, CarbonImmutable $to): float
+    {
+        $daysYear = $this->employee?->payrollGroup?->days_year ?? PayrollGroup::NUMBER_WORKING_DAYS_MONFRI;
+        $holidays = Holiday::query()
+            ->whereDate('date', '>=', $from->toDateString())
+            ->whereDate('date', '<=', $to->toDateString())
+            ->pluck('date')
+            ->map(fn ($date) => CarbonImmutable::parse($date)->toDateString())
+            ->all();
+
+        $days = 0.0;
+
+        for ($date = $from; $date->lte($to); $date = $date->addDay()) {
+            if ($daysYear === PayrollGroup::NUMBER_WORKING_DAYS_MONFRI && $date->isWeekend()) {
+                continue;
+            }
+
+            if ($daysYear === PayrollGroup::NUMBER_WORKING_DAYS_MONSAT && $date->isSunday()) {
+                continue;
+            }
+
+            if (in_array($date->toDateString(), $holidays, true)) {
+                continue;
+            }
+
+            $days += 1;
+        }
+
+        return $days;
     }
 }

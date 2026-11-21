@@ -83,6 +83,12 @@ it('reports readiness once every required step is complete', function () {
         'hdmf_number' => '0000-0000-0000',
         'tin_number' => '000-000-000-000',
         'tax_status' => 'S',
+        'rest_day_pay' => true,
+        'regular_holiday_pay' => true,
+        'special_holiday_pay' => true,
+        'premium_holiday_pay' => true,
+        'overtime_pay' => true,
+        'night_differential' => true,
     ]);
 
     Timesheet::factory()->create([

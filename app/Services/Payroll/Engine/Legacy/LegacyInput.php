@@ -517,7 +517,7 @@ final class LegacyInput
         $columns = array_values(array_filter(
             [
                 'employee_id', 'log_date', 'day_type', 'day_rate_code',
-                'is_absent', 'is_leave', 'is_paid_leave',
+                'is_absent', 'is_leave', 'is_paid_leave', 'leave_half_day',
                 'actual_regular', 'actual_ot', 'actual_nt', 'actual_nt_ot',
                 'regular', 'ot', 'nt',
                 'logs', 'am_login', 'am_logout', 'pm_login', 'pm_logout', 'am_out_morning',
@@ -599,6 +599,7 @@ final class LegacyInput
                 absent: (int) ($row->is_absent ?? 0) === 1,
                 leave: (int) ($row->is_leave ?? 0) === 1,
                 paidLeave: (int) ($row->is_paid_leave ?? 0) === 1,
+                leaveFraction: (int) ($row->leave_half_day ?? 0) === 1 ? 0.5 : 1.0,
                 legacyHours: $legacy,
             );
         }

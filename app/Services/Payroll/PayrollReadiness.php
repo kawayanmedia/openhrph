@@ -358,7 +358,13 @@ class PayrollReadiness
     protected function attendanceSection(?PayrollGroup $group, Collection $employees, ?PayrollDate $period): array
     {
         $tracked = $employees->filter(fn (Employee $employee) => (bool) $employee->timesheet);
-        $paidWithoutTimesheet = $this->settingIsTruthy('auto_absent_no_timesheet');
+
+        // "auto_absent_no_timesheet" marks a missing day absent (unpaid). It is
+        // the opposite of paying the period basic without attendance, so it
+        // must not be used to declare the attendance step complete.
+        $autoAbsent = $this->settingIsTruthy('auto_absent_no_timesheet');
+        $paysWithoutTimesheet = ! $autoAbsent;
+
         $holidayYear = $period?->payroll_date?->year ?? now()->year;
         $holidayCount = Holiday::query()->where('year', $holidayYear)->count();
 
@@ -369,9 +375,6 @@ class PayrollReadiness
         if ($employees->isNotEmpty() && $tracked->isEmpty()) {
             $attendanceComplete = true;
             $attendanceMeta = 'Timesheet tracking is disabled for all employees';
-        } elseif ($employees->isNotEmpty() && $paidWithoutTimesheet) {
-            $attendanceComplete = true;
-            $attendanceMeta = 'Missing attendance is paid on basic salary';
         } elseif ($period === null) {
             $attendanceMeta = 'Waiting for a pay schedule';
         } else {
@@ -386,6 +389,8 @@ class PayrollReadiness
             if ($present >= $tracked->count()) {
                 $attendanceComplete = true;
                 $attendanceMeta = "{$range} · {$present} of {$tracked->count()} employees recorded";
+            } elseif ($paysWithoutTimesheet) {
+                $attendanceMeta = "{$range} · {$present} of {$tracked->count()} employees recorded; missing attendance will be paid on basic salary";
             } elseif ($period->attendance_date_start?->isFuture()) {
                 $attendanceStatus = 'upcoming';
                 $attendanceMeta = "{$range} · starts ".$period->attendance_date_start->format('M j');
@@ -473,6 +478,19 @@ class PayrollReadiness
 
         foreach ($missingPay as $warning) {
             $warnings[] = $warning;
+        }
+
+        $flagsOff = $employees->filter(fn (Employee $employee) => ! $employee->rest_day_pay
+            || ! $employee->regular_holiday_pay
+            || ! $employee->special_holiday_pay
+            || ! $employee->premium_holiday_pay
+            || ! $employee->overtime_pay
+            || ! $employee->night_differential)->count();
+
+        if ($flagsOff > 0) {
+            $warnings[] = $flagsOff === 1
+                ? '1 employee has a statutory premium switch off (rest day, holiday, overtime or night differential); the engine will pay 100% for those days'
+                : $flagsOff.' employees have statutory premium switches off (rest day, holiday, overtime or night differential); the engine will pay 100% for those days';
         }
 
         $unassigned = Employee::query()

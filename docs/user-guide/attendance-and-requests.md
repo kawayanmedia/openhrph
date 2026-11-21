@@ -65,8 +65,8 @@ Employees can view their dashboard, schedules, attendance report, and request hi
 Approved requests feed into attendance and payroll calculations. For example:
 
 - Approved overtime can add overtime pay.
-- Approved leave can affect leave balances and paid/unpaid leave.
-- Approved undertime can reduce pay for the affected period.
+- Approved leave is counted in scheduled working days (weekends and holidays are skipped), supports half-days, and is posted to attendance as paid or unpaid so payroll pays it correctly.
+- Approved undertime is recorded on the timesheet for attendance reporting.
 - Approved official business can keep the employee paid while away from the usual worksite.
 - Approved schedule adjustments change the expected hours for the affected dates.
 

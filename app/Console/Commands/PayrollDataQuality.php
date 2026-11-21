@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * Reports payroll master-data issues that would weaken statutory reporting or
@@ -36,7 +36,9 @@ class PayrollDataQuality extends Command
             ->whereNull('e.deleted_at')
             ->get([
                 'e.id', 'e.employee_number', 'e.first_name', 'e.last_name',
-                'e.basic_salary', 'e.daily_rate', 'e.is_minimum_wage',
+                'e.payment_type', 'e.basic_salary', 'e.daily_rate', 'e.is_minimum_wage',
+                'e.rest_day_pay', 'e.regular_holiday_pay', 'e.special_holiday_pay',
+                'e.premium_holiday_pay', 'e.overtime_pay', 'e.night_differential',
                 'e.tin_number', 'e.sss_number', 'e.philhealth_number', 'e.hdmf_number',
                 'e.region as employee_region', 'e.industry as employee_industry',
                 'o.region as office_region', 'o.industry as office_industry',
@@ -51,6 +53,19 @@ class PayrollDataQuality extends Command
 
             if (! $region || ! $industry) {
                 $issues[] = [$employee->employee_number, $name, 'Missing region/industry', 'Wage order cannot be resolved'];
+            }
+
+            if ($employee->payment_type === 'daily' && (int) $employee->daily_rate <= 0) {
+                $issues[] = [$employee->employee_number, $name, 'Missing daily rate', 'Payment type is daily'];
+            }
+
+            if ((int) $employee->rest_day_pay === 0
+                && (int) $employee->regular_holiday_pay === 0
+                && (int) $employee->special_holiday_pay === 0
+                && (int) $employee->premium_holiday_pay === 0
+                && (int) $employee->overtime_pay === 0
+                && (int) $employee->night_differential === 0) {
+                $issues[] = [$employee->employee_number, $name, 'Statutory premiums off', 'Rest day, holiday, overtime and night differential all disabled'];
             }
 
             if ($employee->is_minimum_wage) {

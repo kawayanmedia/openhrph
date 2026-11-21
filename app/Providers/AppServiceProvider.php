@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Holiday;
 use App\Models\Leave;
 use App\Models\LeaveRequest;
+use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\PayrollGroup;
 use App\Models\TimesheetRequest;
@@ -18,6 +19,7 @@ use App\Observers\LeaveObserver;
 use App\Observers\LeaveRequestObserver;
 use App\Observers\PayrollDetailObserver;
 use App\Observers\PayrollGroupObserver;
+use App\Observers\PayrollObserver;
 use App\Observers\TimesheetRequestObserver;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Engine\EngineManager;
@@ -76,6 +78,7 @@ class AppServiceProvider extends ServiceProvider
         Leave::observe(LeaveObserver::class);
         Holiday::observe(HolidayObserver::class);
         PayrollDetail::observe(PayrollDetailObserver::class);
+        Payroll::observe(PayrollObserver::class);
         Company::observe(CompanyObserver::class);
 
         // New user can use

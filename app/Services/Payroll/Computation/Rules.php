@@ -60,8 +60,14 @@ final class Rules
         'upl' => self::DAY_UNPAID_LEAVE,
     ];
 
-    /** Labor Code overtime premium (125% of the day rate). */
+    /** Labor Code overtime premium for an ordinary day (125% of the day rate). */
     public const OVERTIME_MULTIPLIER = 1.25;
+
+    /**
+     * Premium for work beyond eight hours on a rest day or holiday: the
+     * first-eight-hours rate plus at least 30% (Labor Code Art. 87, par. 2).
+     */
+    public const PREMIUM_DAY_OVERTIME_MULTIPLIER = 1.30;
 
     /** 10% premium for work between 22:00 and 06:00. */
     public const NIGHT_DIFFERENTIAL_RATE = 0.10;
@@ -193,6 +199,28 @@ final class Rules
         return Money::mul(self::dailyRate($monthly, $daysPerYear), 1 / $hoursPerDay);
     }
 
+    /**
+     * Hourly rate for a daily-paid employee, derived from the contracted daily
+     * rate rather than the monthly field.
+     */
+    public static function hourlyRateFromDaily(int $daily, int $hoursPerDay): int
+    {
+        if ($hoursPerDay <= 0) {
+            $hoursPerDay = 8;
+        }
+
+        return Money::mul($daily, 1 / $hoursPerDay);
+    }
+
+    /**
+     * Overtime multiplier on top of the day rate: 130% on a premium day and
+     * 125% on an ordinary day.
+     */
+    public static function overtimeMultiplierFor(float $dayRate): float
+    {
+        return $dayRate > 1 ? self::PREMIUM_DAY_OVERTIME_MULTIPLIER : self::OVERTIME_MULTIPLIER;
+    }
+
     public static function linePay(int $hourly, float $hours, ?string $dayType, bool $overtime): int
     {
         if ($hours <= 0) {
@@ -202,7 +230,7 @@ final class Rules
         $rate = self::dayMultiplier($dayType);
 
         if ($overtime) {
-            $rate *= self::OVERTIME_MULTIPLIER;
+            $rate *= self::overtimeMultiplierFor($rate);
         }
 
         return Money::mul($hourly, $hours * $rate);

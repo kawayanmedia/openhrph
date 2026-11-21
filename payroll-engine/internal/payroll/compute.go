@@ -46,15 +46,22 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		hoursPerDay = 8
 	}
 
+	monthlyPaid := strings.EqualFold(strings.TrimSpace(employee.PaymentType), model.PaymentMonthly)
+
 	daily := employee.DailyRate
 	if daily == 0 {
 		daily = rules.DailyRate(employee.MonthlyBasic, daysPerYear)
 	}
 
+	// Daily-paid employees are contracted at a daily rate. Deriving their
+	// hourly rate from the monthly field would treat the daily rate as a
+	// month's pay and understate the wage by the days-per-year divisor.
 	hourly := rules.HourlyRate(employee.MonthlyBasic, daysPerYear, hoursPerDay)
-	slip.DailyRate = daily
+	if !monthlyPaid && employee.DailyRate > 0 {
+		hourly = employee.DailyRate.Mul(1 / float64(hoursPerDay))
+	}
 
-	monthlyPaid := strings.EqualFold(strings.TrimSpace(employee.PaymentType), model.PaymentMonthly)
+	slip.DailyRate = daily
 	periods := cfg.PeriodsPerMonth()
 	if periods <= 0 {
 		periods = 1
@@ -99,11 +106,17 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 			continue
 		}
 
+		leaveFraction := line.LeaveFraction
+		if leaveFraction <= 0 || leaveFraction > 1 {
+			leaveFraction = 1
+		}
+
 		if line.PaidLeave || rules.IsPaidDay(line.DayType) {
 			if !monthlyPaid {
-				slip.RegularPay = slip.RegularPay.Add(daily)
-				slip.BasicEarned = slip.BasicEarned.Add(daily)
-				slip.RegularHours += float64(hoursPerDay)
+				paidLeave := daily.Mul(leaveFraction)
+				slip.RegularPay = slip.RegularPay.Add(paidLeave)
+				slip.BasicEarned = slip.BasicEarned.Add(paidLeave)
+				slip.RegularHours += float64(hoursPerDay) * leaveFraction
 			}
 
 			continue
@@ -111,8 +124,9 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		if rules.IsUnpaidDay(line.DayType) {
 			if monthlyPaid {
-				slip.RegularPay = slip.RegularPay.Sub(daily)
-				slip.BasicEarned = slip.BasicEarned.Sub(daily)
+				unpaid := daily.Mul(leaveFraction)
+				slip.RegularPay = slip.RegularPay.Sub(unpaid)
+				slip.BasicEarned = slip.BasicEarned.Sub(unpaid)
 			}
 
 			continue
@@ -132,7 +146,9 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 			regularPay = hourly.Mul(line.Hours * premium.premiumOnly)
 		}
 
-		overtimeRate := premium.dayRate * rules.OvertimeMultiplier
+		// Article 87 requires the premium-day rate plus at least 30% for work
+		// beyond eight hours on a rest day or holiday (169% to 507%).
+		overtimeRate := premium.dayRate * rules.OvertimeMultiplierFor(premium.dayRate)
 		if !employee.Benefits.OvertimePay && line.Overtime > 0 {
 			slip.Warnings = append(slip.Warnings,
 				fmt.Sprintf("%s: overtime premium not applied (not entitled); ordinary rate used", line.Date))
@@ -153,7 +169,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		nightOTPay := money.Zero
 		if line.NightOT > 0 {
-			base := premium.dayRate * rules.OvertimeMultiplier
+			base := premium.dayRate * rules.OvertimeMultiplierFor(premium.dayRate)
 			if !employee.Benefits.OvertimePay {
 				base = premium.dayRate
 			}
