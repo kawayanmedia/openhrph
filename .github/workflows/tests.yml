@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   phpunit:
-    name: PHPUnit (PHP 8.4)
+    name: PHPUnit (PHP 8.5)
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -27,7 +27,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.5'
           extensions: bcmath, ctype, curl, dom, fileinfo, gd, iconv, intl, mbstring, openssl, pdo_sqlite, simplexml, sqlite3, tokenizer, xml, xmlreader, xmlwriter, zip, zlib
           coverage: none
           ini-values: memory_limit=512M
@@ -43,8 +43,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-php-8.4-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-php-8.4-
+          key: composer-${{ runner.os }}-php-8.5-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-php-8.5-
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
