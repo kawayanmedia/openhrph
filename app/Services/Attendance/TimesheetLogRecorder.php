@@ -26,20 +26,47 @@ class TimesheetLogRecorder
 
     public const STATUS_INVALID = 'invalid';
 
+    public const STATUS_REJECTED = 'rejected';
+
+    public const REASON_DEBOUNCE = 'debounce';
+
+    public const REASON_LOCKED = 'locked';
+
+    public const REASON_CLOSED = 'closed';
+
     public function __construct(private readonly AttendancePeriod $period) {}
 
     /**
-     * Find the timesheet for the day without creating it.
+     * Find the timesheet for the punch's workday without creating it.
+     *
+     * For overnight shifts the workday can be the previous calendar day, so a
+     * time-out at 06:00 is matched to the shift that started at 22:00.
      */
     public function findFor(Employee $employee, CarbonInterface $date): ?Timesheet
+    {
+        return $this->findTimesheet($employee, $this->workdayFor($employee, $date));
+    }
+
+    /**
+     * Find the timesheet for an explicit calendar date without creating it.
+     */
+    public function findForDate(Employee $employee, CarbonInterface $date): ?Timesheet
     {
         return $this->findTimesheet($employee, CarbonImmutable::parse($date)->startOfDay());
     }
 
     /**
-     * Find the timesheet for the day, generating it from the schedule when missing.
+     * Find the timesheet for the punch's workday, generating it when missing.
      */
     public function timesheetFor(Employee $employee, CarbonInterface $date): Timesheet
+    {
+        return $this->ensureForDate($employee, $this->workdayFor($employee, $date));
+    }
+
+    /**
+     * Find the timesheet for an explicit calendar date, generating it when missing.
+     */
+    public function ensureForDate(Employee $employee, CarbonInterface $date): Timesheet
     {
         $day = CarbonImmutable::parse($date)->startOfDay();
 
@@ -52,6 +79,42 @@ class TimesheetLogRecorder
         (new GenerateTimesheetGateway)->addDays($employee, CarbonPeriod::create($day, $day));
 
         return $this->findTimesheet($employee, $day) ?? $this->createTimesheet($employee, $day);
+    }
+
+    /**
+     * Resolve the workday a punch belongs to.
+     *
+     * Only overnight schedules shift the workday: a punch that arrives before
+     * the shift's start time closes the previous day's outstanding time-in.
+     */
+    public function workdayFor(Employee $employee, CarbonInterface $moment): CarbonImmutable
+    {
+        $moment = CarbonImmutable::parse($moment);
+        $today = $moment->startOfDay();
+        $schedule = $employee->schedule;
+
+        if ($schedule === null) {
+            return $today;
+        }
+
+        $shiftStart = $this->clock($schedule->time_in);
+        $shiftEnd = $this->clock($schedule->time_out);
+
+        if ($shiftStart === null || $shiftEnd === null || $shiftStart <= $shiftEnd) {
+            return $today;
+        }
+
+        if ($moment->format('H:i:s') >= $shiftStart) {
+            return $today;
+        }
+
+        $previous = $this->findTimesheet($employee, $today->subDay());
+
+        if ($previous !== null && $this->nextLogType($previous) === 1) {
+            return $today->subDay();
+        }
+
+        return $today;
     }
 
     /**
@@ -89,7 +152,8 @@ class TimesheetLogRecorder
      *     log_date: string,
      *     time: string,
      *     log_type: int,
-     *     locked: bool
+     *     locked: bool,
+     *     reason?: string
      * }
      */
     public function record(
@@ -100,15 +164,46 @@ class TimesheetLogRecorder
         ?int $logType = null,
     ): array {
         $moment = CarbonImmutable::parse($at);
-        $timesheet = $this->timesheetFor($employee, $moment);
+        $workday = $this->workdayFor($employee, $moment);
+        $timesheet = $this->findTimesheet($employee, $workday);
+
+        $rejected = $this->rejectionFor($employee, $timesheet, $workday);
+
+        if ($rejected !== null) {
+            return [
+                'status' => self::STATUS_REJECTED,
+                'employee_id' => $employee->getKey(),
+                'log_date' => $workday->toDateString(),
+                'time' => $moment->format('H:i:s'),
+                'log_type' => $logType === 1 ? 1 : 0,
+                'locked' => (bool) ($timesheet?->is_locked ?? false),
+                'reason' => $rejected,
+            ];
+        }
+
+        $timesheet ??= $this->ensureForDate($employee, $workday);
         $locked = (bool) $timesheet->is_locked;
 
         $logType ??= $this->nextLogType($timesheet);
         $logType = $logType === 1 ? 1 : 0;
 
+        $lastPunch = $this->lastPunchMoment($timesheet);
+
+        if ($lastPunch !== null && $this->isWithinDebounceWindow($moment, $lastPunch)) {
+            return [
+                'status' => self::STATUS_DUPLICATE,
+                'employee_id' => $employee->getKey(),
+                'log_date' => $workday->toDateString(),
+                'time' => $moment->format('H:i:s'),
+                'log_type' => $logType,
+                'locked' => $locked,
+                'reason' => self::REASON_DEBOUNCE,
+            ];
+        }
+
         $entry = [
             'employee_id' => (string) ($employee->biometric_id ?? $employee->employee_number),
-            'log_date' => $moment->toDateString(),
+            'log_date' => $workday->toDateString(),
             'time' => $moment->format('H:i:s'),
             'log_type' => $logType,
             'source' => $source,
@@ -116,7 +211,7 @@ class TimesheetLogRecorder
             'recorded_at' => now()->toDateTimeString(),
         ];
 
-        if (! $this->append($timesheet, $entry)) {
+        if (! $this->appendLog($timesheet, $entry)) {
             return [
                 'status' => self::STATUS_DUPLICATE,
                 'employee_id' => $employee->getKey(),
@@ -126,13 +221,6 @@ class TimesheetLogRecorder
                 'locked' => $locked,
             ];
         }
-
-        // Keep the legacy AM/PM columns in step for screens that still read them.
-        if (! $locked) {
-            $this->mirrorTimeColumns($timesheet, $moment, $logType);
-        }
-
-        $timesheet->save();
 
         return [
             'status' => self::STATUS_ACCEPTED,
@@ -164,16 +252,116 @@ class TimesheetLogRecorder
 
         $logs->push($entry);
 
-        $timesheet->logs = $logs->sortBy('time')->values()->all();
+        $timesheet->logs = $logs
+            ->sortBy(fn (array $log): string => $this->chronologicalKey($log))
+            ->values()
+            ->all();
 
         return true;
+    }
+
+    /**
+     * Append a log entry, mirror it into the legacy columns and save.
+     *
+     * @param  array<string, mixed>  $entry
+     */
+    public function appendLog(Timesheet $timesheet, array $entry): bool
+    {
+        if (! $this->append($timesheet, $entry)) {
+            return false;
+        }
+
+        $timesheetDate = $timesheet->log_date?->toDateString();
+        $logDate = $entry['log_date'] ?? $timesheetDate;
+
+        if (is_string($logDate) && is_string($entry['time'] ?? null)) {
+            $moment = CarbonImmutable::parse($logDate.' '.$entry['time']);
+            $logType = (int) ($entry['log_type'] ?? 0);
+
+            $this->mirrorTimeColumns($timesheet, $moment, $logType, $this->isOvernightOut($timesheet, $moment, $logType));
+        }
+
+        $timesheet->save();
+
+        return true;
+    }
+
+    private function rejectionFor(Employee $employee, ?Timesheet $timesheet, CarbonImmutable $workday): ?string
+    {
+        if ($timesheet !== null && (bool) $timesheet->is_locked) {
+            return self::REASON_LOCKED;
+        }
+
+        if ($this->period->isClosedFor($employee, $workday)) {
+            return self::REASON_CLOSED;
+        }
+
+        return null;
+    }
+
+    private function lastPunchMoment(Timesheet $timesheet): ?CarbonImmutable
+    {
+        $latest = null;
+
+        foreach (collect($timesheet->logs ?? []) as $log) {
+            $moment = $this->punchMoment($timesheet, $log);
+
+            if ($moment !== null && ($latest === null || $moment->greaterThan($latest))) {
+                $latest = $moment;
+            }
+        }
+
+        return $latest;
+    }
+
+    /**
+     * @param  array<string, mixed>  $log
+     */
+    private function punchMoment(Timesheet $timesheet, array $log): ?CarbonImmutable
+    {
+        if (! empty($log['recorded_at'])) {
+            return CarbonImmutable::parse($log['recorded_at']);
+        }
+
+        $date = $log['log_date'] ?? $timesheet->log_date?->toDateString();
+        $time = $log['time'] ?? null;
+
+        if (! is_string($date) || ! is_string($time) || $time === '') {
+            return null;
+        }
+
+        return CarbonImmutable::parse($date.' '.$time);
+    }
+
+    private function isWithinDebounceWindow(CarbonImmutable $moment, CarbonImmutable $lastPunch): bool
+    {
+        $window = (int) config('attendance.punch_debounce_seconds', 60);
+
+        if ($window <= 0) {
+            return false;
+        }
+
+        return abs($moment->getTimestamp() - $lastPunch->getTimestamp()) < $window;
+    }
+
+    /**
+     * @param  array<string, mixed>  $log
+     */
+    private function chronologicalKey(array $log): string
+    {
+        if (! empty($log['recorded_at'])) {
+            return (string) $log['recorded_at'];
+        }
+
+        return trim(($log['log_date'] ?? '').' '.($log['time'] ?? ''));
     }
 
     private function findTimesheet(Employee $employee, CarbonImmutable $day): ?Timesheet
     {
         return Timesheet::query()
             ->where('employee_id', $employee->getKey())
-            ->whereDate('log_date', $day->toDateString())
+            ->where('log_date', '>=', $day->toDateString())
+            ->where('log_date', '<', $day->addDay()->toDateString())
             ->first();
     }
 
@@ -194,7 +382,33 @@ class TimesheetLogRecorder
         return $timesheet;
     }
 
-    private function mirrorTimeColumns(Timesheet $timesheet, CarbonImmutable $moment, int $logType): void
+    /**
+     * A time-out before the start of an overnight shift belongs to the shift
+     * that started the evening before, so it is mirrored to `am_out_morning`.
+     */
+    private function isOvernightOut(Timesheet $timesheet, CarbonImmutable $moment, int $logType): bool
+    {
+        if ($logType !== 1) {
+            return false;
+        }
+
+        $schedule = $timesheet->schedule;
+
+        if ($schedule === null) {
+            return false;
+        }
+
+        $shiftStart = $this->clock($schedule->time_in);
+        $shiftEnd = $this->clock($schedule->time_out);
+
+        if ($shiftStart === null || $shiftEnd === null || $shiftStart <= $shiftEnd) {
+            return false;
+        }
+
+        return $moment->format('H:i:s') < $shiftStart;
+    }
+
+    private function mirrorTimeColumns(Timesheet $timesheet, CarbonImmutable $moment, int $logType, bool $overnight): void
     {
         $time = $moment->format('H:i');
         $isAfternoon = $time >= '12:00';
@@ -209,10 +423,27 @@ class TimesheetLogRecorder
             return;
         }
 
+        if ($overnight) {
+            $timesheet->am_out_morning = $time;
+
+            return;
+        }
+
         if ($isAfternoon) {
             $timesheet->pm_logout = $time;
         } else {
             $timesheet->am_logout = $time;
         }
+    }
+
+    private function clock(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $value = substr($value, 0, 8);
+
+        return strlen($value) === 5 ? $value.':00' : $value;
     }
 }

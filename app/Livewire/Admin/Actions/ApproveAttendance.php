@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Admin\Actions;
 
-use App\Jobs\ApproveAttendanceJob;
 use App\Livewire\Admin\Fields\Text;
+use App\Services\Attendance\AttendanceCorrection;
 use Illuminate\Bus\Queueable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\InteractsWithQueue;
@@ -30,14 +30,33 @@ class ApproveAttendance extends Action
      */
     public function handle(Request $request, array $fields, Collection $models): mixed
     {
-        foreach ($models as $model) {
-            $model->status = STATUS_APPROVED;
-            $model->save();
+        $approver = $request->user()?->employee;
+        $service = app(AttendanceCorrection::class);
 
-            ApproveAttendanceJob::dispatch($model, $model->employee, (object) $fields);
+        $applied = 0;
+        $skipped = 0;
+        $reasons = [];
+
+        foreach ($models as $model) {
+            $result = $service->apply($model, $approver, $fields['remarks'] ?? null);
+
+            if ($result['status'] === AttendanceCorrection::STATUS_APPLIED) {
+                $applied++;
+
+                continue;
+            }
+
+            $skipped++;
+            $reasons[] = $result['message'];
         }
 
-        return self::message('Attendance has been approved!');
+        $summary = "Attendance approved: {$applied} applied";
+
+        if ($skipped > 0) {
+            $summary .= ", {$skipped} skipped (".implode(' ', array_unique($reasons)).')';
+        }
+
+        return self::message($summary.'.');
     }
 
     /**

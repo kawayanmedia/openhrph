@@ -3,100 +3,159 @@
 namespace App\Gateways;
 
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\PayrollGroup;
 use App\Models\Timesheet;
+use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
+use Carbon\CarbonPeriod;
 
 class GenerateTimesheetGateway
 {
-    public function addDays(Employee $employee, $days = null, $scheduleId = null)
+    /**
+     * Create the blank attendance rows an employee needs for a date range.
+     *
+     * Existing rows whose day type and rate are already set are left alone so a
+     * daily regeneration cannot wipe a manual correction. Employees without a
+     * work schedule are skipped: a blank row without a schedule cannot be
+     * classified as a working day or a rest day.
+     *
+     * @return array{created: int, updated: int, skipped: int}
+     */
+    public function addDays(Employee $employee, $days = null, ?int $scheduleId = null): array
     {
-        // If employee is not active then return
-        if (! $employee->allow_timesheet_edit) {
-            return false;
+        $dates = $this->normalizeDates($days);
+        $scheduleId ??= $employee->schedule_id;
+
+        $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0];
+
+        if ($scheduleId === null || $dates === []) {
+            $summary['skipped'] = count($dates);
+
+            return $summary;
         }
 
-        // if we supply days
-        if ($days) {
-            $dates = $days;
-        } else {
-            $date = now();
-            $dateTo = now();
-            $dates = \Carbon\CarbonPeriod::create($date->subMonth(2), '1 day', $dateTo->addMonth());
-        }
+        $start = $dates[0]->toDateString();
+        $end = $dates[count($dates) - 1]->toDateString();
+
+        $endExclusive = CarbonImmutable::parse($end)->addDay()->toDateString();
+
+        $existing = Timesheet::query()
+            ->where('employee_id', $employee->getKey())
+            ->where('log_date', '>=', $start)
+            ->where('log_date', '<', $endExclusive)
+            ->get()
+            ->keyBy(fn (Timesheet $timesheet): ?string => $timesheet->log_date?->toDateString());
+
+        $holidays = Holiday::query()
+            ->where('date', '>=', $start)
+            ->where('date', '<', $endExclusive)
+            ->get()
+            ->keyBy(fn (Holiday $holiday): ?string => $holiday->date?->toDateString());
 
         foreach ($dates as $date) {
+            $logDate = $date->toDateString();
+            $timesheet = $existing->get($logDate);
 
-            $logdate = $date->format('Y-m-d');
+            if ($timesheet !== null && $timesheet->day_type !== null && $timesheet->rate_code !== null) {
+                // Keep the classification but follow a schedule reassignment so
+                // overtime and shift rules use the new schedule.
+                if ((int) $timesheet->schedule_id !== $scheduleId) {
+                    $timesheet->schedule_id = $scheduleId;
+                    $timesheet->save();
+                    $summary['updated']++;
 
-            $timesheet = Timesheet::firstOrNew([
-                'employee_id' => $employee->id,
-                'employee_number' => $employee->employee_number,
-                'log_date' => $logdate,
-            ]);
-
-            // If we already have data then just continue
-            if ($timesheet->rate_code != null and $timesheet->day_type != null) {
-                // continue;
-            }
-
-            $timesheet->day_type = Timesheet::REGULAR_DAY;
-
-            $isRestDay = false;
-
-            // $this->comment($employee->payrollGroup?->frequency);
-            // $this->comment($employee->payrollGroup?->days_year);
-            if ($employee->payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONFRI) {
-
-                // If saturday or sunday then it should be restday
-                if ($date->isSaturday() or $date->isSunday()) {
-                    $isRestDay = true;
+                    continue;
                 }
+
+                $summary['skipped']++;
+
+                continue;
             }
 
-            if ($employee->payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONSAT) {
+            $isNew = $timesheet === null;
 
-                // If Sunday then it should be restday
-                if ($date->isSunday()) {
-                    $isRestDay = true;
-                }
+            if ($isNew) {
+                $timesheet = new Timesheet;
+                $timesheet->employee_id = $employee->getKey();
+                $timesheet->employee_number = $employee->employee_number;
+                $timesheet->biometric_id = $employee->biometric_id;
+                $timesheet->log_date = $logDate;
+                $timesheet->office_id = $employee->office_id;
+                $timesheet->department_id = $employee->department_id;
             }
 
-            // $this->comment($timesheet->id . '' . $date->isSaturday());
-            // Check if holiday
-            $holiday = find_holiday($date->format('Y-m-d'));
+            $isRestDay = $this->isRestDay($date, $employee->payrollGroup);
+            $holiday = $holidays->get($logDate);
 
-            // If restday then lets check if holiday
-            if ($isRestDay) {
-                $timesheet->day_type = Timesheet::REST_DAY;
-            }
+            $timesheet->day_type = $isRestDay ? Timesheet::REST_DAY : Timesheet::REGULAR_DAY;
+            $timesheet->schedule_id = $scheduleId;
 
-            if ($holiday) {
-                $timesheet->holiday_type = $holiday->code;
-                $timesheet->holiday_id = $holiday->id;
+            if ($holiday !== null) {
+                $timesheet->holiday_type = $holiday->holiday_type;
+                $timesheet->holiday_id = $holiday->getKey();
                 $timesheet->holiday_name = $holiday->name;
+                $timesheet->holiday_code = $holiday->code;
             }
 
-            // Regular day
-            if ($timesheet->day_type == Timesheet::REGULAR_DAY and $timesheet->holiday_type == null) {
-                $timesheet->rate_code = Timesheet::REGULAR_DAY;
-            }
-
-            if ($timesheet->day_type == Timesheet::REGULAR_DAY and $timesheet->holiday_type != null) {
-                $timesheet->rate_code = $timesheet->holiday_type;
-            }
-
-            // Rest Day
-            if ($timesheet->day_type == Timesheet::REST_DAY and $timesheet->holiday_type == null) {
-                $timesheet->rate_code = Timesheet::REST_DAY;
-            }
-
-            if ($timesheet->day_type == Timesheet::REST_DAY and $timesheet->holiday_type != null) {
-                $timesheet->rate_code = Timesheet::REST_DAY.'-'.$timesheet->holiday_type;
-            }
-
-            $timesheet->schedule_id = $scheduleId ?? $employee->schedule_id;
+            $timesheet->rate_code = $this->rateCode($isRestDay, $holiday);
 
             $timesheet->save();
+
+            $isNew ? $summary['created']++ : $summary['updated']++;
         }
+
+        return $summary;
+    }
+
+    /**
+     * @return array<int, CarbonImmutable>
+     */
+    private function normalizeDates($days): array
+    {
+        if ($days instanceof CarbonPeriod) {
+            $days = $days->toArray();
+        }
+
+        if (! is_array($days) || $days === []) {
+            $date = now();
+            $days = CarbonPeriod::create($date->copy()->subMonth(2), '1 day', $date->copy()->addMonth())->toArray();
+        }
+
+        $normalized = [];
+
+        foreach ($days as $day) {
+            $normalized[] = CarbonImmutable::parse($day)->startOfDay();
+        }
+
+        usort($normalized, fn ($a, $b) => $a <=> $b);
+
+        return $normalized;
+    }
+
+    private function isRestDay(CarbonInterface $date, ?PayrollGroup $payrollGroup): bool
+    {
+        if ($payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONFRI) {
+            return $date->isSaturday() || $date->isSunday();
+        }
+
+        if ($payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONSAT) {
+            return $date->isSunday();
+        }
+
+        return false;
+    }
+
+    private function rateCode(bool $isRestDay, ?Holiday $holiday): string
+    {
+        $dayType = $isRestDay ? Timesheet::REST_DAY : Timesheet::REGULAR_DAY;
+
+        if ($holiday === null) {
+            return $dayType;
+        }
+
+        return $isRestDay
+            ? Timesheet::REST_DAY.'-'.$holiday->code
+            : (string) $holiday->code;
     }
 }

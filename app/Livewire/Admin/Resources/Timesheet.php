@@ -4,8 +4,11 @@ namespace App\Livewire\Admin\Resources;
 
 use App\Enums\Timesheet\DayType;
 use App\Livewire\Admin\Actions\EditViewTimeSheet;
+use App\Livewire\Admin\Actions\ExportCsv;
 use App\Livewire\Admin\Actions\GenerateTimeSheet;
 use App\Livewire\Admin\Actions\ImportTimeSheet;
+use App\Livewire\Admin\Actions\MarkTimesheetAbsent;
+use App\Livewire\Admin\Fields\Badge;
 use App\Livewire\Admin\Fields\Date;
 use App\Livewire\Admin\Fields\ID;
 use App\Livewire\Admin\Fields\Select;
@@ -13,6 +16,7 @@ use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Filters\DateRangeFrom;
 use App\Livewire\Admin\Filters\DateRangeTo;
 use App\Livewire\Admin\Filters\FieldsFilter;
+use App\Livewire\Admin\Filters\TimesheetEmployee;
 use App\Livewire\Admin\Resource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +32,7 @@ class Timesheet extends Resource
 
     public static string $group = 'Attendance';
 
-    public static array $search = ['employee.first_name', 'employee.last_name'];
+    public static array $search = ['employee_number', 'employee.first_name', 'employee.last_name'];
 
     public static function label(): string
     {
@@ -37,8 +41,8 @@ class Timesheet extends Resource
 
     public static function indexQuery(Builder $query): Builder
     {
-        // Get only timesheets with an employee.
-        return $query->has('employee');
+        // Get only timesheets with an employee, newest day first.
+        return $query->has('employee')->orderByDesc('log_date');
     }
 
     public function fields(Request $request): array
@@ -70,11 +74,42 @@ class Timesheet extends Resource
                 return $this->day_type_format;
             })->asHtml(),
 
-            Text::make('TimeIn', 'am_login'),
-
-            Text::make('Hours', function () {
-                return number_format($this->total_hours, 2);
+            Text::make('Time In', function () {
+                return $this->time_in;
             }),
+
+            Text::make('Time Out', function () {
+                return $this->time_out;
+            }),
+
+            Text::make('Punches', function () {
+                return count($this->logs ?? []);
+            }),
+
+            Text::make('Worked Hours', function () {
+                return number_format((float) $this->worked_hours, 2);
+            }),
+
+            Badge::make('Status', function () {
+                if ((bool) $this->is_locked) {
+                    return 'Locked';
+                }
+
+                if ($this->has_missing_punch) {
+                    return 'Missing punch';
+                }
+
+                if ((bool) $this->is_absent) {
+                    return 'Absent';
+                }
+
+                return 'Open';
+            })->map([
+                'Locked' => 'info',
+                'Missing punch' => 'warning',
+                'Absent' => 'danger',
+                'Open' => 'success',
+            ]),
         ];
     }
 
@@ -88,6 +123,7 @@ class Timesheet extends Resource
         return [
             new DateRangeFrom,
             new DateRangeTo,
+            new TimesheetEmployee,
             new FieldsFilter,
         ];
     }
@@ -101,8 +137,19 @@ class Timesheet extends Resource
     {
         return [
             (new ImportTimeSheet)->onlyOnIndexToolbar(),
-            (new EditViewTimeSheet($this->resource))->onlyOnTableRow(),
             (new GenerateTimeSheet)->onlyOnIndexToolbar(),
+            (new MarkTimesheetAbsent)->onlyOnIndexToolbar(),
+            (new ExportCsv)->onlyOnIndexToolbar()->withFormat(fn ($model) => [
+                'Employee Number' => $model->employee_number,
+                'Employee' => $model->employee?->fullname,
+                'Date' => $model->log_date?->toDateString(),
+                'Day Type' => $model->day_type,
+                'Time In' => $model->time_in,
+                'Time Out' => $model->time_out,
+                'Worked Hours' => number_format((float) $model->worked_hours, 2),
+                'Status' => $model->is_locked ? 'Locked' : ($model->has_missing_punch ? 'Missing punch' : 'Open'),
+            ]),
+            (new EditViewTimeSheet($this->resource))->onlyOnTableRow(),
         ];
     }
 

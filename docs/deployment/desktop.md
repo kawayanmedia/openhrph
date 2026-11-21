@@ -256,12 +256,49 @@ auto-updates require a signed and notarised app. Add these repository secrets to
 
 | Secret | Purpose |
 | --- | --- |
-| `CSC_LINK`, `CSC_KEY_PASSWORD` | macOS signing certificate (base64 `.p12` and its password) |
+| `CSC_LINK`, `CSC_KEY_PASSWORD` | macOS signing certificate (base64 `.p12` and its password); the same secrets sign Windows when they hold a `.pfx` |
 | `NATIVEPHP_APPLE_ID`, `NATIVEPHP_APPLE_ID_PASS`, `NATIVEPHP_APPLE_TEAM_ID` | Apple notarisation |
 | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | Azure Trusted Signing (Windows) |
 | `NATIVEPHP_AZURE_PUBLISHER_NAME`, `NATIVEPHP_AZURE_ENDPOINT`, `NATIVEPHP_AZURE_CERTIFICATE_PROFILE_NAME`, `NATIVEPHP_AZURE_CODE_SIGNING_ACCOUNT_NAME` | Azure Trusted Signing profile |
 
 Without `CSC_LINK` the workflow sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and produces unsigned artifacts for testing.
+
+#### Signing Windows for free
+
+Azure Artifact Signing (formerly Trusted Signing) starts at roughly US$10/month for the Basic tier — the ~US$100 tier is
+Premium, which only buys a larger signature quota — and Public Trust identity validation is limited to organizations in
+the US, Canada, EU, UK, Australia, New Zealand, Japan, South Korea, Singapore, Switzerland, Norway and Israel.
+
+Because this project is MIT licensed, [SignPath Foundation](https://signpath.org/) signs Windows builds for free with a
+publicly trusted OV certificate held in their HSM. Apply at [signpath.org/apply](https://signpath.org/apply), create a
+project with a release signing policy, upload an installer sample so SignPath can generate the artifact configuration,
+and issue an API token for a CI user. Then configure these on the repository:
+
+| Name | Type | Value |
+| --- | --- | --- |
+| `SIGNPATH_API_TOKEN` | secret | API token for the SignPath organization |
+| `SIGNPATH_ORGANIZATION_ID` | variable | SignPath organization ID |
+| `SIGNPATH_PROJECT_SLUG` | variable | Project slug; setting it switches signing on |
+| `SIGNPATH_SIGNING_POLICY_SLUG` | variable | Signing policy slug; its artifact configuration is used |
+
+When `SIGNPATH_PROJECT_SLUG` is set, the Windows job builds without publishing, uploads the NSIS installer as a GitHub
+Actions artifact, submits it to SignPath, verifies the returned Authenticode signature, and only then publishes. Signing
+rewrites the installer bytes, so the same job rewrites the hashes in `latest.yml` and deletes the blockmaps; without
+that, electron-updater rejects every update it downloads.
+
+The SignPath artifact configuration must cover the installer:
+
+```xml
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration">
+    <zip-file>
+        <pe-file path="OpenHR-PH-*-setup.exe" />
+    </zip-file>
+</artifact-configuration>
+```
+
+The certificate subject is SignPath Foundation, so Windows shows that as the publisher instead of the organization.
+Only the installer is signed: the installed application carries no Mark-of-the-Web, so launching it does not raise
+SmartScreen prompts. Azure Trusted Signing and SignPath are alternatives — configure one of them, not both.
 
 ## Desktop limitations
 
@@ -286,6 +323,7 @@ Without `CSC_LINK` the workflow sets `CSC_IDENTITY_AUTO_DISCOVERY=false` and pro
 | Build is stale | `php artisan native:reset` then rebuild |
 | Wrong PHP binary | Set `NATIVEPHP_PHP_BINARY_PATH` to a custom binary folder; NativePHP expects `{os}/{arch}/php` |
 | `Electron.app` is missing after `native:install` | Some npm versions skip Electron's install script. Run `node vendor/nativephp/desktop/resources/electron/node_modules/electron/install.js` once |
+| Windows release is unsigned | Set the `SIGNPATH_PROJECT_SLUG` variable (and the other `SIGNPATH_*` values) or the Azure secrets; without them CI ships an unsigned installer |
 | Update never appears | Confirm the release is published (not draft), the tag matches `NATIVEPHP_APP_VERSION`, and the build is signed |
 
 See `php artisan native:debug` output when opening an issue.

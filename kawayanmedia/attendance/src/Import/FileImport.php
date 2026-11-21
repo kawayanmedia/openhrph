@@ -35,10 +35,7 @@ class FileImport implements AttendanceImport
         $this->filePath = $request->file->store('attendance/logs');
     }
 
-    public function handle()
-    {
-
-    }
+    public function handle() {}
 
     public function process()
     {
@@ -59,7 +56,7 @@ class FileImport implements AttendanceImport
 
         set_time_limit(0);
 
-        //$this->filePath = storage_path('app/attendance/logs/hospital.dat');
+        // $this->filePath = storage_path('app/attendance/logs/hospital.dat');
         $filePath = storage_path('app/'.$this->filePath);
         // Read each line of .txt or .dat file
         if ($fd = fopen($filePath, 'r')) {
@@ -90,17 +87,22 @@ class FileImport implements AttendanceImport
                 [$employeeId, $dateTime, $stat, $logType] = explode("\t", $line);
             }
 
+            // Skip malformed lines before padding, otherwise an empty id
+            // becomes "000" and is treated as a real employee.
+            if ($employeeId === '' || $dateTime === '') {
+                continue;
+            }
+
             $employeeId = sprintf('%03d', $employeeId);
 
             if (count(explode(' ', $dateTime)) != 2) {
-                $date = '';
-                $time = '';
-            } else {
-                [$date, $time] = explode(' ', $dateTime);
+                continue;
             }
 
-            // Dont process some old data or employee id is blank
-            if (($date < $this->importFromDate) or $employeeId == '') {
+            [$date, $time] = explode(' ', $dateTime);
+
+            // Dont process some old data or an invalid employee id
+            if (($date < $this->importFromDate) or $employeeId == '' or $date == '') {
                 continue;
             }
 

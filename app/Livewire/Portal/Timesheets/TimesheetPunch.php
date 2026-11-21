@@ -54,14 +54,17 @@ class TimesheetPunch extends Component
         $period = app(AttendancePeriod::class);
         $moment = CarbonImmutable::now();
 
-        $timesheet = $recorder->findFor($employee, $moment);
+        $workday = $recorder->workdayFor($employee, $moment);
+        $timesheet = $recorder->findForDate($employee, $workday);
 
         $canRecord = $timesheet === null
-            ? ! $period->isClosedFor($employee, $moment)
+            ? ! $period->isClosedFor($employee, $workday)
             : $recorder->canRecord($employee, $timesheet);
 
         if (! $canRecord) {
-            $this->addError('punch', 'Attendance for this payroll period is closed.');
+            $this->addError('punch', ($timesheet?->is_locked ?? false)
+                ? 'This timesheet is locked.'
+                : 'Attendance for this payroll period is closed.');
 
             return;
         }
@@ -82,9 +85,25 @@ class TimesheetPunch extends Component
             return;
         }
 
-        $this->status = $result['status'] === TimesheetLogRecorder::STATUS_ACCEPTED
-            ? ($result['log_type'] === 0 ? 'Time in recorded at ' : 'Time out recorded at ').$moment->format('h:i A').'.'
-            : 'That punch was already recorded.';
+        if ($result['status'] === TimesheetLogRecorder::STATUS_REJECTED) {
+            $this->addError('punch', $result['reason'] === TimesheetLogRecorder::REASON_LOCKED
+                ? 'This timesheet is locked.'
+                : 'Attendance for this payroll period is closed.');
+
+            return;
+        }
+
+        if ($result['status'] === TimesheetLogRecorder::STATUS_DUPLICATE) {
+            $this->status = ($result['reason'] ?? null) === TimesheetLogRecorder::REASON_DEBOUNCE
+                ? 'That punch was just recorded. Wait a moment before punching again.'
+                : 'That punch was already recorded.';
+
+            $this->load();
+
+            return;
+        }
+
+        $this->status = ($result['log_type'] === 0 ? 'Time in recorded at ' : 'Time out recorded at ').$moment->format('h:i A').'.';
 
         $this->load();
     }
@@ -110,19 +129,21 @@ class TimesheetPunch extends Component
         $recorder = app(TimesheetLogRecorder::class);
         $period = app(AttendancePeriod::class);
         $today = CarbonImmutable::now();
+        $workday = $recorder->workdayFor($employee, $today);
 
-        $timesheet = $recorder->findFor($employee, $today);
-        $window = $period->windowFor($employee, $today);
+        $timesheet = $recorder->findForDate($employee, $workday);
+        $window = $period->windowFor($employee, $workday);
 
         $this->today = [
-            'log_date' => $today->format('M d, Y'),
+            'log_date' => $workday->format('M d, Y'),
+            'shift_started' => ! $workday->isSameDay($today) ? $workday->format('M d, Y') : null,
             'schedule' => $timesheet?->schedule?->name ?? $employee->schedule?->name,
             'time_in' => $timesheet?->time_in,
             'time_out' => $timesheet?->time_out,
-            'total_hours' => number_format((float) ($timesheet?->total_hours ?? 0), 2),
+            'total_hours' => number_format((float) ($timesheet?->worked_hours ?? 0), 2),
             'next' => $timesheet === null ? 0 : $recorder->nextLogType($timesheet),
             'can_record' => $timesheet === null
-                ? ! $period->isClosedFor($employee, $today)
+                ? ! $period->isClosedFor($employee, $workday)
                 : $recorder->canRecord($employee, $timesheet),
             'locked' => (bool) ($timesheet?->is_locked ?? false),
             'period' => $window['label'],
@@ -138,7 +159,8 @@ class TimesheetPunch extends Component
 
         $this->rows = Timesheet::query()
             ->where('employee_id', $employee->getKey())
-            ->whereBetween('log_date', [$window['start']->toDateString(), $window['end']->toDateString()])
+            ->where('log_date', '>=', $window['start']->toDateString())
+            ->where('log_date', '<', $window['end']->addDay()->toDateString())
             ->orderByDesc('log_date')
             ->get()
             ->map(fn (Timesheet $row): array => [
@@ -147,8 +169,9 @@ class TimesheetPunch extends Component
                 'holiday' => $row->holiday_name,
                 'time_in' => $row->time_in,
                 'time_out' => $row->time_out,
-                'hours' => number_format((float) $row->total_hours, 2),
+                'hours' => number_format((float) $row->worked_hours, 2),
                 'logs' => count($row->logs ?? []),
+                'missing_punch' => $row->has_missing_punch,
             ])
             ->all();
     }

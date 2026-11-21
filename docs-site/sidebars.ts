@@ -21,6 +21,7 @@ const sidebars: SidebarsConfig = {
         'user-guide/getting-started',
         'user-guide/employees',
         'user-guide/attendance-and-requests',
+        'user-guide/timesheet-management',
         'user-guide/payroll',
         'user-guide/reports-and-payslips',
         'user-guide/settings-and-access',

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Filters;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,10 @@ class DateRangeTo extends Filter
             return $query;
         }
 
-        return $query->where('log_date', '<=', $value);
+        // Include the whole selected day even when the column stores a timestamp.
+        $endExclusive = CarbonImmutable::parse($value)->addDay()->toDateString();
+
+        return $query->where('log_date', '<', $endExclusive);
     }
 
     // Behaviour approximated: the Nova DateFilter received a date string; the

@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Services\Attendance\TimesheetImport;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Islestech\Attendance\Import\FileImport;
 
 class Timesheet extends Model
 {
@@ -180,13 +180,6 @@ class Timesheet extends Model
         );
     }
 
-    // TODO we need to check if timesheet already have paired with time in
-    // and time out
-    public function getIsPairedAttribute(): bool
-    {
-        return true;
-    }
-
     public function getDayTypeFormatAttribute()
     {
         $redColor = "<span class='items-center justify-center px-3 text-sm font-bold text-white rounded shadow bg-red-500 hover:bg-red-400 dark:text-gray-900 focus:outline-none focus:ring ring-red-200 dark:ring-gray-600 h-9'>";
@@ -234,19 +227,113 @@ class Timesheet extends Model
         return $times;
     }
 
-    public function getTotalHoursAttribute()
+    /**
+     * Whether the day's punches alternate in/out and contain no orphan punch.
+     */
+    public function getIsPairedAttribute(): bool
     {
-        return $this->regular +
-            $this->ot +
-            $this->nt +
-            $this->nt_ot;
-        // return collect($this->logs_rates)->sum('hours');
-        // $times = 0;
-        // foreach (collect(json_decode($this->logs_rates, true)) as $time) {
-        //     $times += $time['hours'];
-        // }
+        $logs = collect($this->logs ?? [])->values();
 
-        // return $times;
+        if ($logs->isEmpty()) {
+            return $this->legacyColumnsArePaired();
+        }
+
+        if ($logs->count() % 2 !== 0) {
+            return false;
+        }
+
+        $expected = 0;
+
+        foreach ($logs as $log) {
+            if ((int) ($log['log_type'] ?? 0) !== $expected) {
+                return false;
+            }
+
+            $expected = $expected === 0 ? 1 : 0;
+        }
+
+        return true;
+    }
+
+    public function getHasMissingPunchAttribute(): bool
+    {
+        return ! $this->is_paired;
+    }
+
+    /**
+     * Actual hours worked, excluding the night/premium equivalents.
+     */
+    public function getWorkedHoursAttribute(): float
+    {
+        $hours = 0.0;
+        $hasLines = false;
+
+        foreach (collect($this->logs_rates ?? []) as $key => $line) {
+            if (! is_array($line)) {
+                continue;
+            }
+
+            $key = (string) $key;
+
+            // Night premium lines duplicate the regular hours; only count the
+            // ordinary, overtime and night-overtime buckets.
+            if (str_ends_with($key, '-nt')) {
+                continue;
+            }
+
+            if (! str_ends_with($key, '-regular') && ! str_ends_with($key, '-ot')) {
+                continue;
+            }
+
+            $hasLines = true;
+            $actual = (float) ($line['actual'] ?? 0);
+
+            $hours += $actual > 0 ? $actual : (float) ($line['hours'] ?? 0);
+        }
+
+        if ($hasLines) {
+            return round($hours, 2);
+        }
+
+        return $this->legacyWorkedHours();
+    }
+
+    /**
+     * Pay-equivalent hours: regular, overtime and the night premiums on top.
+     */
+    public function getEquivalentHoursAttribute(): float
+    {
+        return round($this->regular + $this->ot + $this->nt + $this->nt_ot, 2);
+    }
+
+    public function getTotalHoursAttribute(): float
+    {
+        return $this->worked_hours;
+    }
+
+    private function legacyColumnsArePaired(): bool
+    {
+        $hasTimeIn = filled($this->am_login) || filled($this->pm_login);
+        $hasTimeOut = filled($this->am_logout) || filled($this->pm_logout) || filled($this->am_out_morning);
+
+        return ! ($hasTimeIn xor $hasTimeOut);
+    }
+
+    private function legacyWorkedHours(): float
+    {
+        $minutes = 0.0;
+
+        foreach ([['am_login', 'am_logout'], ['pm_login', 'pm_logout']] as [$in, $out]) {
+            if (filled($this->{$in}) && filled($this->{$out})) {
+                $minutes += max(0, strtotime((string) $this->{$out}) - strtotime((string) $this->{$in})) / 60;
+            }
+        }
+
+        if (filled($this->pm_login) && filled($this->am_out_morning)) {
+            $minutes += max(0, strtotime('+1 day '.$this->am_out_morning) - strtotime((string) $this->pm_login)) / 60;
+        }
+
+        return round($minutes / 60, 2);
     }
 
     public function getDayTypeHolidayFormatAttribute()
@@ -317,11 +404,23 @@ class Timesheet extends Model
 
     public function getTimeInAttribute()
     {
+        $log = collect($this->logs ?? [])->first(fn ($log): bool => is_array($log) && (int) ($log['log_type'] ?? 0) === 0);
+
+        if (is_array($log) && is_string($log['time'] ?? null)) {
+            return substr($log['time'], 0, 5);
+        }
+
         return $this->am_login ?? $this->pm_login ?? null;
     }
 
     public function getTimeOutAttribute()
     {
+        $log = collect($this->logs ?? [])->reverse()->first(fn ($log): bool => is_array($log) && (int) ($log['log_type'] ?? 0) === 1);
+
+        if (is_array($log) && is_string($log['time'] ?? null)) {
+            return substr($log['time'], 0, 5);
+        }
+
         return $this->am_logout ?? $this->pm_logout ?? $this->am_out_morning ?? null;
     }
 
@@ -756,50 +855,18 @@ class Timesheet extends Model
     public function scopeByDates($query, $from, $to)
     {
         if ($from != null && $to != null) {
-            $query->whereBetween('log_date', [$from, $to]);
+            $query->where('log_date', '>=', $from)
+                ->where('log_date', '<', Carbon::parse($to)->addDay()->toDateString());
         }
     }
 
+    /**
+     * Import a biometric log file into the timesheets.
+     *
+     * @return array{accepted: int, duplicates: int, unmatched: int, invalid: int, blocked: int, timesheets: int}
+     */
     public function processImport($file = 'test.txt')
     {
-        $fileImport = new FileImport;
-        $fileImport->setLimit();
-        $fileImport->filePath = $file;
-        $timesheets = $fileImport->process();
-
-        // We can also generate timesheets first if not
-        // yet generated.
-
-        // Much better if we can get unique employees
-
-        // $employees = Employee::whereIn('biometric_id', [])->get();
-
-        // TODO need improvement on these
-
-        foreach ($timesheets as $biometricId => $timesheet) {
-
-            $employee = Employee::where('biometric_id', $biometricId)->first();
-
-            if ($employee) {
-                foreach ($timesheet as $date => $logs) {
-                    $log = Timesheet::firstOrNew([
-                        'employee_id' => $employee->id,
-                        'employee_number' => $employee->employee_number,
-                        'biometric_id' => $biometricId,
-                        'log_date' => $date,
-                    ]);
-
-                    if ($log->logs == null) {
-                    } else {
-                    }
-
-                    $log->logs = $logs;
-                    $log->save();
-                }
-            }
-        }
-
-        // dd($timesheets);
-        // dd($timesheets['251']);
+        return app(TimesheetImport::class)->import($file);
     }
 }

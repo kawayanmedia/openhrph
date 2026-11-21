@@ -234,3 +234,78 @@ it('rejects users without a linked employee record', function () {
         ->assertHasErrors('punch')
         ->assertSee('not linked to an employee record');
 });
+
+it('records an overnight time out on the shift workday', function () {
+    $schedule = Schedule::factory()->create([
+        'company_id' => $this->company->id,
+        'name' => 'Night Shift',
+        'am_in' => null,
+        'am_out' => null,
+        'pm_in' => '22:00',
+        'pm_out' => null,
+        'am_out_morning' => '06:00',
+    ]);
+
+    $this->employee->schedule_id = $schedule->id;
+    $this->employee->save();
+
+    Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-11',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'rate_code' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $schedule->id,
+        'am_login' => null,
+        'am_logout' => null,
+        'pm_login' => '22:00',
+        'pm_logout' => null,
+        'logs' => [[
+            'employee_id' => '101',
+            'log_date' => '2026-11-11',
+            'time' => '22:00:00',
+            'log_type' => 0,
+            'source' => 'portal',
+            'recorded_at' => '2026-11-11 22:00:00',
+        ]],
+    ]);
+
+    Carbon::setTestNow('2026-11-12 06:05:00');
+
+    Livewire::actingAs($this->user)
+        ->test(TimesheetPunch::class)
+        ->call('timeOut')
+        ->assertHasNoErrors()
+        ->assertSee('Time out recorded at 06:05 AM.');
+
+    app(TenantContext::class)->set($this->company->id);
+
+    $timesheet = Timesheet::query()->whereDate('log_date', '2026-11-11')->firstOrFail();
+
+    expect($timesheet->logs)->toHaveCount(2);
+    expect($timesheet->logs[1]['log_type'])->toBe(1);
+    expect($timesheet->logs[1]['log_date'])->toBe('2026-11-11');
+    expect($timesheet->am_out_morning)->toBe('06:05');
+    expect(Timesheet::query()->whereDate('log_date', '2026-11-12')->exists())->toBeFalse();
+});
+
+it('ignores a repeated punch inside the debounce window', function () {
+    Livewire::actingAs($this->user)
+        ->test(TimesheetPunch::class)
+        ->call('timeIn')
+        ->assertHasNoErrors();
+
+    Livewire::actingAs($this->user)
+        ->test(TimesheetPunch::class)
+        ->call('timeIn')
+        ->assertHasNoErrors()
+        ->assertSee('just recorded');
+
+    app(TenantContext::class)->set($this->company->id);
+
+    $timesheet = Timesheet::query()->firstOrFail();
+
+    expect($timesheet->logs)->toHaveCount(1);
+    expect($timesheet->logs[0]['log_type'])->toBe(0);
+});

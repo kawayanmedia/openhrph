@@ -24,6 +24,8 @@ concurrency:
 
 permissions:
   contents: write
+  # The SignPath action downloads the unsigned artifact through the API.
+  actions: read
 
 jobs:
   prepare:
@@ -116,6 +118,8 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Signing is optional. Add CSC_LINK/CSC_KEY_PASSWORD (and the Apple or
       # Azure variables) as repository secrets to sign and notarise builds.
+      # Windows can instead be signed after packaging by SignPath, which is
+      # free for open source projects; see docs/deployment/desktop.md.
       CSC_LINK: ${{ secrets.CSC_LINK }}
       CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
@@ -230,11 +234,125 @@ jobs:
         shell: bash
         run: |
           PUBLISH=""
-          if [[ "${{ needs.prepare.outputs.publish }}" == "true" ]]; then
+
+          # SignPath signs the packaged Windows installer, so electron-builder
+          # must not upload it to the draft release before that happens.
+          if [[ "${{ needs.prepare.outputs.publish }}" == "true" && ! ( "${{ matrix.platform }}" == "win" && -n "${{ vars.SIGNPATH_PROJECT_SLUG }}" ) ]]; then
             PUBLISH="--publish"
           fi
 
           php artisan native:build ${{ matrix.platform }} ${{ matrix.arch }} $PUBLISH --no-interaction
+
+      # SignPath Foundation signs open source Windows builds for free. Configure
+      # the SIGNPATH_* repository variables and the SIGNPATH_API_TOKEN secret to
+      # enable it; see docs/deployment/desktop.md.
+      - name: Upload the unsigned Windows installer
+        id: upload-windows-unsigned
+        if: matrix.platform == 'win' && vars.SIGNPATH_PROJECT_SLUG != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: openhrph-win-x64-unsigned
+          path: nativephp/electron/dist/*.exe
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Sign the Windows installer
+        if: matrix.platform == 'win' && vars.SIGNPATH_PROJECT_SLUG != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-windows-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: ${{ runner.temp }}/windows-signed
+
+      - name: Install the signed installer
+        if: matrix.platform == 'win' && vars.SIGNPATH_PROJECT_SLUG != ''
+        shell: pwsh
+        run: |
+          $signed = Get-ChildItem "$env:RUNNER_TEMP/windows-signed/*.exe"
+
+          if (-not $signed) {
+            throw 'SignPath returned no signed executable.'
+          }
+
+          foreach ($file in $signed) {
+            $signature = Get-AuthenticodeSignature $file.FullName
+
+            if ($signature.Status -ne 'Valid') {
+              throw "$($file.Name) is not validly signed: $($signature.Status)"
+            }
+
+            Copy-Item $file.FullName nativephp/electron/dist -Force
+          }
+
+      # Signing rewrites the installer bytes, so the hashes electron-builder
+      # baked into latest.yml would make every update fail verification. The
+      # blockmaps are cut from the unsigned file too, so drop them and let
+      # electron-updater fall back to a full download.
+      - name: Refresh the update metadata
+        if: matrix.platform == 'win' && vars.SIGNPATH_PROJECT_SLUG != ''
+        shell: bash
+        run: |
+          node --input-type=commonjs - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const crypto = require('crypto');
+
+          const dist = 'nativephp/electron/dist';
+          const manifest = path.join(dist, 'latest.yml');
+
+          if (!fs.existsSync(manifest)) {
+            console.error('latest.yml is missing, so update metadata cannot be refreshed.');
+            process.exit(1);
+          }
+
+          for (const file of fs.readdirSync(dist)) {
+            if (file.endsWith('.blockmap')) {
+              fs.unlinkSync(path.join(dist, file));
+            }
+          }
+
+          const digest = (file) => {
+            const bytes = fs.readFileSync(path.join(dist, file));
+
+            return {
+              sha512: crypto.createHash('sha512').update(bytes).digest('base64'),
+              size: bytes.length,
+            };
+          };
+
+          let yaml = fs.readFileSync(manifest, 'utf8');
+
+          yaml = yaml.replace(/( {2}- url: (.+)\n {4}sha512: ).+(\n {4}size: ).+/g, (match, head, url, tail) => {
+            const { sha512, size } = digest(decodeURIComponent(url));
+
+            return head + sha512 + tail + size;
+          });
+
+          const primary = (yaml.match(/^path: (.+)$/m) || [])[1];
+
+          if (primary) {
+            yaml = yaml.replace(/^sha512: .+$/m, 'sha512: ' + digest(decodeURIComponent(primary)).sha512);
+          }
+
+          fs.writeFileSync(manifest, yaml);
+          console.log(yaml);
+          NODE
+
+      - name: Publish the signed Windows build
+        if: matrix.platform == 'win' && vars.SIGNPATH_PROJECT_SLUG != '' && needs.prepare.outputs.publish == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ needs.prepare.outputs.version }}" \
+            nativephp/electron/dist/*.exe \
+            nativephp/electron/dist/latest.yml \
+            --repo "${{ github.repository }}" \
+            --clobber
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

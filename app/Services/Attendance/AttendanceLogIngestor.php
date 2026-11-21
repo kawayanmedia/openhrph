@@ -22,6 +22,7 @@ class AttendanceLogIngestor
      *     duplicates: int,
      *     unmatched: int,
      *     invalid: int,
+     *     rejected: int,
      *     results: array<int, array<string, mixed>>
      * }
      */
@@ -32,6 +33,7 @@ class AttendanceLogIngestor
             'duplicates' => 0,
             'unmatched' => 0,
             'invalid' => 0,
+            'rejected' => 0,
             'results' => [],
         ];
 
@@ -75,6 +77,16 @@ class AttendanceLogIngestor
 
                 if ($result['status'] === TimesheetLogRecorder::STATUS_DUPLICATE) {
                     $summary['duplicates']++;
+                    $result['message'] = ($result['reason'] ?? null) === TimesheetLogRecorder::REASON_DEBOUNCE
+                        ? 'The punch was received too soon after the previous one.'
+                        : 'The punch already exists.';
+                } elseif ($result['status'] === TimesheetLogRecorder::STATUS_REJECTED) {
+                    $summary['rejected']++;
+                    $result['message'] = match ($result['reason'] ?? null) {
+                        TimesheetLogRecorder::REASON_LOCKED => 'The timesheet is locked.',
+                        TimesheetLogRecorder::REASON_CLOSED => 'Attendance for this payroll period is closed.',
+                        default => 'The punch was rejected.',
+                    };
                 } else {
                     $summary['accepted']++;
                 }

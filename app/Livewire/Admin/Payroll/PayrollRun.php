@@ -5,6 +5,8 @@ namespace App\Livewire\Admin\Payroll;
 use App\Jobs\ProcessPayrollJob;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Services\Attendance\TimesheetPeriodLock;
+use App\Services\HrAudit;
 use App\Services\Payroll\Engine\EngineManager;
 use App\Services\Payroll\Engine\EngineResult;
 use App\Services\Payroll\Engine\PayrollEngineException;
@@ -197,6 +199,15 @@ class PayrollRun extends Component
             'approved_by' => Auth::id(),
         ])->save();
 
+        $lockedTimesheets = app(TimesheetPeriodLock::class)->lock($payroll);
+
+        HrAudit::record((int) $payroll->company_id, 'timesheet_period_locked', null, null, [
+            'payroll_id' => $payroll->getKey(),
+            'timesheets' => $lockedTimesheets,
+            'date_from' => $payroll->date_from?->toDateString(),
+            'date_to' => $payroll->date_to?->toDateString(),
+        ]);
+
         app(PayrollJournalService::class)->post($payroll);
 
         PayrollAudit::record($payroll, 'approved');
@@ -236,6 +247,15 @@ class PayrollRun extends Component
         ])->save();
 
         app(PayrollJournalService::class)->reverse($payroll, $reason);
+
+        $unlockedTimesheets = app(TimesheetPeriodLock::class)->unlock($payroll);
+
+        HrAudit::record((int) $payroll->company_id, 'timesheet_period_unlocked', null, $reason, [
+            'payroll_id' => $payroll->getKey(),
+            'timesheets' => $unlockedTimesheets,
+            'date_from' => $payroll->date_from?->toDateString(),
+            'date_to' => $payroll->date_to?->toDateString(),
+        ]);
 
         PayrollAudit::record($payroll, 'reopened', $reason);
 

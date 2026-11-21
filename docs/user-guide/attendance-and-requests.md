@@ -41,8 +41,11 @@ Typical actions include:
 - **Generate Timesheet** — build timesheets for a payroll period.
 - **Import Timesheet** — load attendance from a file.
 - **Export As CSV** — download the selected rows.
+- **Mark Missing Days Absent** — flag scheduled working days with no attendance.
 
-Always review the timesheet before processing payroll. Look for missing days, duplicate entries, and unusual overtime.
+Each row shows time in/out, **Worked Hours** and a status badge: **Open**, **Missing punch**, **Absent** or **Locked**. Approving a payroll locks the timesheets in its date range; only the company owner can reopen the payroll.
+
+Always review the timesheet before processing payroll. Look for missing days, duplicate entries, and unusual overtime. See [Timesheet management](timesheet-management.md) for the common problems and the full cut-off checklist.
 
 ## Employee portal requests
 

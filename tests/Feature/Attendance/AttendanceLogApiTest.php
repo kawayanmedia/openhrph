@@ -201,3 +201,29 @@ it('returns the stored raw logs for a day', function () {
         ->assertJsonPath('data.employee.id', $this->employee->id)
         ->assertJsonPath('data.logs.0.time', '08:00:00');
 });
+
+it('rejects punches against a locked timesheet', function () {
+    app(TenantContext::class)->set($this->company->id);
+
+    Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-12',
+        'is_locked' => true,
+        'logs' => null,
+    ]);
+
+    $response = $this->postJson('/api/attendance/logs', [
+        'logs' => [['biometric_id' => '101', 'at' => '2026-11-12 08:00:00', 'type' => 'in']],
+    ], ['X-Device-Key' => 'device-key']);
+
+    $response->assertOk()
+        ->assertJsonPath('data.accepted', 0)
+        ->assertJsonPath('data.rejected', 1)
+        ->assertJsonPath('data.results.0.reason', 'locked');
+
+    app(TenantContext::class)->set($this->company->id);
+
+    expect(Timesheet::query()->firstOrFail()->logs)->toBeNull();
+});

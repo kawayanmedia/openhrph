@@ -2,14 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\GeneratesTimesheets;
 use App\Console\Concerns\RunsForTenants;
-use App\Gateways\GenerateTimesheetGateway;
-use App\Models\Employee;
-use App\Models\Timesheet;
 use Illuminate\Console\Command;
 
 class GenerateBlankTimesheetCommand extends Command
 {
+    use GeneratesTimesheets;
     use RunsForTenants;
 
     /**
@@ -32,13 +31,30 @@ class GenerateBlankTimesheetCommand extends Command
      */
     public function handle(): int
     {
-        $this->forTenantOption(function (): void {
-            $gateway = new GenerateTimesheetGateway;
+        $range = $this->resolveTimesheetRange();
 
-            foreach (Employee::with('payrollGroup')->lazy() as $employee) {
-                $gateway->addDays($employee);
+        if ($range === null) {
+            return Command::FAILURE;
+        }
+
+        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0];
+
+        $this->forTenantOption(function () use ($range, &$totals): void {
+            $summary = $this->generateTimesheets($range['from'], $range['to']);
+
+            foreach (array_keys($totals) as $key) {
+                $totals[$key] += $summary[$key];
             }
         });
+
+        $this->info(sprintf(
+            'Timesheets %s to %s: %d created, %d updated, %d skipped (no schedule or already classified).',
+            $range['from'],
+            $range['to'],
+            $totals['created'],
+            $totals['updated'],
+            $totals['skipped'],
+        ));
 
         return Command::SUCCESS;
     }

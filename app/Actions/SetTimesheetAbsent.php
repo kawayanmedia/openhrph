@@ -3,28 +3,37 @@
 namespace App\Actions;
 
 use App\Models\Timesheet;
-use Illuminate\Http\Request;
+use Carbon\CarbonImmutable;
 use Lorisleiva\Actions\Concerns\AsAction;
 
 class SetTimesheetAbsent extends BaseAction
 {
     use AsAction;
 
-    public function handle($payroll)
+    /**
+     * Flag scheduled working days without attendance as absent.
+     *
+     * Rest days, holidays, leaves, locked rows and days with any recorded
+     * punch are left untouched so payroll never double counts an absence.
+     */
+    public function handle(string $from, string $to, ?int $officeId = null, ?int $employeeId = null): int
     {
-        Timesheet::whereBetween('log_date', [$payroll->date_from->format('Y-m-d'), $payroll->date_to->format('Y-m-d')])
+        $endExclusive = CarbonImmutable::parse($to)->addDay()->toDateString();
+
+        return Timesheet::query()
+            ->where('log_date', '>=', $from)
+            ->where('log_date', '<', $endExclusive)
+            ->where('day_type', Timesheet::REGULAR_DAY)
+            ->whereNull('holiday_id')
+            ->where('is_leave', false)
+            ->where('is_locked', false)
+            ->where('is_absent', false)
             ->whereNull('logs_rates')
+            ->whereNull('am_login')
+            ->whereNull('pm_login')
+            ->whereNotNull('schedule_id')
+            ->when($officeId !== null, fn ($query) => $query->where('office_id', $officeId))
+            ->when($employeeId !== null, fn ($query) => $query->where('employee_id', $employeeId))
             ->update(['is_absent' => true]);
-
-        return true;
     }
-
-    // We can add this as controller route
-    // Route::post('/leaves', CreateLeaveAction::class)->middleware('auth');
-    // public function asController(Request $request)
-    // {
-    //     $this->handle($request, []);
-
-    //     return redirect()->back();
-    // }
 }

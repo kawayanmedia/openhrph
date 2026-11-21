@@ -10,6 +10,8 @@ use App\Livewire\Admin\Support\FormData;
 use App\Models\Rate;
 use App\Models\Schedule;
 use App\Models\Timesheet;
+use App\Services\Attendance\AttendancePeriod;
+use App\Services\HrAudit;
 use Illuminate\Bus\Queueable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\InteractsWithQueue;
@@ -39,7 +41,15 @@ class EditViewTimeSheet extends Action
      */
     public function handle(Request $request, array $fields, Collection $models): mixed
     {
+        $period = app(AttendancePeriod::class);
+
+        if ($models->contains(fn (Timesheet $model): bool => $this->isLocked($model, $period))) {
+            return self::message('This timesheet is locked because payroll for the period has been approved or the cut-off is closed. Reopen the payroll before editing attendance.');
+        }
+
         foreach ($models as $model) {
+            $before = $this->snapshot($model);
+
             $model->is_paid_leave = $fields['day_type'] == Rate::PAID_LEAVE;
 
             if ($fields['day_type'] == Rate::PAID_LEAVE or $fields['day_type'] == Rate::UNPAID_LEAVE) {
@@ -79,7 +89,9 @@ class EditViewTimeSheet extends Action
                 $model->day_type = Timesheet::REST_DAY;
                 $model->save();
 
-                return self::message('Timesheet has been updated.');
+                $this->recordAudit($model, $before);
+
+                continue;
             }
 
             if ($fields['day_type'] != Timesheet::ABSENT) {
@@ -103,9 +115,53 @@ class EditViewTimeSheet extends Action
 
             $model->actual_regular = $regularHours;
             $model->addTime($fields['day_type'], $rate, $regularHours, $fields['time_in'], $fields['time_out'], $regularHours);
+
+            $this->recordAudit($model, $before);
         }
 
         return self::message('Timesheet has been updated.');
+    }
+
+    private function isLocked(Timesheet $timesheet, AttendancePeriod $period): bool
+    {
+        if ((bool) $timesheet->is_locked) {
+            return true;
+        }
+
+        $employee = $timesheet->employee;
+
+        return $employee !== null && $period->isClosedFor($employee, $timesheet->log_date);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function snapshot(Timesheet $timesheet): array
+    {
+        return [
+            'day_type' => $timesheet->day_type,
+            'rate_code' => $timesheet->rate_code,
+            'regular' => $timesheet->getRawOriginal('regular'),
+            'ot' => $timesheet->getRawOriginal('ot'),
+            'nt' => $timesheet->getRawOriginal('nt'),
+            'nt_ot' => $timesheet->getRawOriginal('nt_ot'),
+            'is_absent' => (bool) $timesheet->is_absent,
+            'is_leave' => (bool) $timesheet->is_leave,
+            'logs_rates' => $timesheet->logs_rates,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $before
+     */
+    private function recordAudit(Timesheet $model, array $before): void
+    {
+        HrAudit::record((int) $model->company_id, 'timesheet_updated', $model->employee_id, null, [
+            'timesheet_id' => $model->getKey(),
+            'log_date' => $model->log_date?->toDateString(),
+            'before' => $before,
+            'after' => $this->snapshot($model->refresh()),
+        ]);
     }
 
     /**
@@ -193,7 +249,7 @@ class EditViewTimeSheet extends Action
             Boolean::make('Time Out Next Day', 'time_out_next_day'),
 
             Text::make('Hours', 'hours')
-                ->rules('required')
+                ->rules('required', 'numeric', 'min:0', 'max:24')
                 ->help(''),
 
             Heading::make($this->model->logs_display)->asHtml(),

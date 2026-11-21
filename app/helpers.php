@@ -16,6 +16,7 @@ use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Notifications\NovaNotification;
 
@@ -967,7 +968,23 @@ if (! function_exists('status_badge')) {
 if (! function_exists('notify')) {
     function notify(User $user, $title, $url, $icon = 'download', $type = 'info')
     {
-        if ($user != null) {
+        if ($user === null) {
+            return;
+        }
+
+        // Nova is no longer installed in this build. Skip instead of throwing
+        // so request creation never fails because a toast cannot be delivered.
+        if (! class_exists(NovaNotification::class)) {
+            Log::info('notification.skipped', [
+                'user_id' => $user->getKey(),
+                'title' => $title,
+                'url' => $url,
+            ]);
+
+            return;
+        }
+
+        try {
             $user->notify(
                 NovaNotification::make()
                     ->message($title)
@@ -975,6 +992,8 @@ if (! function_exists('notify')) {
                     // ->icon('download')
                     ->type($type)
             );
+        } catch (Throwable $exception) {
+            report($exception);
         }
     }
 }

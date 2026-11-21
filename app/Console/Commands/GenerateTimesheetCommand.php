@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Concerns\GeneratesTimesheets;
 use App\Console\Concerns\RunsForTenants;
-use App\Models\Timesheet;
 use Illuminate\Console\Command;
 
 class GenerateTimesheetCommand extends Command
 {
+    use GeneratesTimesheets;
     use RunsForTenants;
 
     /**
@@ -22,17 +23,37 @@ class GenerateTimesheetCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Generate timesheets for the given date range';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $this->forTenantOption(function (): void {
-            $timesheet = new Timesheet;
-            $timesheet->processImport();
+        $range = $this->resolveTimesheetRange();
+
+        if ($range === null) {
+            return Command::FAILURE;
+        }
+
+        $totals = ['created' => 0, 'updated' => 0, 'skipped' => 0];
+
+        $this->forTenantOption(function () use ($range, &$totals): void {
+            $summary = $this->generateTimesheets($range['from'], $range['to']);
+
+            foreach (array_keys($totals) as $key) {
+                $totals[$key] += $summary[$key];
+            }
         });
+
+        $this->info(sprintf(
+            'Timesheets %s to %s: %d created, %d updated, %d skipped (no schedule or already classified).',
+            $range['from'],
+            $range['to'],
+            $totals['created'],
+            $totals['updated'],
+            $totals['skipped'],
+        ));
 
         return Command::SUCCESS;
     }

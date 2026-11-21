@@ -28,6 +28,9 @@
                 <div class="sm:flex sm:items-start sm:justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-500">{{ $today['log_date'] }}</p>
+                        @if ($today['shift_started'])
+                            <p class="mt-1 text-xs text-gray-500">Overnight shift started {{ $today['shift_started'] }}.</p>
+                        @endif
                         <p class="mt-1 text-3xl font-bold tracking-tight text-gray-900">{{ now()->format('h:i A') }}</p>
                         <dl class="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-sm text-gray-600">
                             <div>
@@ -93,6 +96,11 @@
                             @endforeach
                         </ul>
                     @endif
+
+                    <p class="mt-3 text-sm text-gray-500">
+                        Missing or wrong punch?
+                        <a href="{{ route('portal.attendance.create') }}" class="font-medium text-primary-600 underline hover:text-primary-700">Request a correction</a>.
+                    </p>
                 </div>
             </div>
         </div>
@@ -129,7 +137,12 @@
                                             </td>
                                             <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $row['time_in'] ?? '—' }}</td>
                                             <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $row['time_out'] ?? '—' }}</td>
-                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $row['logs'] }}</td>
+                                            <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {{ $row['logs'] }}
+                                                @if ($row['missing_punch'])
+                                                    <span class="ml-1 text-xs font-medium text-red-600">missing punch</span>
+                                                @endif
+                                            </td>
                                             <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{{ $row['hours'] }}</td>
                                         </tr>
                                     @endforeach
