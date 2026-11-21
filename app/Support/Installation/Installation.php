@@ -3,6 +3,8 @@
 namespace App\Support\Installation;
 
 use App\Enums\Sector;
+use App\Jurisdictions\Contracts\Jurisdiction;
+use App\Jurisdictions\Support\JurisdictionManager;
 use App\Models\InstallationSetting;
 use App\Sectors\Contracts\SectorPolicy;
 use App\Sectors\SectorManager;
@@ -160,7 +162,7 @@ final class Installation
         $code = self::get(self::KEY_COUNTRY);
 
         if (! is_string($code) || trim($code) === '') {
-            $code = (string) config('payroll.default_country', 'PH');
+            $code = (string) config('jurisdictions.default', config('payroll.default_country', 'PH'));
         }
 
         return strtoupper(trim($code));
@@ -178,24 +180,45 @@ final class Installation
         $profile = config('payroll.countries.'.$code);
 
         if (! is_array($profile)) {
-            $profile = config('payroll.countries.'.strtoupper((string) config('payroll.default_country', 'PH')), []);
+            $jurisdiction = app(JurisdictionManager::class)->for($code);
+            $profile = $jurisdiction->profile();
+
+            if ($profile === []) {
+                $profile = [
+                    'name' => $jurisdiction->name(),
+                    'currency' => $jurisdiction->currency(),
+                    'currency_symbol' => $jurisdiction->currencySymbol(),
+                    'locale' => $jurisdiction->locale(),
+                    'timezone' => $jurisdiction->timezone(),
+                ];
+            }
         }
 
         return is_array($profile) ? $profile : [];
     }
 
+    /**
+     * The active country plugin.
+     */
+    public static function jurisdiction(?string $code = null): Jurisdiction
+    {
+        return app(JurisdictionManager::class)->for($code ?? self::countryCode());
+    }
+
     public static function statutoryDriver(?string $code = null): string
     {
+        return self::jurisdiction($code)->statutoryDriver()->code();
+    }
+
+    /**
+     * A version tag written on every payroll so a historical run can be
+     * reproduced even after the installation changes country or rates.
+     */
+    public static function policyVersion(?string $code = null): string
+    {
         $code = strtoupper(trim((string) ($code ?? self::countryCode())));
-        $profile = config('payroll.countries.'.$code);
 
-        // An unknown country must never fall back to the PH driver: a
-        // misconfigured installation would otherwise compute PH contributions.
-        $driver = is_array($profile) ? ($profile['statutory_driver'] ?? 'generic') : 'generic';
-
-        return is_string($driver) && in_array($driver, (array) config('payroll.statutory_drivers', ['ph', 'generic']), true)
-            ? $driver
-            : 'generic';
+        return $code.':'.self::statutoryDriver($code).':v1';
     }
 
     public static function currencyCode(): string

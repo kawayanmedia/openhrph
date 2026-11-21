@@ -22,13 +22,13 @@ in this repository's sector config; they belong in the effective-dated
 
 | Concern | Government | Private | Where it lives |
 | --- | --- | --- | --- |
-| Social insurance | GSIS, RA 8291. 9% employee / 12% employer are the **initial** rates on AMC up to the AMC limit, with a 2%/12% tier above it and Board authority to adjust. Current GSIS ceiling practice needs confirmation. | SSS, RA 11199: 15% total (10% employer / 5% employee), MSC ₱5,000–₱35,000. The statute's table ends at 2025; a 2026 circular must be checked. | `config/sectors.php` selects the agency; `statutory_gsis` / `statutory_sss_brackets` hold the rates |
+| Social insurance | GSIS, RA 8291. 9% employee / 12% employer are the **initial** rates on AMC up to the AMC limit, with a 2%/12% tier above it and Board authority to adjust. Current GSIS ceiling practice needs confirmation. | SSS, RA 11199: 15% total (10% employer / 5% employee), MSC ₱5,000–₱35,000. The statute's table ends at 2025; a 2026 circular must be checked. | `app/Jurisdictions/Philippines/Config/sector.php` selects the agency; `statutory_gsis` / `statutory_sss_brackets` hold the rates |
 | Health / housing | PhilHealth, RA 11223 Sec. 10: 5% for 2024–2025, floor ₱10,000, ceiling ₱100,000. Pag-IBIG rate and cap still need confirmation. | Same statutes. | `statutory_philhealth`, `statutory_pagibig` |
 | Withholding tax | RA 10963: ₱90,000 cap on 13th month and other benefits, covering RA 6686 and PD 851 benefits. | Same. | `statutory_tax_brackets`; the cap is `CompensationCatalogue::OTHER_BENEFITS_EXCLUSION` |
 | Remittance deadlines | GSIS: first 10 days; late interest at least 2% simple/month (RA 8291 Secs. 6(b), 7). | SSS: employer deducts and remits employee + employer share (RA 11199 Secs. 18–19). Deadline schedule still needs confirmation. | Remittance working papers |
 | Mandatory identifiers | GSIS BP, TIN, PhilHealth, Pag-IBIG; plantilla/item number | SSS, TIN, PhilHealth, Pag-IBIG | `statutory.required_identifiers`, employee form |
 | Base pay | Salary grade + step (DBM schedule). The 3-year step increment is pending confirmation (likely EO 201 s.2016 / EO 64 s.2024). | Contract/minimum wage | `salary_grades`, `employees.salary_grade/step` |
-| Government allowances | Uniform/clothing up to ₱7,000/yr (GAA, e.g. RA 11975 Sec. 58; DBM BC 2024-1). Medical allowance exists (BC 2024-6; amount pending). PERA/RATA/hazard/subsistence/laundry need confirmation. | Not applicable | `config/sectors.php` compensation elements; `compensations` catalogue |
+| Government allowances | Uniform/clothing up to ₱7,000/yr (GAA, e.g. RA 11975 Sec. 58; DBM BC 2024-1). Medical allowance exists (BC 2024-6; amount pending). PERA/RATA/hazard/subsistence/laundry need confirmation. | Not applicable | `app/Jurisdictions/Philippines/Config/sector.php` compensation elements; `compensations` catalogue |
 | Bonuses | Mid-year bonus: one month basic as of May 15 (EO 201 s.2016, DBM BC 2017-2). Year-end bonus + cash gift (DBM BC 2016-4; ₱5,000 confirmed only in the BC footnote). SRI (AO 40 s.2025 / BC 2025-3). CNA incentive (BC 2024-4, 2025-2, 2026-1; amount pending). PBB and loyalty cash gift pending. | 13th month, PD 851 Sec. 1, due by December 24. | `bonus.items`; `CompensationCatalogue` |
 | Leave | Maternity 105 days (RA 11210); paternity 7 days (RA 8187, both sectors); solo parent up to 7 days (RA 11861, both sectors). CSC VL/SL/SPL/forced leave and monetization pending confirmation; VAWC 10 days pending confirmation. | SIL 5 days after 1 year (Labor Code Art. 95), with the small-establishment and paid-leave exceptions. Same maternity/paternity/solo parent laws. | `leave.types`; `leave_types` table |
 | Working time | Labor Code Title I excludes government employees (Art. 82). Government OT/ND/holiday rules pending confirmation. | OT +25% (Art. 87); night differential +10% for 10 p.m.–6 a.m. (Art. 86); holiday pay pending. | `rules.night_differential`; payroll engine |
@@ -78,7 +78,8 @@ app/Sectors/PrivateSector.php              private-sector policy
 app/Sectors/Support/SectorProfile.php      typed config DTO
 app/Sectors/Support/FeatureSet.php         named capabilities
 app/Sectors/Catalogues/…                   employment, leave, document, sector seeders
-config/sectors.php                         every declarative difference
+app/Jurisdictions/<Country>/Config/sector.php  country-specific sector differences
+config/sectors.php                         installation default only
 ```
 
 `SectorManager` resolves in this order:
@@ -119,7 +120,7 @@ public static ?string $sector = 'Government';
 `is_government` flag. `is_government` stays in the JSON contract so older parity
 fixtures keep working; the Go engine derives `Sector` from the company type.
 
-The PHP calculators live under `App\Services\Statutory\Philippines`. That
+The PHP calculators live under `App\Jurisdictions\Philippines\Statutory`. That
 namespace is **Philippine statutory law**, not public-sector policy. Do not put
 Government-only HR rules there.
 
@@ -165,7 +166,7 @@ to `hr_audit_events`.
 ## Adding a sector
 
 1. Add a case to `App\Enums\Sector`.
-2. Add a profile to `config/sectors.php` with the same keys as the others.
+2. Add a profile to the jurisdiction's `Config/sector.php` with the same keys as the others and return it from `Jurisdiction::sectorProfile()`.
 3. Add a class extending `ConfigurableSector` and return it from
    `SectorManager::make()`.
 4. Extend `openhr:install` if the new sector needs a new installer choice.

@@ -4,6 +4,7 @@ namespace App\Support\Payroll;
 
 use App\Enums\Sector;
 use App\Models\Compensation;
+use App\Support\Installation\Installation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -72,6 +73,20 @@ final class CompensationCatalogue
      */
     public static function rows(?Sector $sector = null): array
     {
+        $country = Installation::countryCode();
+
+        if ($country !== 'PH') {
+            return array_map(static fn (array $row): array => array_merge([
+                'code' => $row['code'] ?? '',
+                'name' => $row['name'] ?? $row['code'] ?? '',
+                'tax_class_code' => $row['tax_class_code'] ?? null,
+                'tax_class' => $row['tax_class'] ?? 'Compensation',
+                'group' => $row['group'] ?? Compensation::GROUP_COMPENSATION,
+                'tax_option' => $row['tax_option'] ?? ((bool) ($row['is_taxable'] ?? false) ? 'fully_taxable' : 'fully_nontaxable'),
+                'is_taxable' => (bool) ($row['is_taxable'] ?? false),
+            ], $row), array_values(Installation::jurisdiction()->catalogue()->compensationElements($sector)));
+        }
+
         $rows = [
             // Taxable regular compensation.
             ['code' => 'BASIC PAY ADJUSTMENT', 'name' => 'BASIC PAY ADJUSTMENT', 'tax_class_code' => Compensation::TAX_CLASS_BASIC_SALARY, 'tax_class' => 'Basic Salary', 'group' => Compensation::GROUP_COMPENSATION, 'tax_option' => 'fully_taxable', 'is_taxable' => true],
@@ -173,8 +188,10 @@ final class CompensationCatalogue
 
         $now ??= now();
         $synced = 0;
+        $country = Installation::countryCode();
 
         $hasSector = Schema::hasColumn('compensations', 'sector');
+        $hasCountry = Schema::hasColumn('compensations', 'country_code');
 
         foreach (self::rows($sector) as $row) {
             $classification = [
@@ -197,9 +214,19 @@ final class CompensationCatalogue
                 $classification['sector'] = $row['sector'] ?? null;
             }
 
+            if ($hasCountry) {
+                $classification['country_code'] = $country;
+            }
+
             $query = DB::table('compensations')
                 ->whereNull('company_id')
                 ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim($row['code']))]);
+
+            if ($hasCountry) {
+                $query->where(function ($query) use ($country): void {
+                    $query->where('country_code', $country)->orWhereNull('country_code');
+                });
+            }
 
             if (! $query->exists()) {
                 DB::table('compensations')->insert($classification + [
@@ -225,10 +252,17 @@ final class CompensationCatalogue
                 $overrideClassification['deleted_at'],
             );
 
-            DB::table('compensations')
+            $overrideQuery = DB::table('compensations')
                 ->whereNotNull('company_id')
-                ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim($row['code']))])
-                ->update($overrideClassification);
+                ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim($row['code']))]);
+
+            if ($hasCountry) {
+                $overrideQuery->where(function ($query) use ($country): void {
+                    $query->where('country_code', $country)->orWhereNull('country_code');
+                });
+            }
+
+            $overrideQuery->update($overrideClassification);
 
             $synced++;
         }

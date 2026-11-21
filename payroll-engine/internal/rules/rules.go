@@ -65,6 +65,26 @@ func OvertimeMultiplierFor(dayRate float64) float64 {
 // NightDifferentialRate is the 10% premium for work between 22:00 and 06:00.
 const NightDifferentialRate = 0.10
 
+// DayMultipliers returns the canonical day-type multiplier table.
+func DayMultipliers() map[string]float64 {
+	return map[string]float64{
+		DayRegular:                          1.00,
+		DayRest:                             1.30,
+		DaySpecialHoliday:                   1.30,
+		DayRegularHoliday:                   2.00,
+		DayRestSpecialHoliday:               1.50,
+		DayRestRegularHoliday:               2.60,
+		DayDoubleHoliday:                    3.00,
+		DayRestDoubleHoliday:                3.90,
+		DayRegularHolidaySpecialHoliday:     2.60,
+		DayRestRegularHolidaySpecialHoliday: 3.00,
+		DayPaidLeave:                        1.00,
+		DayUnpaidLeave:                      0.00,
+		DayAbsent:                           0.00,
+		DayUndertime:                        1.00,
+	}
+}
+
 // DayMultiplier returns the premium for work performed on the given day type.
 func DayMultiplier(dayType string) float64 {
 	switch normalize(dayType) {

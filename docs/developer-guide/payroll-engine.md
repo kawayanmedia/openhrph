@@ -67,7 +67,7 @@ The Go CLI accepts:
 - `GoPayrollEngine` runs the binary with Symfony Process.
 - `PhpPayrollEngine` is the fallback driver. It is parity-locked to the Go
   engine: the earning rules live in `App\Services\Payroll\Computation`, the
-  statutory calculators in `App\Services\Statutory\Philippines`, and both are pinned to the
+  statutory calculators in `App\Jurisdictions\Philippines\Statutory`, and both are pinned to the
   Go output by a shared corpus, so it returns the same payslips.
 - `EngineResult` normalizes the JSON response for the Livewire payroll page.
 
@@ -75,7 +75,7 @@ The Go wrapper passes the DSN resolved from the Laravel database config. It only
 
 ## Statutory services
 
-Each agency is a separate, framework-free namespace under `App\Services\Statutory\Philippines`. A service
+Each agency is a separate, framework-free namespace under `App\Jurisdictions\Philippines\Statutory`. A service
 takes its rates and brackets in the constructor and returns a centavo-exact result object, so a
 historical run stays reproducible after a rate change and the code can be reused outside this
 application.
@@ -112,7 +112,7 @@ The PHP `Config` carries both `sector` and `is_government`. `is_government` stay
 in the JSON contract for older parity fixtures; the Go engine sets `Sector` from
 the company type and keeps `IsGovernment` as the computation switch.
 
-`App\Services\Statutory\Philippines` is the Philippine statutory calculator
+`App\Jurisdictions\Philippines\Statutory` is the Philippine statutory calculator
 namespace (SSS, PhilHealth, Pag-IBIG, GSIS, BIR). It is not the public-sector
 policy layer; that lives in `App\Sectors`.
 

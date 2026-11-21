@@ -29,8 +29,9 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
-- Sector rules (Government vs Private) live in `app/Sectors/` and `config/sectors.php`. Resolve them through `SectorManager`; do not add new `if (government)` branches in payroll or UI code.
-- `App\Services\Statutory\Philippines` is the Philippine statutory calculator namespace (SSS, PhilHealth, Pag-IBIG, GSIS, BIR). It is not the public-sector policy layer.
+- Country law lives in `app/Jurisdictions/<Country>`; resolve it through `JurisdictionManager` or `Installation::jurisdiction()`. Never add new `if (country === ...)` branches in payroll, UI or reports. A new country is a module implementing `App\Jurisdictions\Contracts\Jurisdiction`.
+- Sector rules (Government vs Private) live in `app/Sectors/` plus the jurisdiction's `Config/sector.php`. Resolve them through `SectorManager`; do not add new `if (government)` branches in payroll or UI code.
+- `App\Jurisdictions\Philippines\Statutory` is the Philippine statutory calculator namespace (SSS, PhilHealth, Pag-IBIG, GSIS, BIR). It is not the public-sector policy layer.
 
 ## Frontend Bundling
 

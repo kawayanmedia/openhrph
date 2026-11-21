@@ -2,6 +2,17 @@
 
 namespace App\Services\Payroll\Engine\Legacy;
 
+use App\Jurisdictions\Contracts\PayrollPolicy;
+use App\Jurisdictions\Philippines\Statutory\Bir\TaxBracket;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
+use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigSchedule;
+use App\Jurisdictions\Philippines\Statutory\PayFrequency;
+use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthSchedule;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssBracket;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssSchedule;
+use App\Jurisdictions\Support\PayrollPolicyData;
 use App\Models\Compensation;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Computation\BenefitFlags;
@@ -16,15 +27,6 @@ use App\Services\Payroll\Computation\TimesheetLine;
 use App\Services\Payroll\Computation\YtdTotals;
 use App\Services\Payroll\Engine\PayrollEngineException;
 use App\Services\Payroll\Statutory\ComponentResolver;
-use App\Services\Statutory\Philippines\Bir\TaxBracket;
-use App\Services\Statutory\Philippines\Bir\WithholdingTaxTable;
-use App\Services\Statutory\Philippines\ContributionSchedule;
-use App\Services\Statutory\Philippines\Gsis\GsisSchedule;
-use App\Services\Statutory\Philippines\PagIbig\PagIbigSchedule;
-use App\Services\Statutory\Philippines\PayFrequency;
-use App\Services\Statutory\Philippines\PhilHealth\PhilHealthSchedule;
-use App\Services\Statutory\Philippines\Sss\SssBracket;
-use App\Services\Statutory\Philippines\Sss\SssSchedule;
 use App\Support\Installation\Installation;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
@@ -179,6 +181,7 @@ final class LegacyInput
         $config->isGovernment = $config->sector->isGovernment();
         $config->countryCode = Installation::countryCode();
         $config->statutoryDriver = Installation::statutoryDriver($config->countryCode);
+        $config->policy = self::loadPolicy($run, $config->countryCode);
 
         $groupQuery = DB::table('payroll_groups')
             ->where('id', $run->groupID)
@@ -318,6 +321,23 @@ final class LegacyInput
         }
 
         return $config;
+    }
+
+    private static function loadPolicy(Run $run, string $countryCode): PayrollPolicy
+    {
+        if ($run->payrollID > 0 && Schema::hasTable('payrolls') && Schema::hasColumn('payrolls', 'rules_snapshot')) {
+            $snapshot = DB::table('payrolls')->where('id', $run->payrollID)->value('rules_snapshot');
+
+            if (is_string($snapshot) && $snapshot !== '') {
+                $decoded = json_decode($snapshot, true);
+
+                if (is_array($decoded)) {
+                    return PayrollPolicyData::fromArray($decoded);
+                }
+            }
+        }
+
+        return Installation::jurisdiction($countryCode)->payrollPolicy();
     }
 
     /**

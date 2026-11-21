@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Government\SalaryGrade;
+use App\Jurisdictions\Philippines\Models\Government\SalaryGrade;
 use Database\Factories\Concerns\ResolvesTenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

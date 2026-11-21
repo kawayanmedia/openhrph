@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Statutory\Philippines\ContributionSchedule;
-use App\Services\Statutory\Philippines\PayFrequency;
+use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
+use App\Jurisdictions\Philippines\Statutory\PayFrequency;
 
 it('normalises the stored schedule variants', function () {
     expect(ContributionSchedule::fromString('everypay'))->toBe(ContributionSchedule::EVERY_PAY)

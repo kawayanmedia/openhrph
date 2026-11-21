@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Jurisdictions\Philippines\Statutory\GovernmentDeduction;
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\PayrollGroup;
-use App\Services\Statutory\Philippines\GovernmentDeduction;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;

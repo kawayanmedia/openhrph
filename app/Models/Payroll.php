@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Scopes\FilterScope;
+use App\Support\Installation\Installation;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -44,9 +45,10 @@ class Payroll extends Model
 
     protected $table = 'payrolls';
 
-    protected $fillable = [];
+    protected $fillable = ['country_code', 'policy_version', 'rules_snapshot'];
 
     protected $casts = [
+        'rules_snapshot' => 'array',
         'payroll_date' => 'date',
         'date_from' => 'date',
         'date_to' => 'date',
@@ -66,6 +68,14 @@ class Payroll extends Model
      */
     protected static function booted()
     {
+        static::creating(function (Payroll $model): void {
+            $jurisdiction = Installation::jurisdiction();
+
+            $model->country_code ??= $jurisdiction->code();
+            $model->policy_version ??= Installation::policyVersion();
+            $model->rules_snapshot ??= $jurisdiction->payrollPolicy()->toArray();
+        });
+
         static::created(function (Payroll $model) {
             set_current_timestamp($model);
         });

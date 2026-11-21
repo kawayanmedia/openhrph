@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\Settings;
 
+use App\Jurisdictions\Support\JurisdictionManager;
 use App\Livewire\Admin\Fields\Boolean;
 use App\Livewire\Admin\Fields\Field;
 use App\Livewire\Admin\Fields\File;
@@ -146,6 +147,31 @@ class Settings extends Component
     /**
      * @return array<int, Field>
      */
+    /**
+     * @return array<int, Field>
+     */
+    protected function companyIdentifierFields(): array
+    {
+        $sector = Installation::sector();
+        $fields = [];
+
+        foreach (Installation::jurisdiction()->identifiers()->companyFields() as $field) {
+            $key = (string) ($field['key'] ?? '');
+
+            if ($key === '') {
+                continue;
+            }
+
+            if ($sector !== null && ! empty($field['sector']) && strcasecmp((string) $field['sector'], $sector) !== 0) {
+                continue;
+            }
+
+            $fields[] = Text::make((string) ($field['label'] ?? $key), $key);
+        }
+
+        return $fields;
+    }
+
     protected function generalFields(): array
     {
         return [
@@ -170,20 +196,7 @@ class Settings extends Component
                         ]),
                 ]),
 
-            Text::make('TIN', 'tin')
-                ->placeholder('000-000-000-000'),
-
-            Text::make('RDO', 'rdo')
-                ->placeholder('049'),
-
-            Text::make('SSS', 'sss')
-                ->placeholder('00-0000000-0'),
-
-            Text::make('HDMF', 'hdmf')
-                ->placeholder('0000-0000-0000'),
-
-            Text::make('PhilHealth', 'phil_health')
-                ->placeholder('00-000000000-0'),
+            ...$this->companyIdentifierFields(),
 
             Boolean::make('Automatically generate Employee Number', 'auto_employee_number')
                 ->help('Automatically generate employee number when adding new employee')
@@ -236,18 +249,17 @@ class Settings extends Component
     {
         $profile = Installation::countryProfile();
         $sector = Installation::sector() ?? 'Not selected';
+        $jurisdiction = Installation::jurisdiction();
 
         return [
             Heading::make(
-                'Installation: '.$sector.' · Country: '.Installation::countryCode().' · Driver: '.Installation::statutoryDriver(),
+                'Installation: '.$sector.' · Country: '.$jurisdiction->name().' ('.$jurisdiction->code().') · Driver: '.$jurisdiction->statutoryDriver()->code(),
             )->help(
                 'The sector is fixed for the whole installation. Change it, or the country, with `php artisan openhr:install --force`.',
             ),
 
             Select::make('Country', 'installation_country_code')
-                ->options(collect(config('payroll.countries', []))
-                    ->mapWithKeys(fn (array $country, string $code): array => [$code => $code.' — '.($country['name'] ?? $code)])
-                    ->all())
+                ->options($this->jurisdictionOptions())
                 ->default(Installation::countryCode())
                 ->rules('required'),
 
@@ -263,8 +275,8 @@ class Settings extends Component
                 ->default($profile['timezone'] ?? 'UTC')
                 ->rules('required', 'max:64'),
 
-            Heading::make('Generic countries')
-                ->help('Non-PH countries read active components from Statutory components and their bracket rows. Import a JSON definition with `php artisan payroll:statutory:import --country=XX --file=path.json`.'),
+            Heading::make('Jurisdiction')
+                ->help('The country selects the statutory driver, payroll rules, holidays, leave and reports. A country without a dedicated module reads Statutory components and their bracket rows; import a JSON definition with `php artisan payroll:statutory:import --country=XX --file=path.json`.'),
         ];
     }
 
@@ -290,7 +302,10 @@ class Settings extends Component
                 ->help($features !== '' ? $features : 'None declared for this sector.'),
         ];
 
-        if ($sector->isGovernment()) {
+        if (Installation::jurisdiction()->statutoryDriver()->code() !== 'ph') {
+            $fields[] = Heading::make('Country rules')
+                ->help('This jurisdiction supplies its own contribution, tax and leave rules.');
+        } elseif ($sector->isGovernment()) {
             $fields[] = Text::make('GSIS contribution base', 'gsis_base')
                 ->default((string) ($defaults['gsis_base'] ?? 'basic'))
                 ->help('basic, gross, or taxable. The rate itself lives in the effective-dated GSIS table.');
@@ -340,17 +355,17 @@ class Settings extends Component
                 ->placeholder('Ex: 261')
                 ->rules('numeric', 'max:265', 'min:1'),
 
-            Select::make('SSS payment schedule for semi-monthly', 'sss_schedule')
-                ->rules('required')
-                ->options(payment_schedules()),
-
-            Select::make('Philhealth payment schedule for semi-monthly', 'phil_health_schedule')
-                ->rules('required')
-                ->options(payment_schedules()),
-
-            Select::make('HDMF payment schedule for semi-monthly', 'hdmf_schedule')
-                ->rules('required')
-                ->options(payment_schedules()),
+            ...(Installation::jurisdiction()->statutoryDriver()->code() === 'ph' ? [
+                Select::make('SSS payment schedule for semi-monthly', 'sss_schedule')
+                    ->rules('required')
+                    ->options(payment_schedules()),
+                Select::make('Philhealth payment schedule for semi-monthly', 'phil_health_schedule')
+                    ->rules('required')
+                    ->options(payment_schedules()),
+                Select::make('HDMF payment schedule for semi-monthly', 'hdmf_schedule')
+                    ->rules('required')
+                    ->options(payment_schedules()),
+            ] : []),
 
             Number::make('Total number of days in a year', 'days_year_with_weeked')
                 ->help('Daily Paid Monday to Saturday (With weekends). DOLE uses 313 (365 days minus 52 Sundays).')
@@ -423,14 +438,34 @@ class Settings extends Component
     }
 
     /**
+     * @return array<string, string>
+     */
+    protected function jurisdictionOptions(): array
+    {
+        $options = [];
+
+        foreach ((array) config('payroll.countries', []) as $code => $profile) {
+            $options[strtoupper((string) $code)] = $code.' — '.($profile['name'] ?? $code);
+        }
+
+        foreach (app(JurisdictionManager::class)->all() as $code => $jurisdiction) {
+            $options[$code] = $code.' — '.$jurisdiction->name();
+        }
+
+        ksort($options);
+
+        return $options;
+    }
+
+    /**
      * Persist the installation-wide settings on the Country & statutory page.
      */
     protected function saveInstallationSettings(): bool
     {
         $country = strtoupper(trim((string) ($this->form['installation_country_code'] ?? Installation::countryCode())));
 
-        if (! array_key_exists($country, (array) config('payroll.countries', []))) {
-            $this->addError('form.installation_country_code', 'Choose a country configured in config/payroll.php.');
+        if (! array_key_exists($country, $this->jurisdictionOptions())) {
+            $this->addError('form.installation_country_code', 'Choose a registered jurisdiction.');
 
             return false;
         }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Sector;
+use App\Jurisdictions\Support\JurisdictionManager;
 use App\Livewire\Admin\Settings\Settings;
 use App\Models\Company;
 use App\Sectors\SectorManager;
@@ -59,8 +60,10 @@ it('keeps both sector profiles structurally aligned', function () {
     $government = Sector::Government;
     $private = Sector::Private;
 
-    $governmentKeys = array_keys(config('sectors.profiles.'.$government->value));
-    $privateKeys = array_keys(config('sectors.profiles.'.$private->value));
+    $jurisdiction = app(JurisdictionManager::class)->current();
+
+    $governmentKeys = array_keys($jurisdiction->sectorProfile($government));
+    $privateKeys = array_keys($jurisdiction->sectorProfile($private));
 
     sort($governmentKeys);
     sort($privateKeys);

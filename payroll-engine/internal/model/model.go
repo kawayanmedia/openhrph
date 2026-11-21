@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/money"
+	"github.com/kawayanmedia/openhrph-payroll-engine/internal/rules"
 	"github.com/kawayanmedia/openhrph-payroll-engine/internal/statutory"
 )
 
@@ -244,6 +245,10 @@ type Config struct {
 	CountryCode     string
 	StatutoryDriver string
 	Components      []statutory.GenericComponent
+
+	// Policy carries the country's non-statutory earning rules. It is loaded
+	// from the payroll's snapshot so a historical run stays reproducible.
+	Policy rules.Policy
 
 	// PayrollDate keys the de minimis ledger to the calendar month, semester
 	// or year the ceiling applies to.

@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\Support;
 
 use App\Sectors\SectorManager;
+use App\Support\Installation\Installation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -15,6 +16,7 @@ class Navigation
     public static function sections(): Collection
     {
         return collect(config('admin.menu', []))
+            ->merge(Installation::jurisdiction()->adminMenu())
             ->map(fn (array $section) => static::normalizeSection($section))
             ->filter()
             ->values();
@@ -22,7 +24,7 @@ class Navigation
 
     protected static function normalizeSection(array $section): ?array
     {
-        if (! static::canSee($section['can'] ?? null, $section['sector'] ?? $section['sectors'] ?? null)) {
+        if (! static::canSee($section['can'] ?? null, $section['sector'] ?? $section['sectors'] ?? null, $section['jurisdiction'] ?? null)) {
             return null;
         }
 
@@ -57,7 +59,7 @@ class Navigation
 
         $groups = collect($section['groups'] ?? [])
             ->map(function (array $group) {
-                if (! static::canSee($group['can'] ?? null, $group['sector'] ?? $group['sectors'] ?? null)) {
+                if (! static::canSee($group['can'] ?? null, $group['sector'] ?? $group['sectors'] ?? null, $group['jurisdiction'] ?? null)) {
                     return null;
                 }
 
@@ -88,7 +90,7 @@ class Navigation
 
     protected static function normalizeItem(array $item): ?array
     {
-        if (! static::canSee($item['can'] ?? null, $item['sector'] ?? $item['sectors'] ?? null)) {
+        if (! static::canSee($item['can'] ?? null, $item['sector'] ?? $item['sectors'] ?? null, $item['jurisdiction'] ?? null)) {
             return null;
         }
 
@@ -134,9 +136,13 @@ class Navigation
     /**
      * @param  string|array<int, string>|null  $sector
      */
-    protected static function canSee(?string $key, string|array|null $sector = null): bool
+    protected static function canSee(?string $key, string|array|null $sector = null, string|array|null $jurisdiction = null): bool
     {
         if (! static::sectorAllows($sector)) {
+            return false;
+        }
+
+        if (! static::jurisdictionAllows($jurisdiction)) {
             return false;
         }
 
@@ -161,6 +167,27 @@ class Navigation
         }
 
         return ! empty($user->group?->permissions[$permission]);
+    }
+
+    /**
+     * @param  string|array<int, string>|null  $jurisdiction
+     */
+    protected static function jurisdictionAllows(string|array|null $jurisdiction): bool
+    {
+        if ($jurisdiction === null) {
+            return true;
+        }
+
+        $current = Installation::jurisdiction()->code();
+        $allowed = array_map('strval', (array) $jurisdiction);
+
+        foreach ($allowed as $candidate) {
+            if (strcasecmp($candidate, $current) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

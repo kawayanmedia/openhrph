@@ -1,8 +1,8 @@
 <?php
 
-use App\Services\Statutory\Philippines\Bir\WithholdingTaxService;
-use App\Services\Statutory\Philippines\Bir\WithholdingTaxTable;
-use App\Services\Statutory\Philippines\PayFrequency;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
+use App\Jurisdictions\Philippines\Statutory\PayFrequency;
 use App\Support\Money;
 
 it('withholds nothing below the semi-monthly exemption', function () {

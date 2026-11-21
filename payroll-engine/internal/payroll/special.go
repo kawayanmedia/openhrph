@@ -18,6 +18,7 @@ import (
 // (PD 851 as amended by MO 28). The ₱90,000 exclusion is aggregated with the
 // employee's other benefits for the year and only the excess is taxable.
 func ComputeThirteenthMonth(cfg model.Config, employee model.Employee) (model.Payslip, error) {
+	cfg.Policy = cfg.Policy.Normalize()
 	slip := model.Payslip{
 		EmployeeID:   employee.ID,
 		EmployeeNo:   employee.Number,
@@ -48,7 +49,7 @@ func ComputeThirteenthMonth(cfg model.Config, employee model.Employee) (model.Pa
 	// benefit with its own configured tax component.
 	taxable := amount
 	if !generic {
-		taxable = incrementalBenefitExcess(amount, employee.YTD.OtherBenefits)
+		taxable = incrementalBenefitExcess(amount, employee.YTD.OtherBenefits, cfg.Policy)
 	}
 
 	slip.ThirteenthMonth = amount
@@ -88,6 +89,7 @@ func ComputeThirteenthMonth(cfg model.Config, employee model.Employee) (model.Pa
 // and statutory contributions, pro-rated 13th month, leave conversion and
 // separation pay by cause.
 func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, error) {
+	cfg.Policy = cfg.Policy.Normalize()
 	regularCfg := cfg
 	regularCfg.RunType = model.RunRegular
 
@@ -114,7 +116,7 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 	generic := isGenericConfig(cfg)
 	thirteenthTaxable := thirteenth
 	if !generic {
-		thirteenthTaxable = incrementalBenefitExcess(thirteenth, employee.YTD.OtherBenefits)
+		thirteenthTaxable = incrementalBenefitExcess(thirteenth, employee.YTD.OtherBenefits, cfg.Policy)
 	}
 
 	// Leave conversion: unused leave days at the employee's daily rate.
@@ -210,6 +212,7 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 // tax on the annualised taxable income and returns the difference as a
 // positive (additional withholding) or negative (refund) adjustment.
 func ComputeAnnualAdjustment(cfg model.Config, employee model.Employee) (model.Payslip, error) {
+	cfg.Policy = cfg.Policy.Normalize()
 	slip := model.Payslip{
 		EmployeeID:   employee.ID,
 		EmployeeNo:   employee.Number,
@@ -257,13 +260,14 @@ func ComputeAnnualAdjustment(cfg model.Config, employee model.Employee) (model.P
 
 // incrementalBenefitExcess returns the portion of a benefit that exceeds the
 // ₱90,000 annual exclusion after other benefits already received this year.
-func incrementalBenefitExcess(amount, otherBenefits money.Centavos) money.Centavos {
+func incrementalBenefitExcess(amount, otherBenefits money.Centavos, policy rules.Policy) money.Centavos {
 	if amount <= 0 {
 		return 0
 	}
 
-	priorExcess := money.Max(0, otherBenefits.Sub(rules.ThirteenthMonthExemption))
-	totalExcess := money.Max(0, amount.Add(otherBenefits).Sub(rules.ThirteenthMonthExemption))
+	ceiling := policy.Normalize().ThirteenthMonthExempt
+	priorExcess := money.Max(0, otherBenefits.Sub(ceiling))
+	totalExcess := money.Max(0, amount.Add(otherBenefits).Sub(ceiling))
 
 	return money.Max(0, totalExcess.Sub(priorExcess))
 }
@@ -323,6 +327,10 @@ func genericTax(cfg model.Config, amount money.Centavos) (money.Centavos, error)
 func annualBrackets(cfg model.Config) []statutory.TaxBracket {
 	if len(cfg.AnnualTaxBrackets) > 0 {
 		return cfg.AnnualTaxBrackets
+	}
+
+	if !strings.EqualFold(cfg.StatutoryDriver, "ph") {
+		return nil
 	}
 
 	return statutory.TRAINTaxBrackets(statutory.FrequencyMonthly)

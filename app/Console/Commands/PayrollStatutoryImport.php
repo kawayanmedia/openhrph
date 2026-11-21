@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Installation\Installation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -42,8 +43,7 @@ class PayrollStatutoryImport extends Command
             return self::FAILURE;
         }
 
-        $profile = config('payroll.countries.'.$this->country);
-        $driver = is_array($profile) ? ($profile['statutory_driver'] ?? 'generic') : 'generic';
+        $driver = Installation::statutoryDriver($this->country);
 
         if ($this->option('fresh')) {
             $this->deleteCountryRows();

@@ -55,6 +55,14 @@ abstract class Resource implements Wireable
      */
     public static ?string $sector = null;
 
+    /**
+     * Optional jurisdiction restriction, e.g. `PH`.
+     *
+     * A resource with a jurisdiction is only reachable when the installation
+     * uses that country. Leave it null for country-neutral resources.
+     */
+    public static ?string $jurisdiction = null;
+
     public function __construct(public ?Model $resource = null) {}
 
     /**

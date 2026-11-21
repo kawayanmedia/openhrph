@@ -3,7 +3,7 @@
 namespace App\Sectors\Catalogues;
 
 use App\Enums\Sector;
-use App\Sectors\SectorManager;
+use App\Support\Installation\Installation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -36,10 +36,10 @@ final class LeaveTypeCatalogue
         $sectors = $sector === null ? Sector::cases() : [$sector];
         $rows = [];
 
-        foreach ($sectors as $case) {
-            $policy = app(SectorManager::class)->for($case);
+        $leavePolicy = Installation::jurisdiction()->leavePolicy();
 
-            foreach ($policy->leaveTypes() as $row) {
+        foreach ($sectors as $case) {
+            foreach ($leavePolicy->types($case) as $row) {
                 $code = trim((string) ($row['code'] ?? ''));
                 $name = trim((string) ($row['name'] ?? ''));
 
@@ -105,6 +105,7 @@ final class LeaveTypeCatalogue
 
         $now ??= now();
         $hasSector = Schema::hasColumn('leave_types', 'sector');
+        $hasCountry = Schema::hasColumn('leave_types', 'country_code');
 
         $system = DB::table('leave_types')
             ->whereNull('company_id')
@@ -137,6 +138,10 @@ final class LeaveTypeCatalogue
 
             if (! $hasSector) {
                 unset($insert['sector']);
+            }
+
+            if ($hasCountry) {
+                $insert['country_code'] = Installation::countryCode();
             }
 
             DB::table('leave_types')->insert($insert);

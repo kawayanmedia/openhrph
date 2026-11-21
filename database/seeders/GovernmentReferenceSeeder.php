@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Jurisdictions\Philippines\Models\Government\SalaryGrade;
 use App\Models\Company;
-use App\Models\Government\SalaryGrade;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;
 

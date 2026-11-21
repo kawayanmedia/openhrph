@@ -6,6 +6,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Support\Installation\Installation;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -65,7 +66,7 @@ class PayrollJournalService
             $totals['net'] += $this->raw($detail, 'net_pay');
         }
 
-        $accounts = config('payroll.accounting.accounts');
+        $accounts = Installation::jurisdiction()->reports()->accountingAccounts();
 
         return DB::transaction(function () use ($payroll, $totals, $accounts) {
             $this->clear($payroll);

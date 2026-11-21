@@ -2,6 +2,8 @@
 
 namespace App\Services\Payroll\Computation;
 
+use App\Jurisdictions\Contracts\PayrollPolicy;
+use App\Jurisdictions\Support\PayrollPolicyData;
 use App\Support\Money;
 
 /**
@@ -75,8 +77,15 @@ final class Rules
     /** Tax-free ceiling for 13th-month pay and other benefits. */
     public const THIRTEENTH_MONTH_EXEMPTION = 9000000;
 
-    public static function dayMultiplier(?string $dayType): float
+    public static function dayMultiplier(?string $dayType, ?PayrollPolicy $policy = null): float
     {
+        $policy ??= new PayrollPolicyData;
+        $custom = $policy->dayTypeMultipliers()[self::normalize($dayType)] ?? null;
+
+        if ($custom !== null) {
+            return (float) $custom;
+        }
+
         return match (self::normalize($dayType)) {
             self::DAY_REST => 1.30,
             self::DAY_SPECIAL_HOLIDAY => 1.30,
@@ -135,9 +144,9 @@ final class Rules
     /**
      * Only the premium part of the day multiplier (e.g. 0.30 for a rest day).
      */
-    public static function premiumPortion(?string $dayType): float
+    public static function premiumPortion(?string $dayType, ?PayrollPolicy $policy = null): float
     {
-        return self::dayMultiplier($dayType) - 1;
+        return self::dayMultiplier($dayType, $policy) - 1;
     }
 
     public static function isPaidDay(?string $dayType): bool
@@ -216,33 +225,37 @@ final class Rules
      * Overtime multiplier on top of the day rate: 130% on a premium day and
      * 125% on an ordinary day.
      */
-    public static function overtimeMultiplierFor(float $dayRate): float
+    public static function overtimeMultiplierFor(float $dayRate, ?PayrollPolicy $policy = null): float
     {
-        return $dayRate > 1 ? self::PREMIUM_DAY_OVERTIME_MULTIPLIER : self::OVERTIME_MULTIPLIER;
+        $policy ??= new PayrollPolicyData;
+
+        return $policy->overtimeMultiplierFor($dayRate);
     }
 
-    public static function linePay(int $hourly, float $hours, ?string $dayType, bool $overtime): int
+    public static function linePay(int $hourly, float $hours, ?string $dayType, bool $overtime, ?PayrollPolicy $policy = null): int
     {
         if ($hours <= 0) {
             return Money::ZERO;
         }
 
-        $rate = self::dayMultiplier($dayType);
+        $rate = self::dayMultiplier($dayType, $policy);
 
         if ($overtime) {
-            $rate *= self::overtimeMultiplierFor($rate);
+            $rate *= self::overtimeMultiplierFor($rate, $policy);
         }
 
         return Money::mul($hourly, $hours * $rate);
     }
 
-    public static function nightDifferential(int $hourly, float $hours, ?string $dayType): int
+    public static function nightDifferential(int $hourly, float $hours, ?string $dayType, ?PayrollPolicy $policy = null): int
     {
         if ($hours <= 0) {
             return Money::ZERO;
         }
 
-        return Money::mul($hourly, $hours * self::dayMultiplier($dayType) * self::NIGHT_DIFFERENTIAL_RATE);
+        $policy ??= new PayrollPolicyData;
+
+        return Money::mul($hourly, $hours * self::dayMultiplier($dayType, $policy) * $policy->nightDifferentialRate());
     }
 
     public static function absenceDeduction(int $daily, float $days): int
@@ -265,13 +278,16 @@ final class Rules
     /**
      * @return array{0: int, 1: int} exempt and taxable portions
      */
-    public static function splitThirteenthMonth(int $amount): array
+    public static function splitThirteenthMonth(int $amount, ?PayrollPolicy $policy = null): array
     {
-        if ($amount <= self::THIRTEENTH_MONTH_EXEMPTION) {
+        $policy ??= new PayrollPolicyData;
+        $ceiling = $policy->thirteenthMonthExemptCentavos();
+
+        if ($amount <= $ceiling) {
             return [$amount, 0];
         }
 
-        return [self::THIRTEENTH_MONTH_EXEMPTION, $amount - self::THIRTEENTH_MONTH_EXEMPTION];
+        return [$ceiling, $amount - $ceiling];
     }
 
     /**

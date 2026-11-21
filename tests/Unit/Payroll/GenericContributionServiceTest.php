@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Statutory\Philippines\Generic\GenericContributionService;
+use App\Jurisdictions\Philippines\Statutory\Generic\GenericContributionService;
 
 it('computes a percentage with a floor and a cap', function () {
     $component = [

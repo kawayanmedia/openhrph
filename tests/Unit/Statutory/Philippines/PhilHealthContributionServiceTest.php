@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Statutory\Philippines\PhilHealth\PhilHealthContributionService;
-use App\Services\Statutory\Philippines\PhilHealth\PhilHealthSchedule;
+use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthContributionService;
+use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthSchedule;
 use App\Support\Money;
 
 it('charges the premium on the floor for low salaries', function () {

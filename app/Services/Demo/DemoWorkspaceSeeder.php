@@ -7,7 +7,6 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
-use App\Models\Holiday;
 use App\Models\Office;
 use App\Models\Payroll;
 use App\Models\PayrollGroup;
@@ -302,27 +301,7 @@ class DemoWorkspaceSeeder
 
     private function seedHolidays(int $companyId): void
     {
-        if (Installation::countryCode() !== 'PH') {
-            return;
-        }
-
-        $holidays = config('holidays.'.now()->year);
-
-        if (! is_array($holidays)) {
-            return;
-        }
-
-        foreach ($holidays as $holiday) {
-            Holiday::query()->firstOrCreate(
-                ['company_id' => $companyId, 'date' => $holiday['date']],
-                [
-                    'year' => (int) $holiday['year'],
-                    'name' => $holiday['name'],
-                    'holiday_type' => $holiday['holiday_type'],
-                    'code' => $holiday['code'],
-                ],
-            );
-        }
+        Installation::jurisdiction()->holidays()->import($companyId, (int) now()->year);
     }
 
     /**

@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Statutory\Philippines\PagIbig\PagIbigContributionService;
-use App\Services\Statutory\Philippines\PagIbig\PagIbigSchedule;
+use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigContributionService;
+use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigSchedule;
 use App\Support\Money;
 
 it('uses the lower employee rate at or below 1,500', function () {

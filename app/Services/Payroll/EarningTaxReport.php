@@ -7,8 +7,8 @@ use App\Services\Payroll\Computation\Computer;
 use App\Services\Payroll\Computation\Config;
 use App\Services\Payroll\Computation\Earning;
 use App\Services\Payroll\Computation\Employee;
-use App\Services\Payroll\Computation\Rules;
 use App\Services\Payroll\Engine\Legacy\LegacyInput;
+use App\Support\Installation\Installation;
 use Throwable;
 
 /**
@@ -177,8 +177,10 @@ final class EarningTaxReport
         if (round($thirteenth, 2) !== 0.0) {
             $amount = (int) round($thirteenth * 100);
             $otherBenefits = $employee?->ytd->otherBenefits ?? 0;
-            $taxablePart = Computer::incrementalBenefitExcess($amount, $otherBenefits);
-            $remaining = max(0, Rules::THIRTEENTH_MONTH_EXEMPTION - $otherBenefits);
+            $policy = $cfg?->policy ?? Installation::jurisdiction()->payrollPolicy();
+            $ceiling = $policy->thirteenthMonthExemptCentavos();
+            $taxablePart = Computer::incrementalBenefitExcess($amount, $otherBenefits, $policy);
+            $remaining = max(0, $ceiling - $otherBenefits);
 
             $rows[] = self::row(
                 '13th month',

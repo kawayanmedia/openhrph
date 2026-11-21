@@ -2,15 +2,17 @@
 
 namespace App\Services\Payroll\Computation;
 
-use App\Services\Statutory\Philippines\Bir\WithholdingTaxService;
-use App\Services\Statutory\Philippines\Bir\WithholdingTaxTable;
-use App\Services\Statutory\Philippines\ContributionSchedule;
-use App\Services\Statutory\Philippines\Generic\GenericContributionService;
-use App\Services\Statutory\Philippines\Gsis\GsisContributionService;
-use App\Services\Statutory\Philippines\PagIbig\PagIbigContributionService;
-use App\Services\Statutory\Philippines\PayFrequency;
-use App\Services\Statutory\Philippines\PhilHealth\PhilHealthContributionService;
-use App\Services\Statutory\Philippines\Sss\SssContributionService;
+use App\Jurisdictions\Contracts\PayrollPolicy;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
+use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
+use App\Jurisdictions\Philippines\Statutory\Generic\GenericContributionService;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisContributionService;
+use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigContributionService;
+use App\Jurisdictions\Philippines\Statutory\PayFrequency;
+use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthContributionService;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssContributionService;
+use App\Jurisdictions\Support\PayrollPolicyData;
 use App\Support\Money;
 use DateTimeImmutable;
 use RuntimeException;
@@ -156,7 +158,7 @@ final class Computer
                 continue;
             }
 
-            [$dayRate, $premiumOnly, $note] = self::entitledDayRate($employee->benefits, $line->dayType, $line->date);
+            [$dayRate, $premiumOnly, $note] = self::entitledDayRate($employee->benefits, $line->dayType, $line->date, $cfg->policy);
 
             if ($note !== null) {
                 $slip->warnings[] = $note;
@@ -188,7 +190,7 @@ final class Computer
 
             // Article 87 requires the premium-day rate plus at least 30% for
             // work beyond eight hours on a rest day or holiday.
-            $overtimeRate = $dayRate * Rules::overtimeMultiplierFor($dayRate);
+            $overtimeRate = $dayRate * Rules::overtimeMultiplierFor($dayRate, $cfg->policy);
 
             if (! $employee->benefits->overtimePay && $line->overtime > 0) {
                 $slip->warnings[] = sprintf(
@@ -203,7 +205,7 @@ final class Computer
             $nightRate = 0.0;
 
             if ($employee->benefits->nightDifferential) {
-                $nightRate = $dayRate * Rules::NIGHT_DIFFERENTIAL_RATE;
+                $nightRate = $dayRate * $cfg->policy->nightDifferentialRate();
             } elseif ($line->night > 0) {
                 $slip->warnings[] = sprintf('%s: night differential not applied (not entitled)', $line->date);
             }
@@ -213,13 +215,13 @@ final class Computer
             $nightOTPay = Money::ZERO;
 
             if ($line->nightOT > 0) {
-                $base = $dayRate * Rules::overtimeMultiplierFor($dayRate);
+                $base = $dayRate * Rules::overtimeMultiplierFor($dayRate, $cfg->policy);
 
                 if (! $employee->benefits->overtimePay) {
                     $base = $dayRate;
                 }
 
-                $differential = $employee->benefits->nightDifferential ? Rules::NIGHT_DIFFERENTIAL_RATE : 0.0;
+                $differential = $employee->benefits->nightDifferential ? $cfg->policy->nightDifferentialRate() : 0.0;
 
                 $nightOTPay = Money::mul($hourly, $line->nightOT * $base * $differential);
             }
@@ -447,7 +449,7 @@ final class Computer
         // (RA 9504 as amended by RA 10963).
         $minWageExemption = Money::ZERO;
 
-        if ($employee->isMinimumWage && $employee->minimumWage > 0) {
+        if ($cfg->policy->minimumWageTaxExempt() && $employee->isMinimumWage && $employee->minimumWage > 0) {
             // A minimum-wage flag must be supported by the rate actually paid.
             // A stale or incorrect flag must not create a tax exemption.
             $rate = $employee->dailyRate;
@@ -641,7 +643,7 @@ final class Computer
 
         // The 90,000 exclusion is a Philippine rule; a generic country taxes
         // the benefit according to its own configured tax component.
-        $taxable = $generic ? $amount : self::incrementalBenefitExcess($amount, $employee->ytd->otherBenefits);
+        $taxable = $generic ? $amount : self::incrementalBenefitExcess($amount, $employee->ytd->otherBenefits, $cfg->policy);
 
         $slip->thirteenthMonth = $amount;
         $slip->periodBasic = $amount;
@@ -695,7 +697,7 @@ final class Computer
         }
 
         $generic = self::isGeneric($cfg);
-        $thirteenthTaxable = $generic ? $thirteenth : self::incrementalBenefitExcess($thirteenth, $employee->ytd->otherBenefits);
+        $thirteenthTaxable = $generic ? $thirteenth : self::incrementalBenefitExcess($thirteenth, $employee->ytd->otherBenefits, $cfg->policy);
 
         // Leave conversion: unused leave days at the employee's daily rate.
         $leaveDays = $employee->leaveBalanceDays;
@@ -825,14 +827,15 @@ final class Computer
      * The portion of a benefit that exceeds the ₱90,000 annual exclusion after
      * other benefits already received this year.
      */
-    public static function incrementalBenefitExcess(int $amount, int $otherBenefits): int
+    public static function incrementalBenefitExcess(int $amount, int $otherBenefits, ?PayrollPolicy $policy = null): int
     {
         if ($amount <= 0) {
             return 0;
         }
 
-        $priorExcess = Money::max(0, $otherBenefits - Rules::THIRTEENTH_MONTH_EXEMPTION);
-        $totalExcess = Money::max(0, $amount + $otherBenefits - Rules::THIRTEENTH_MONTH_EXEMPTION);
+        $ceiling = ($policy ?? new PayrollPolicyData)->thirteenthMonthExemptCentavos();
+        $priorExcess = Money::max(0, $otherBenefits - $ceiling);
+        $totalExcess = Money::max(0, $amount + $otherBenefits - $ceiling);
 
         return Money::max(0, $totalExcess - $priorExcess);
     }
@@ -895,6 +898,10 @@ final class Computer
     {
         if ($cfg->annualTaxBrackets !== []) {
             return $cfg->annualTaxBrackets;
+        }
+
+        if (strtolower(trim($cfg->statutoryDriver)) !== 'ph') {
+            return [];
         }
 
         return WithholdingTaxTable::train(PayFrequency::MONTHLY);
@@ -1073,9 +1080,9 @@ final class Computer
      *
      * @return array{0: float, 1: float, 2: string|null} day rate, premium only, warning
      */
-    private static function entitledDayRate(BenefitFlags $flags, string $dayType, string $date): array
+    private static function entitledDayRate(BenefitFlags $flags, string $dayType, string $date, ?PayrollPolicy $policy = null): array
     {
-        $multiplier = Rules::dayMultiplier($dayType);
+        $multiplier = Rules::dayMultiplier($dayType, $policy);
         $entitled = true;
 
         if (Rules::isRestDay($dayType)) {

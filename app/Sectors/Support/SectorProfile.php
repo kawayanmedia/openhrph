@@ -21,9 +21,12 @@ final class SectorProfile
         private readonly array $attributes,
     ) {}
 
-    public static function fromConfig(Sector $sector): self
+    /**
+     * @param  array<string, mixed>|null  $attributes
+     */
+    public static function fromConfig(Sector $sector, ?array $attributes = null): self
     {
-        $attributes = config('sectors.profiles.'.$sector->value, []);
+        $attributes ??= config('sectors.profiles.'.$sector->value, []);
 
         return new self($sector, is_array($attributes) ? $attributes : []);
     }

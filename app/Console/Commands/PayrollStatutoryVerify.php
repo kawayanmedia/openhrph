@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Installation\Installation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +26,7 @@ class PayrollStatutoryVerify extends Command
     {
         $date = Carbon::parse($this->argument('date'))->toDateString();
         $country = strtoupper(trim((string) ($this->option('country') ?: 'PH')));
-        $profile = config('payroll.countries.'.$country);
-        $driver = is_array($profile) ? ($profile['statutory_driver'] ?? 'generic') : 'generic';
+        $driver = Installation::statutoryDriver($country);
 
         if ($driver !== 'ph') {
             return $this->verifyGeneric($country, $date);

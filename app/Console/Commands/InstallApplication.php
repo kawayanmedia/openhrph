@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Jurisdictions\Support\JurisdictionManager;
+use App\Jurisdictions\Support\JurisdictionRegistry;
 use App\Models\InstallationSetting;
 use App\Models\Payroll;
 use App\Sectors\Catalogues\SectorCatalogue;
@@ -87,6 +89,7 @@ class InstallApplication extends Command
 
             DB::table('companies')->update([
                 'type' => $sector,
+                'country_code' => $country,
                 'updated_at' => now(),
             ]);
         });
@@ -100,10 +103,13 @@ class InstallApplication extends Command
         $this->line("  Currency: {$currency} · Locale: {$locale} · Timezone: {$timezone}");
 
         $this->seedSectorCatalogues($sector);
+        Installation::jurisdiction($country)->install();
 
         if (! $this->option('skip-statutory')) {
             $this->importStatutory($country);
         }
+
+        $this->importHolidays($country);
 
         return self::SUCCESS;
     }
@@ -145,8 +151,8 @@ class InstallApplication extends Command
         if (is_string($option) && trim($option) !== '') {
             $code = strtoupper(trim($option));
 
-            if (! array_key_exists($code, $countries)) {
-                throw new \RuntimeException("Unknown country [{$code}]. Add it to config/payroll.php first.");
+            if (! array_key_exists($code, $countries) && ! app(JurisdictionRegistry::class)->has($code)) {
+                throw new \RuntimeException("Unknown country [{$code}]. Add a jurisdiction module or a config/payroll.php profile first.");
             }
 
             return $code;
@@ -162,9 +168,36 @@ class InstallApplication extends Command
             $choices[] = $code.' — '.($profile['name'] ?? $code);
         }
 
+        foreach (app(JurisdictionManager::class)->all() as $code => $jurisdiction) {
+            if (! isset($countries[$code])) {
+                $choices[] = $code.' — '.$jurisdiction->name();
+            }
+        }
+
         $answer = (string) $this->choice('Which country payroll rules should be used?', $choices, 0);
 
         return strtoupper(substr($answer, 0, 2));
+    }
+
+    private function importHolidays(string $country): void
+    {
+        $provider = Installation::jurisdiction($country)->holidays();
+        $year = (int) now()->year;
+
+        if ($provider->calendar($year) === []) {
+            $this->line('  Holidays: none bundled for '.$year.'; import them with payroll:holidays:import.');
+
+            return;
+        }
+
+        $companies = DB::table('companies')->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        $count = 0;
+
+        foreach ($companies as $companyId) {
+            $count += $provider->import($companyId, $year);
+        }
+
+        $this->line('  Holidays imported: '.$count);
     }
 
     private function hasProcessedPayroll(): bool

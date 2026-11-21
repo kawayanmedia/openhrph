@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Statutory\Philippines\Gsis\GsisContributionService;
-use App\Services\Statutory\Philippines\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisContributionService;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
 use App\Support\Money;
 
 it('charges 9% to the member and 12% to the employer', function () {

@@ -24,8 +24,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
                 ->group(base_path('routes/attendance-api.php'));
 
             Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('routes/calculator-api.php'));
+                ->prefix('api');
         },
     )
     ->withMiddleware(function (Middleware $middleware) {

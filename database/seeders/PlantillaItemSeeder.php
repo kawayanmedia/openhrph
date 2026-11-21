@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Jurisdictions\Philippines\Models\Government\PlantillaItem;
 use App\Models\Company;
-use App\Models\Government\PlantillaItem;
 use App\Models\Office;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;

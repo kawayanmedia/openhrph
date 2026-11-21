@@ -23,6 +23,8 @@ class Company extends Model
             if ($sector = Installation::sector()) {
                 $company->type = $sector;
             }
+
+            $company->country_code ??= Installation::countryCode();
         });
     }
 

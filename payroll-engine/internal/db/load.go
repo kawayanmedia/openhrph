@@ -280,8 +280,21 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 
 	cfg.Frequency = normalizeFrequency(frequency)
 	cfg.ComputeUndertime = computeUndertime
-	cfg.CountryCode = loadInstallationCountry(ctx, db)
+	cfg.CountryCode = loadPayrollCountry(ctx, db, run.PayrollID)
+	if cfg.CountryCode == "" {
+		cfg.CountryCode = loadInstallationCountry(ctx, db)
+	}
 	cfg.StatutoryDriver = statutoryDriver(cfg.CountryCode)
+	policy, fromSnapshot := loadPolicySnapshot(ctx, db, run.PayrollID)
+	cfg.Policy = policy.Normalize()
+
+	if !fromSnapshot && !strings.EqualFold(cfg.StatutoryDriver, "ph") {
+		// A generic country must not inherit the Philippine minimum-wage and
+		// 13th-month tax treatment when no snapshot was written.
+		cfg.Policy.MinimumWageTaxExempt = false
+		cfg.Policy.ThirteenthMonthExempt = 0
+		cfg.Policy.ThirteenthMonthExemptRaw = 0
+	}
 
 	if daysYear.Valid && daysYear.Int64 > 0 {
 		cfg.DaysPerYear = int(daysYear.Int64)
@@ -392,6 +405,77 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 	cfg.Holidays = loadHolidays(ctx, db, run)
 
 	return cfg, nil
+}
+
+// loadPayrollCountry returns the country recorded on the payroll, so a
+// historical run is not affected by a later installation change.
+func loadPayrollCountry(ctx context.Context, db *sql.DB, payrollID int64) string {
+	if payrollID <= 0 || !tableExists(ctx, db, "payrolls") {
+		return ""
+	}
+
+	var country sql.NullString
+
+	err := db.QueryRowContext(ctx,
+		"SELECT country_code FROM payrolls WHERE id = ? LIMIT 1", payrollID).Scan(&country)
+	if err != nil || !country.Valid {
+		return ""
+	}
+
+	return strings.ToUpper(strings.TrimSpace(country.String))
+}
+
+// loadPolicySnapshot returns the policy written when the payroll was created.
+// A legacy payroll has no snapshot and uses the default policy.
+func loadPolicySnapshot(ctx context.Context, db *sql.DB, payrollID int64) (rules.Policy, bool) {
+	policy := rules.DefaultPolicy()
+
+	if payrollID <= 0 || !tableExists(ctx, db, "payrolls") {
+		return policy, false
+	}
+
+	var raw sql.NullString
+
+	err := db.QueryRowContext(ctx,
+		"SELECT rules_snapshot FROM payrolls WHERE id = ? LIMIT 1", payrollID).Scan(&raw)
+	if err != nil || !raw.Valid || strings.TrimSpace(raw.String) == "" {
+		return policy, false
+	}
+
+	var snapshot struct {
+		DayTypeMultipliers           map[string]float64 `json:"day_type_multipliers"`
+		OvertimeMultiplier           float64            `json:"overtime_multiplier"`
+		PremiumDayOvertimeMultiplier float64            `json:"premium_day_overtime_multiplier"`
+		NightDifferentialRate        float64            `json:"night_differential_rate"`
+		NightWindowStart             string             `json:"night_window_start"`
+		NightWindowEnd               string             `json:"night_window_end"`
+		ThirteenthMonthExemptRaw     int64              `json:"thirteenth_month_exempt_centavos"`
+		MinimumWageTaxExempt         bool               `json:"minimum_wage_tax_exempt"`
+		DaysPerYearDefault           int                `json:"days_per_year_default"`
+		HoursPerDayDefault           int                `json:"hours_per_day_default"`
+		SeparationMonthsPerYear      map[string]float64 `json:"separation_months_per_year"`
+		SpecialRuns                  []string           `json:"special_runs"`
+	}
+
+	if err := json.Unmarshal([]byte(raw.String), &snapshot); err != nil {
+		return policy, false
+	}
+
+	return rules.Policy{
+		Configured:                   true,
+		DayTypeMultipliers:           snapshot.DayTypeMultipliers,
+		OvertimeMultiplier:           snapshot.OvertimeMultiplier,
+		PremiumDayOvertimeMultiplier: snapshot.PremiumDayOvertimeMultiplier,
+		NightDifferentialRate:        snapshot.NightDifferentialRate,
+		NightWindowStart:             snapshot.NightWindowStart,
+		NightWindowEnd:               snapshot.NightWindowEnd,
+		ThirteenthMonthExemptRaw:     snapshot.ThirteenthMonthExemptRaw,
+		MinimumWageTaxExempt:         snapshot.MinimumWageTaxExempt,
+		DaysPerYearDefault:           snapshot.DaysPerYearDefault,
+		HoursPerDayDefault:           snapshot.HoursPerDayDefault,
+		SeparationMonthsPerYear:      snapshot.SeparationMonthsPerYear,
+		SpecialRuns:                  snapshot.SpecialRuns,
+	}.Normalize(), true
 }
 
 // loadInstallationCountry returns the installation country, defaulting to PH
@@ -1589,16 +1673,33 @@ func slug(value string) string {
 	return value
 }
 
+func runCountry(ctx context.Context, db *sql.DB, run Run) string {
+	country := loadPayrollCountry(ctx, db, run.PayrollID)
+	if country == "" {
+		country = loadInstallationCountry(ctx, db)
+	}
+
+	return country
+}
+
 func loadHolidays(ctx context.Context, db *sql.DB, run Run) []model.Holiday {
 	if !tableExists(ctx, db, "holidays") {
 		return nil
 	}
 
+	countryClause := ""
+	args := []any{run.CompanyID, run.DateFrom, run.DateTo}
+
+	if columnExists(ctx, db, "holidays", "country_code") {
+		countryClause = " AND (country_code IS NULL OR country_code = ?)"
+		args = []any{run.CompanyID, run.DateFrom, run.DateTo, strings.ToUpper(strings.TrimSpace(runCountry(ctx, db, run)))}
+	}
+
 	rows, err := db.QueryContext(ctx, `
 		SELECT DATE_FORMAT(date, '%Y-%m-%d'), COALESCE(code, '')
 		FROM holidays
-		WHERE deleted_at IS NULL AND company_id = ? AND date BETWEEN ? AND ?
-		ORDER BY date`, run.CompanyID, run.DateFrom, run.DateTo)
+		WHERE deleted_at IS NULL AND company_id = ? AND date BETWEEN ? AND ?`+countryClause+`
+		ORDER BY date`, args...)
 	if err != nil {
 		return nil
 	}

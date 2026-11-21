@@ -3,6 +3,7 @@
 namespace App\Sectors;
 
 use App\Enums\Sector;
+use App\Jurisdictions\Support\JurisdictionManager;
 use App\Models\Company;
 use App\Sectors\Contracts\SectorPolicy;
 use App\Sectors\Support\SectorProfile;
@@ -28,6 +29,8 @@ final class SectorManager
      * @var array<string, SectorPolicy>
      */
     private array $policies = [];
+
+    public function __construct(private readonly JurisdictionManager $jurisdictions) {}
 
     public function current(): SectorPolicy
     {
@@ -122,7 +125,10 @@ final class SectorManager
 
     private function make(Sector $sector): SectorPolicy
     {
-        $profile = SectorProfile::fromConfig($sector);
+        $profile = SectorProfile::fromConfig(
+            $sector,
+            $this->jurisdictions->current()->sectorProfile($sector),
+        );
 
         return match ($sector) {
             Sector::Government => new GovernmentSector($profile),

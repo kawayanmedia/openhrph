@@ -29,6 +29,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | `app/Support/Tenancy/` | Tenant context, scopes, cache helpers, and exceptions |
 | `app/Services/Payroll/` | PHP payroll engine fallback and the Go engine wrapper |
 | `app/Services/Statutory/Philippines/` | Philippine statutory calculators (SSS, PhilHealth, Pag-IBIG, GSIS, BIR) |
+| `app/Jurisdictions/` | Country plugins: statutory law, payroll policy, holidays, leave, reports |
 | `app/Sectors/` | Sector policy, catalogues, and the sector manager |
 | `bootstrap/` | Laravel bootstrap, middleware, and health route |
 | `config/` | Application configuration, including `admin.php`, `payroll.php`, and `tenancy.php` |
@@ -66,7 +67,8 @@ This guide is for developers, integrators, and system administrators who build, 
 | Add a dashboard metric | `app/Livewire/Admin/Metrics/` |
 | Change the admin menu | `config/admin.php` and `app/Livewire/Admin/Support/Navigation.php` |
 | Change payroll rules | `payroll-engine/internal/` and `config/payroll.php` |
-| Change sector rules or catalogues | `app/Sectors/`, `config/sectors.php`, and `docs/developer-guide/sectors.md` |
+| Add or change a country | `app/Jurisdictions/`, `config/jurisdictions.php`, and `docs/developer-guide/jurisdictions.md` |
+| Change sector rules or catalogues | `app/Sectors/`, the jurisdiction's `Config/sector.php`, and `docs/developer-guide/sectors.md` |
 | Change tenancy behavior | `app/Support/Tenancy/` and `docs/tenancy.md` |
 | Change UI tokens | `resources/css/app.css` |
 | Change deployment | `deploy/aws/` and `docs/deployment/` |

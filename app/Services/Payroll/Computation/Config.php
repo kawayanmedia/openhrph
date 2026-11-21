@@ -3,12 +3,14 @@
 namespace App\Services\Payroll\Computation;
 
 use App\Enums\Sector;
-use App\Services\Statutory\Philippines\Bir\TaxBracket;
-use App\Services\Statutory\Philippines\Gsis\GsisSchedule;
-use App\Services\Statutory\Philippines\PagIbig\PagIbigSchedule;
-use App\Services\Statutory\Philippines\PayFrequency;
-use App\Services\Statutory\Philippines\PhilHealth\PhilHealthSchedule;
-use App\Services\Statutory\Philippines\Sss\SssBracket;
+use App\Jurisdictions\Contracts\PayrollPolicy;
+use App\Jurisdictions\Philippines\Statutory\Bir\TaxBracket;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigSchedule;
+use App\Jurisdictions\Philippines\Statutory\PayFrequency;
+use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthSchedule;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssBracket;
+use App\Jurisdictions\Support\PayrollPolicyData;
 
 /**
  * Everything the computation needs that is not employee-specific.
@@ -74,6 +76,7 @@ final class Config
         public array $components = [],
         public Sector $sector = Sector::Private,
         public string $payrollDate = '',
+        public PayrollPolicy $policy = new PayrollPolicyData,
     ) {}
 
     public function periodsPerYear(): int
@@ -142,6 +145,7 @@ final class Config
             components: array_values((array) ($data['components'] ?? [])),
             sector: $sector,
             payrollDate: (string) ($data['payroll_date'] ?? ''),
+            policy: PayrollPolicyData::fromArray((array) ($data['policy'] ?? [])),
         );
     }
 
@@ -178,6 +182,7 @@ final class Config
             'pagibig_base' => $this->pagIbigBase,
             'gsis_base' => $this->gsisBase,
             'payroll_date' => $this->payrollDate,
+            'policy' => $this->policy->toArray(),
             'de_minimis' => array_map(static fn (DeMinimisBenefit $row): array => $row->toArray(), $this->deMinimis),
             'holidays' => array_map(static fn (Holiday $row): array => $row->toArray(), $this->holidays),
             'pay_without_timesheet' => $this->payWithoutTimesheet,

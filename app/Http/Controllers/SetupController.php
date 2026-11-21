@@ -10,7 +10,6 @@ use App\Models\DeductionPhilHealth;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
-use App\Models\Holiday;
 use App\Models\Office;
 use App\Models\PayrollGroup;
 use App\Models\Rate;
@@ -49,18 +48,8 @@ class SetupController extends Controller
             if ($company->setup_done == false) {
                 // Setup all needed settings
 
-                // The bundled calendar is the Philippine holiday set; other
-                // countries import their own calendar.
-                if (Installation::statutoryDriver() === 'ph') {
-                    foreach (config('holidays.'.date('Y')) as $holiday) {
-                        $h = Holiday::firstOrNew(['company_id' => $id, 'date' => $holiday['date']]);
-                        $h->year = $holiday['year'];
-                        $h->name = $holiday['name'];
-                        $h->holiday_type = $holiday['holiday_type'];
-                        $h->code = $holiday['code'];
-                        $h->save();
-                    }
-                }
+                // Each jurisdiction supplies its own calendar.
+                Installation::jurisdiction()->holidays()->import($id, (int) date('Y'));
                 $company->setup_done = true;
                 $company->save();
 

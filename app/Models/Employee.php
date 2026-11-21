@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Jurisdictions\Philippines\Models\Government\ServiceRecord;
 use App\Models\Concerns\BelongsToTenant;
-use App\Models\Government\ServiceRecord;
 use App\Scopes\FilterScope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -82,6 +82,14 @@ class Employee extends Model implements HasMedia
         static::created(function (Employee $model) {
             set_current_timestamp($model);
         });
+    }
+
+    /**
+     * @return HasMany<EmployeeIdentifier, self>
+     */
+    public function identifiers(): HasMany
+    {
+        return $this->hasMany(EmployeeIdentifier::class);
     }
 
     public function registerMediaConversions(?Media $media = null): void

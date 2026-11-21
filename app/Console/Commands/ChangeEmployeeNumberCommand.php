@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Console\Concerns\RunsForTenants;
+use App\Jurisdictions\Philippines\Models\Government\LeaveApplication;
 use App\Models\Employee;
-use App\Models\Government\LeaveApplication;
 use App\Models\Timesheet;
 use Illuminate\Console\Command;
 

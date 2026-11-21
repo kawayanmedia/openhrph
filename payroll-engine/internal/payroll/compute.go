@@ -16,6 +16,8 @@ import (
 
 // Compute produces the payslip for one employee.
 func Compute(cfg model.Config, employee model.Employee) (model.Payslip, error) {
+	cfg.Policy = cfg.Policy.Normalize()
+
 	switch strings.ToLower(strings.TrimSpace(cfg.RunType)) {
 	case model.RunThirteenthMonth:
 		return ComputeThirteenthMonth(cfg, employee)
@@ -137,7 +139,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 			continue
 		}
 
-		premium, note := entitledDayRate(employee.Benefits, line.DayType, line.Date)
+		premium, note := entitledDayRate(employee.Benefits, line.DayType, line.Date, cfg.Policy)
 		if note != "" {
 			slip.Warnings = append(slip.Warnings, note)
 		}
@@ -174,7 +176,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		// Article 87 requires the premium-day rate plus at least 30% for work
 		// beyond eight hours on a rest day or holiday (169% to 507%).
-		overtimeRate := premium.dayRate * rules.OvertimeMultiplierFor(premium.dayRate)
+		overtimeRate := premium.dayRate * cfg.Policy.OvertimeMultiplierFor(premium.dayRate)
 		if !employee.Benefits.OvertimePay && line.Overtime > 0 {
 			slip.Warnings = append(slip.Warnings,
 				fmt.Sprintf("%s: overtime premium not applied (not entitled); ordinary rate used", line.Date))
@@ -185,7 +187,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		nightRate := 0.0
 		if employee.Benefits.NightDifferential {
-			nightRate = premium.dayRate * rules.NightDifferentialRate
+			nightRate = premium.dayRate * cfg.Policy.NightDifferentialRate
 		} else if line.Night > 0 {
 			slip.Warnings = append(slip.Warnings,
 				fmt.Sprintf("%s: night differential not applied (not entitled)", line.Date))
@@ -195,14 +197,14 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		nightOTPay := money.Zero
 		if line.NightOT > 0 {
-			base := premium.dayRate * rules.OvertimeMultiplierFor(premium.dayRate)
+			base := premium.dayRate * cfg.Policy.OvertimeMultiplierFor(premium.dayRate)
 			if !employee.Benefits.OvertimePay {
 				base = premium.dayRate
 			}
 
 			differential := 0.0
 			if employee.Benefits.NightDifferential {
-				differential = rules.NightDifferentialRate
+				differential = cfg.Policy.NightDifferentialRate
 			}
 
 			nightOTPay = hourly.Mul(line.NightOT * base * differential)
@@ -407,7 +409,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 	// the holiday, overtime and night-shift pay attributable to it (RA 9504
 	// as amended by RA 10963).
 	minWageExemption := money.Zero
-	if employee.IsMinimumWage && employee.MinimumWage > 0 {
+	if cfg.Policy.MinimumWageTaxExempt && employee.IsMinimumWage && employee.MinimumWage > 0 {
 		// A minimum-wage flag must be supported by the rate actually paid.
 		// A stale or incorrect flag must not create a tax exemption.
 		rate := employee.DailyRate
@@ -714,8 +716,8 @@ type dayPremium struct {
 // entitledDayRate returns the multiplier for the day, honouring the
 // employee's benefit switches. A disabled switch falls back to the ordinary
 // day rate and the reason is reported on the payslip.
-func entitledDayRate(flags model.BenefitFlags, dayType string, date string) (dayPremium, string) {
-	multiplier := rules.DayMultiplier(dayType)
+func entitledDayRate(flags model.BenefitFlags, dayType string, date string, policy rules.Policy) (dayPremium, string) {
+	multiplier := policy.DayMultiplier(dayType)
 	entitled := true
 
 	switch {

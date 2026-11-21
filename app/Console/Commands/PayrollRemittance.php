@@ -6,6 +6,7 @@ use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Computation\DeductionLine;
+use App\Support\Installation\Installation;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -63,9 +64,21 @@ class PayrollRemittance extends Command
             : [];
 
         $format = strtolower((string) $this->option('format'));
+        $allowed = array_keys((array) Installation::jurisdiction()->reports()->remittanceFormats());
+
+        if ($format !== 'all' && ! in_array($format, $allowed, true)) {
+            $this->error('Unsupported remittance format for '.Installation::countryCode().': '.$format);
+            $this->line('Available: '.implode(', ', $allowed));
+
+            return self::FAILURE;
+        }
 
         if ($format === 'all') {
-            return $this->writeFormats(['summary', 'components', 'sss', 'philhealth', 'pagibig', 'gsis', 'bir', 'coa', 'loans'], $details);
+            $formats = Installation::statutoryDriver() === 'ph'
+                ? ['summary', 'components', 'sss', 'philhealth', 'pagibig', 'gsis', 'bir', 'coa', 'loans']
+                : ['summary', 'components'];
+
+            return $this->writeFormats($formats, $details);
         }
 
         if ($format === 'sector') {

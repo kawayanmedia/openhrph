@@ -1,7 +1,7 @@
 <?php
 
-use App\Services\Statutory\Philippines\Sss\SssContributionService;
-use App\Services\Statutory\Philippines\Sss\SssSchedule;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssContributionService;
+use App\Jurisdictions\Philippines\Statutory\Sss\SssSchedule;
 use App\Support\Money;
 
 it('charges the first salary credit for salaries in the lowest band', function () {
