@@ -55,18 +55,11 @@ The employee detail page can show related records such as:
 
 Open the related record from the employee detail page or from the relevant menu under **Payroll Management** or **Settings**.
 
-## Import employees
+## Import many records at once
 
-If your group has access to the import action, you can add many employees from a spreadsheet.
+For bulk changes, use **Settings → Company → Data Import**. One workbook can add or update offices, departments, payroll groups, positions, schedules, and employees. You download a template, fill it in, preview the result, and only then import. See [Data import](data-import.md).
 
-1. Open the Employee list.
-2. Choose the import action from the toolbar.
-3. Download or prepare the template expected by the import.
-4. Fill in the rows. Keep employee numbers unique.
-5. Upload the file and confirm the import.
-6. Review the imported rows and fix any validation errors.
-
-Start with a small file of two or three employees before importing a large batch.
+Start with a small file of two or three employees before importing a large batch, and keep employee numbers unique.
 
 ## Before the first payroll run
 

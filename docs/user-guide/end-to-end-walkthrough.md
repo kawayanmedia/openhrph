@@ -584,6 +584,7 @@ For more help, see [Troubleshooting](troubleshooting.md).
 ## Next steps
 
 - [Employees](employees.md) — documents, schedules, compensation, and imports
+- [Data import](data-import.md) — bulk upload of reference data and employees from one workbook
 - [Attendance and requests](attendance-and-requests.md) — timesheets, overtime, leave, and corrections
 - [Payroll](payroll.md) — payroll groups, previews, processing, and approval
 - [Reports and payslips](reports-and-payslips.md) — exports, registers, and remittances

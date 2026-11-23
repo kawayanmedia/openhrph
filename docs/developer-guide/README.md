@@ -12,12 +12,13 @@ This guide is for developers, integrators, and system administrators who build, 
 1. [Architecture](architecture.md) — how the application is put together.
 2. [Local development](local-development.md) — get a working environment.
 3. [Admin panel](admin-panel.md) — how the Livewire admin works and how to extend it.
-4. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
-5. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
-6. [Testing](testing.md) — Pest, Playwright, and Go tests.
-7. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
-8. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
-9. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
+4. [Data import](data-import.md) — the workbook import pipeline, sheets, columns, and limits.
+5. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
+6. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
+7. [Testing](testing.md) — Pest, Playwright, and Go tests.
+8. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
+9. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
+10. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
 
 ## Repository map
 
@@ -30,6 +31,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | `app/Services/Payroll/` | PHP payroll engine fallback and the Go engine wrapper |
 | `app/Services/Statutory/Philippines/` | Philippine statutory calculators (SSS, PhilHealth, Pag-IBIG, GSIS, BIR) |
 | `app/Jurisdictions/` | Country plugins: statutory law, payroll policy, holidays, leave, reports |
+| `app/Imports/` | Workbook import engine: `OpenHrWorkbook`, sheet definitions, columns, reader, and sample template |
 | `app/Sectors/` | Sector policy, catalogues, and the sector manager |
 | `bootstrap/` | Laravel bootstrap, middleware, and health route |
 | `config/` | Application configuration, including `admin.php`, `payroll.php`, and `tenancy.php` |
@@ -65,6 +67,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | Add a filter | `app/Livewire/Admin/Filters/` |
 | Add a row/toolbar action | `app/Livewire/Admin/Actions/` |
 | Add a dashboard metric | `app/Livewire/Admin/Metrics/` |
+| Change the import template or add an import sheet | `app/Imports/` and `docs/developer-guide/data-import.md` |
 | Change the admin menu | `config/admin.php` and `app/Livewire/Admin/Support/Navigation.php` |
 | Change payroll rules | `payroll-engine/internal/` and `config/payroll.php` |
 | Add or change a country | `app/Jurisdictions/`, `config/jurisdictions.php`, and `docs/developer-guide/jurisdictions.md` |

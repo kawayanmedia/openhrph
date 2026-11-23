@@ -47,13 +47,19 @@ Do not approve a payroll that shows unexpected totals.
 - Check the employee belongs to the current company.
 - If the page does not open, ask your administrator to check file storage and permissions.
 
-## An import fails
+## An import fails or the preview reports problems
 
-- Start with a small test file.
-- Keep the column names exactly as the template requires.
-- Remove blank rows and duplicate employee numbers.
-- Save the file as the format requested by the import.
-- Read the error message; it usually names the row or column that needs fixing.
+Imports run from **Settings → Company → Data Import** and nothing is saved until the preview is clean. See [Data import](data-import.md) for the full workflow.
+
+- **Start with a small test file.** Two or three rows are enough to prove the headings and values are right.
+- **Use the downloaded template.** Keep the sheet names, the heading row, and the column order it provides. Do not delete required columns.
+- **Delete extra sheets.** Only the six template sheets are read; any other sheet with data is rejected. The **Instructions** sheet is ignored.
+- **Remove blank rows and duplicate keys.** Employee numbers must be unique, and the same rule applies to office, department, payroll group, position, and schedule names.
+- **Enter values, not formulas.** A cell that starts with `=` is reported as a problem; paste the calculated value instead.
+- **Check the problem list.** It names the sheet, row, column, and what is wrong. Choose **Download problem report** when there are more problems than the page shows.
+- **Create references first.** Offices, departments, payroll groups, positions, and employment types must be in the workbook or already exist for the company. Employment types are never created by the import.
+- **Check the file itself.** Use `.xlsx` or `.xls`, keep it under 10 MB, and keep each sheet under 5,000 data rows.
+- **If the page does not react to Preview,** refresh the page and try again before contacting your administrator.
 
 ## The page looks wrong after an update
 

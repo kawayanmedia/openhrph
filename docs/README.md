@@ -23,6 +23,7 @@ For HR officers, payroll staff, administrators, and employees who use the system
 | [Company to payslip walkthrough](user-guide/end-to-end-walkthrough.md) | One complete first run: company profile, reference data, payroll group, employee, portal access, payroll, payslip, and corrections |
 | [Getting started](user-guide/getting-started.md) | Signing in, switching companies, navigation, and changing your password |
 | [Employees](user-guide/employees.md) | Employee records, documents, schedules, compensation, and import |
+| [Data import](user-guide/data-import.md) | Bulk upload of offices, departments, payroll groups, positions, schedules, and employees from one workbook |
 | [Attendance and requests](user-guide/attendance-and-requests.md) | Timesheets, overtime, leave, undertime, official business, and corrections |
 | [Payroll](user-guide/payroll.md) | Payroll groups, previews, processing, approval, locking, and payslips |
 | [Reports and payslips](user-guide/reports-and-payslips.md) | Exports, registers, remittances, and employee payslip access |
@@ -50,6 +51,7 @@ For developers, integrators, and system administrators.
 | --- | --- |
 | [Local development](developer-guide/local-development.md) | Prerequisites, installation, database, assets, queues, payroll engine, and first admin |
 | [Admin panel](developer-guide/admin-panel.md) | Adding Livewire resources, fields, filters, actions, validation, and navigation |
+| [Data import](developer-guide/data-import.md) | Workbook import pipeline, sheet and column definitions, limits, and tests |
 | [Testing](developer-guide/testing.md) | Pest/PHPUnit, Playwright, Go tests, and test data |
 | [Troubleshooting](developer-guide/troubleshooting.md) | Setup and runtime failures |
 | [Contributing](https://github.com/kawayanmedia/openhrph/blob/main/CONTRIBUTING.md) | Branching, conventions, checks, and pull requests |
