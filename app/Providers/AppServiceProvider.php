@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Imports\OpenHrWorkbook;
+use App\Imports\Workbook\WorkbookDefinition;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Holiday;
@@ -48,6 +50,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Scoped, not singleton: Octane keeps the worker alive across requests.
         $this->app->scoped(SectorManager::class);
+
+        $this->app->bind(WorkbookDefinition::class, OpenHrWorkbook::class);
     }
 
     /**

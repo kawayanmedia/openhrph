@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ImportTemplateController;
 use App\Http\Controllers\Admin\PasswordResetController;
 use App\Livewire\Admin\AdminDetail;
 use App\Livewire\Admin\AdminForm;
@@ -8,6 +9,7 @@ use App\Livewire\Admin\Assistant\Chat as AssistantChat;
 use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Dashboards\Main;
 use App\Livewire\Admin\GettingStarted;
+use App\Livewire\Admin\Imports\DataImport;
 use App\Livewire\Admin\Payroll\PayrollPayslip;
 use App\Livewire\Admin\Payroll\PayrollRun;
 use App\Livewire\Admin\Settings\Settings;
@@ -43,6 +45,9 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
         Route::get('dashboard', Main::class)->name('dashboard');
 
         Route::get('getting-started', GettingStarted::class)->name('getting-started');
+
+        Route::get('imports', DataImport::class)->name('import');
+        Route::get('imports/template', ImportTemplateController::class)->name('import.template');
 
         Route::get('assistant', AssistantChat::class)->name('assistant');
 

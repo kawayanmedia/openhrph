@@ -4,7 +4,7 @@ namespace App\Livewire\Admin\Resources;
 
 use App\Livewire\Admin\Actions\AssignEmployeeSchedule;
 use App\Livewire\Admin\Actions\ExportCsv;
-use App\Livewire\Admin\Actions\ImportEmployees;
+use App\Livewire\Admin\Actions\ImportData;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\Boolean;
 use App\Livewire\Admin\Fields\Currency;
@@ -428,7 +428,7 @@ class Employee extends Resource
     {
         return [
             (new AssignEmployeeSchedule($this->resource))->onlyOnDetail(),
-            (new ImportEmployees)->onlyOnIndexToolbar(),
+            (new ImportData)->onlyOnIndexToolbar(),
             ExportCsv::make()->onlyOnIndex(),
         ];
     }

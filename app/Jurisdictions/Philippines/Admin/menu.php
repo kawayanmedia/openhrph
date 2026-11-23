@@ -14,7 +14,7 @@ return [
             [
                 'label' => 'Ref',
                 'items' => [
-                    ['type' => 'resource', 'key' => 'phil-health', 'label' => 'PhilHealth'],
+                    // ['type' => 'resource', 'key' => 'phil-health', 'label' => 'PhilHealth'],
                     ['type' => 'resource', 'key' => 'sss', 'label' => 'SSS'],
                     ['type' => 'resource', 'key' => 'pagibig', 'label' => 'Pagibig'],
                     ['type' => 'resource', 'key' => 'minimum-wage-rate', 'label' => 'Minimum Wage Rate'],

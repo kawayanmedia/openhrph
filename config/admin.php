@@ -112,6 +112,7 @@ return [
                     'label' => 'Company',
                     'items' => [
                         ['type' => 'link', 'url' => '/settings/general', 'label' => 'General Settings', 'can' => 'general_settings'],
+                        ['type' => 'link', 'url' => '/imports', 'label' => 'Data Import'],
                         ['type' => 'link', 'url' => '/settings/sector', 'label' => 'Sector Settings', 'can' => 'general_settings'],
                         ['type' => 'resource', 'key' => 'office', 'label' => 'Office'],
                         ['type' => 'resource', 'key' => 'department', 'label' => 'Department'],
@@ -191,7 +192,6 @@ return [
                 ['type' => 'resource', 'key' => 'pay-roll', 'label' => 'Payroll'],
                 ['type' => 'resource', 'key' => 'employee-compensation', 'label' => 'Employee Compensation'],
                 ['type' => 'resource', 'key' => 'employee-loan', 'label' => 'Employee Loan', 'can' => 'employee_loans'],
-                ['type' => 'resource', 'key' => 'pay-slip', 'label' => 'Pay Slip'],
             ],
         ],
     ],
