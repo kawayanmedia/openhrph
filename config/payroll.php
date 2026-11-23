@@ -216,6 +216,17 @@ return [
         'password' => env('E2E_PASSWORD', 'E2ePassword!2345'),
         'onboarding_user_email' => 'e2e-onboarding@hris.test',
         'onboarding_password' => env('E2E_ONBOARDING_PASSWORD', 'E2ePassword!2345'),
+
+        // The attendance journey tenant: one owner and three portal employees
+        // working a day, night and split shift through November.
+        'attendance_user_email' => 'e2e-attendance@hris.test',
+        'attendance_password' => env('E2E_ATTENDANCE_PASSWORD', 'E2ePassword!2345'),
+        'attendance_employee_emails' => [
+            'day' => 'e2e-day@hris.test',
+            'night' => 'e2e-night@hris.test',
+            'split' => 'e2e-split@hris.test',
+        ],
+        'attendance_month' => 11,
     ],
 
 ];

@@ -1,13 +1,17 @@
 <?php
 
 use App\Gateways\GenerateTimesheetGateway;
+use App\Models\AttendanceScheduleAssignment;
+use App\Models\AttendanceShift;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Services\Attendance\TimesheetImport;
+use App\Services\Attendance\TimesheetLogRecorder;
 use App\Services\Payroll\Computation\Rules;
 use App\Support\Tenancy\TenantContext;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -205,4 +209,107 @@ it('backfills and drops the legacy rate code column', function () {
         ->toBe(Timesheet::REGULAR_HOLIDAY)
         ->and(Schema::hasColumn('timesheets', 'rate_code'))
         ->toBeFalse();
+});
+
+it('assigns imported overnight punches to the shift start date', function () {
+    $shift = AttendanceShift::create([
+        'company_id' => $this->company->id,
+        'name' => 'Night 22-06',
+        'type' => AttendanceShift::TYPE_OVERNIGHT,
+        'segments' => [['22:00', '06:00']],
+        'breaks' => [],
+        'is_active' => true,
+    ]);
+
+    AttendanceScheduleAssignment::create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'shift_id' => $shift->id,
+        'effective_from' => '2026-11-01',
+    ]);
+
+    Storage::disk('local')->put('logs/overnight-import.txt', implode("\n", [
+        "101\t2026-11-10 22:00:00\t1\t1\t1\t0",
+        "101\t2026-11-11 06:00:00\t1\t1\t1\t1",
+    ])."\n");
+
+    $summary = app(TimesheetImport::class)->import('logs/overnight-import.txt');
+
+    expect($summary['accepted'])->toBe(2)
+        ->and($summary['timesheets'])->toBe(1);
+
+    app(TenantContext::class)->set($this->company->id);
+
+    $timesheets = Timesheet::query()
+        ->where('employee_id', $this->employee->id)
+        ->orderBy('log_date')
+        ->get();
+
+    expect($timesheets)->toHaveCount(1)
+        ->and($timesheets[0]->log_date->toDateString())->toBe('2026-11-10')
+        ->and($timesheets[0]->logs)->toHaveCount(2)
+        ->and((int) $timesheets[0]->paid_minutes)->toBe(480)
+        ->and((float) $timesheets[0]->actual_nt)->toBe(8.0);
+
+    Storage::disk('local')->delete('logs/overnight-import.txt');
+});
+
+it('generates the day classification from a rotation assignment', function () {
+    $day = AttendanceShift::create([
+        'company_id' => $this->company->id,
+        'name' => 'Day',
+        'segments' => [['08:00', '12:00'], ['13:00', '17:00']],
+        'breaks' => [],
+        'is_active' => true,
+    ]);
+
+    AttendanceScheduleAssignment::create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'rotation' => [$day->id, null],
+        'cycle_anchor' => '2026-11-09',
+        'effective_from' => '2026-11-01',
+    ]);
+
+    (new GenerateTimesheetGateway)->addDays(
+        $this->employee,
+        CarbonPeriod::create('2026-11-09', '1 day', '2026-11-10'),
+    );
+
+    app(TenantContext::class)->set($this->company->id);
+
+    $rows = Timesheet::query()
+        ->where('employee_id', $this->employee->id)
+        ->orderBy('log_date')
+        ->get()
+        ->keyBy(fn (Timesheet $timesheet): string => $timesheet->log_date->toDateString());
+
+    expect($rows['2026-11-09']->day_type)->toBe(Timesheet::REGULAR_DAY)
+        ->and((int) $rows['2026-11-09']->shift_id)->toBe($day->id)
+        ->and($rows['2026-11-10']->day_type)->toBe(Timesheet::REST_DAY)
+        ->and($rows['2026-11-10']->day_rate_code)->toBe(Timesheet::REST_DAY);
+});
+
+it('creates a rest-day row when a punch lands on a rotation rest day', function () {
+    $day = AttendanceShift::create([
+        'company_id' => $this->company->id,
+        'name' => 'Day',
+        'segments' => [['08:00', '17:00']],
+        'breaks' => [],
+        'is_active' => true,
+    ]);
+
+    AttendanceScheduleAssignment::create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'rotation' => [$day->id, null],
+        'cycle_anchor' => '2026-11-09',
+        'effective_from' => '2026-11-01',
+    ]);
+
+    $timesheet = app(TimesheetLogRecorder::class)
+        ->ensureForDate($this->employee, CarbonImmutable::parse('2026-11-10'));
+
+    expect($timesheet->day_type)->toBe(Timesheet::REST_DAY)
+        ->and($timesheet->day_rate_code)->toBe(Timesheet::REST_DAY);
 });

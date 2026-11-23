@@ -64,6 +64,36 @@
         </div>
     </div>
 
+    <div class="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-navy-800 dark:bg-navy-900/40">
+        <label class="flex min-w-[12rem] flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Saved view
+            <select wire:model.live="savedViewId" class="ui-select font-normal normal-case tracking-normal">
+                <option value="">Current filters</option>
+                @foreach ($savedViews as $view)
+                    <option value="{{ $view->id }}">{{ $view->name }}</option>
+                @endforeach
+            </select>
+        </label>
+
+        <label class="flex min-w-[14rem] flex-1 flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            Save current view as
+            <input type="text"
+                   wire:model="savedViewName"
+                   placeholder="e.g. Missing punches this cut-off"
+                   class="ui-input font-normal normal-case tracking-normal">
+        </label>
+
+        <button wire:click="saveView" class="ui-btn-secondary">Save view</button>
+
+        @if ($savedViewId)
+            <button wire:click="deleteSavedView" class="ui-btn-danger">Delete view</button>
+        @endif
+
+        @error('savedViewName')
+            <p class="w-full text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
+        @enderror
+    </div>
+
     @if (count($filters))
         <div class="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-navy-800 dark:bg-navy-900">
             @foreach ($filters as $filter)

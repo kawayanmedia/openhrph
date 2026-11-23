@@ -3,6 +3,7 @@
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Payroll;
+use App\Models\PayrollAttendanceSnapshot;
 use App\Models\PayrollGroup;
 use App\Models\Timesheet;
 use App\Services\Attendance\TimesheetPeriodLock;
@@ -54,6 +55,9 @@ it('locks only the timesheets of the payroll group', function () {
         'log_date' => '2026-11-10',
     ]);
 
+    $timesheetA->actual_regular = 8;
+    $timesheetA->save();
+
     $timesheetEdge = Timesheet::factory()->create([
         'company_id' => $this->company->id,
         'employee_id' => $employeeA->id,
@@ -85,7 +89,16 @@ it('locks only the timesheets of the payroll group', function () {
     expect((bool) $timesheetEdge->refresh()->is_locked)->toBeTrue();
     expect((bool) $timesheetB->refresh()->is_locked)->toBeFalse();
 
+    $snapshot = PayrollAttendanceSnapshot::query()
+        ->where('payroll_id', $payroll->id)
+        ->where('timesheet_id', $timesheetA->id)
+        ->firstOrFail();
+
+    expect((int) $snapshot->regular_minutes)->toBe(480)
+        ->and(PayrollAttendanceSnapshot::query()->where('payroll_id', $payroll->id)->count())->toBe(2);
+
     expect($lock->unlock($payroll))->toBe(2);
 
-    expect((bool) $timesheetA->refresh()->is_locked)->toBeFalse();
+    expect((bool) $timesheetA->refresh()->is_locked)->toBeFalse()
+        ->and(PayrollAttendanceSnapshot::query()->where('payroll_id', $payroll->id)->count())->toBe(0);
 });

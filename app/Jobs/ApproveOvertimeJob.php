@@ -53,21 +53,31 @@ class ApproveOvertimeJob implements ShouldQueue
 
         $timesheet = Timesheet::firstOrNew([
             'employee_id' => $this->overtimeRequest->employee_id,
-            'employee_number' => $this->overtimeRequest->employee->employee_number,
             'log_date' => $this->overtimeRequest->date,
         ]);
+
+        $timesheet->employee_number ??= $this->overtimeRequest->employee->employee_number;
 
         if ($timesheet->exists && (bool) $timesheet->is_locked) {
             return;
         }
 
-        // Write the hour bucket the payroll engine reads. addTime() wrote the
-        // legacy premium-equivalent column, which the engine only reads as a
-        // fallback.
-        $timesheet->actual_ot = (float) $timesheet->actual_ot + (float) $this->overtimeRequest->hours;
+        $this->overtimeRequest->save();
+
+        // Record the approved minutes on the day instead of blindly adding to
+        // the punch-derived bucket, which a later recompute would overwrite.
+        $approvedHours = (float) OvertimeRequest::query()
+            ->where('employee_id', $this->overtimeRequest->employee_id)
+            ->whereDate('date', $this->overtimeRequest->date)
+            ->where('status', STATUS_APPROVED)
+            ->where('type', OvertimeRequest::TYPE_OVERTIME)
+            ->sum('hours');
+
+        $approvedMinutes = max(0, (int) round($approvedHours * 60));
+
+        $timesheet->approved_ot_minutes = $approvedMinutes;
+        $timesheet->actual_ot = max((float) $timesheet->actual_ot, $approvedHours);
         $timesheet->day_type ??= Timesheet::REGULAR_DAY;
         $timesheet->save();
-
-        $this->overtimeRequest->save();
     }
 }

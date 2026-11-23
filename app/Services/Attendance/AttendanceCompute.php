@@ -4,6 +4,11 @@ namespace App\Services\Attendance;
 
 use Exception;
 
+/**
+ * @deprecated Retained only for the legacy printable DTR.
+ *
+ * Payable hours are derived by TimesheetCalculator; do not add new callers.
+ */
 class AttendanceCompute
 {
     /**
@@ -54,12 +59,12 @@ class AttendanceCompute
 
     public $count_undertime = 0;
 
-    //For tardiness use
+    // For tardiness use
     public $am_login = 0;
 
     public $pm_login = 0;
 
-    //For tardiness use
+    // For tardiness use
     public $am_logout = 0;
 
     public $pm_logout = 0;
@@ -127,7 +132,7 @@ class AttendanceCompute
 
         // 200 = red
         // 100 = maroon
-        //$minutes_tardy = Setting::getField('minutes_tardy');
+        // $minutes_tardy = Setting::getField('minutes_tardy');
 
         // Black font
         $this->font_color_am_login = 0;
@@ -199,8 +204,8 @@ class AttendanceCompute
 
                 return 0;
             }
-            //echo 'hehe1';
-            //echo $pm_login;
+            // echo 'hehe1';
+            // echo $pm_login;
             if ($pm_login > $time_c) {
 
                 $this->pm_font_bold = 'B';
@@ -249,7 +254,7 @@ class AttendanceCompute
             }
         }
 
-        //return $late;
+        // return $late;
     }
 
     // --------------------------------------------------------------------
@@ -420,7 +425,7 @@ class AttendanceCompute
             $this->count_undertime = 0;
         }
 
-        //return $undertime;
+        // return $undertime;
     }
 
     // --------------------------------------------------------------------
@@ -466,7 +471,7 @@ class AttendanceCompute
 
                     // For tardiness use
                     $this->pm_logout = strtotime($hour_to) - strtotime($log1);
-                    //$this->am_logout = strtotime($hour_to) - strtotime($log1);
+                    // $this->am_logout = strtotime($hour_to) - strtotime($log1);
 
                     // mark the undertime as red
                     $this->font_color_pm_logout = 100;
@@ -486,7 +491,7 @@ class AttendanceCompute
                     $this->pm_undertime_hours = strtotime($hour_to) - strtotime($log1);
 
                     // For tardiness use
-                    //$this->pm_logout = strtotime($hour_to) - strtotime($log1);
+                    // $this->pm_logout = strtotime($hour_to) - strtotime($log1);
                     $this->am_logout = strtotime($hour_to) - strtotime($log1);
 
                     // mark the undertime as red
@@ -641,7 +646,7 @@ class AttendanceCompute
                 if ($hours == 1) {
                     $return = "$return $hours hr";
                 }
-            } //end of Hours
+            } // end of Hours
 
             $minutes = $minutes - (floor($minutes / 60)) * 60;
 
@@ -658,7 +663,7 @@ class AttendanceCompute
             if ($minutes == 1) {
                 $return = "$return $minutes min";
             }
-        } //end of minutes
+        } // end of minutes
 
         $seconds = $integer - (floor($integer / 60)) * 60;
 
@@ -677,7 +682,7 @@ class AttendanceCompute
         $return = "$return";
 
         if ($ut == 1) {
-            return $ut_hour . $return;
+            return $ut_hour.$return;
         } else {
             return $return;
         }
@@ -694,7 +699,7 @@ class AttendanceCompute
      *
      *  @int
      *
-     *  @return string
+     * @return string
      */
     public function convert_number($number)
     {
@@ -714,17 +719,17 @@ class AttendanceCompute
         $res = '';
 
         if ($Gn) {
-            $res .= $this->convert_number($Gn) . ' Million';
+            $res .= $this->convert_number($Gn).' Million';
         }
 
         if ($kn) {
-            $res .= (empty($res) ? '' : ' ') .
-                $this->convert_number($kn) . ' Thousand';
+            $res .= (empty($res) ? '' : ' ').
+                $this->convert_number($kn).' Thousand';
         }
 
         if ($Hn) {
-            $res .= (empty($res) ? '' : ' ') .
-                $this->convert_number($Hn) . ' Hundred';
+            $res .= (empty($res) ? '' : ' ').
+                $this->convert_number($Hn).' Hundred';
         }
 
         $ones = [
@@ -747,7 +752,7 @@ class AttendanceCompute
             'Sixteen',
             'Seventeen',
             'Eightteen',
-            'Nineteen'
+            'Nineteen',
         ];
         $tens = [
             '',
@@ -759,7 +764,7 @@ class AttendanceCompute
             'Sixty',
             'Seventy',
             'Eigthy',
-            'Ninety'
+            'Ninety',
         ];
 
         if ($Dn || $n) {
@@ -773,7 +778,7 @@ class AttendanceCompute
                 $res .= $tens[$Dn];
 
                 if ($n) {
-                    $res .= '-' . $ones[$n];
+                    $res .= '-'.$ones[$n];
                 }
             }
         }
@@ -834,13 +839,13 @@ class AttendanceCompute
      */
     public function diff_time($big_time, $small_time)
     {
-        //input format hh:mm:ss
+        // input format hh:mm:ss
 
-        //list($h1,$m1,$s1)=split(":",$big_time);
+        // list($h1,$m1,$s1)=split(":",$big_time);
         [$h1, $m1, $s1] = explode(':', $big_time);
         [$h2, $m2, $s2] = explode(':', $small_time);
 
-        $second1 = $s1 + ($h1 * 3600) + ($m1 * 60); //converting it into seconds
+        $second1 = $s1 + ($h1 * 3600) + ($m1 * 60); // converting it into seconds
         $second2 = $s2 + ($h2 * 3600) + ($m2 * 60);
 
         if ($second1 == $second2) {
@@ -851,19 +856,19 @@ class AttendanceCompute
         }
 
         if ($second1 < $second2) { //
-            $second1 = $second1 + (24 * 60 * 60); //adding 24 hours to it.
+            $second1 = $second1 + (24 * 60 * 60); // adding 24 hours to it.
         }
 
         $second3 = $second1 - $second2;
 
-        //print $second3;
+        // print $second3;
         if ($second3 == 0) {
             $h3 = 0;
         } else {
-            $h3 = floor($second3 / 3600); //find total hours
+            $h3 = floor($second3 / 3600); // find total hours
         }
 
-        $rem_second = $second3 - ($h3 * 3600); //get remaining seconds
+        $rem_second = $second3 - ($h3 * 3600); // get remaining seconds
         if ($rem_second == 0) {
             $m3 = 0;
         } else {
@@ -872,7 +877,7 @@ class AttendanceCompute
 
         $s3 = $rem_second - (60 * $m3);
 
-        if ($h3 == 0) { //formating result.
+        if ($h3 == 0) { // formating result.
             $h3 = '00';
         }
         if ($m3 == 0) {
@@ -960,7 +965,7 @@ class AttendanceCompute
         $f = '';
 
         while ($time1 < $time2) {
-            $time1 = strtotime((date('Y-m-d', $time1) . ' +15days'));
+            $time1 = strtotime((date('Y-m-d', $time1).' +15days'));
             if (date('Y-m', $time1) != $f) {
                 $f = date('Y-m', $time1);
                 if (date('mY', $time1) != $my && ($time1 < $time2)) {
@@ -1167,7 +1172,7 @@ class AttendanceCompute
             $log = date('h:i', strtotime($log));
         }
 
-        return '<font color="#993333">' . $log . '</font>';
+        return '<font color="#993333">'.$log.'</font>';
     }
 
     // --------------------------------------------------------------------
@@ -1194,7 +1199,7 @@ class AttendanceCompute
             // Change hour format
             $log = $this->change_format($log, $is_pm, $format = '');
 
-            return '<b><font color=red>' . $log . '</font></b>';
+            return '<b><font color=red>'.$log.'</font></b>';
         } else {
             $log = $this->change_format($log, $is_pm, $format = '');
 

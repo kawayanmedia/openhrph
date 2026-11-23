@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureDemoEmailVerified;
 use App\Http\Middleware\EnsureDemoModeEnabled;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\ResolveTenantFromApiKey;
+use App\Http\Middleware\SetE2eClock;
 use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -63,7 +64,11 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'demo.verified' => EnsureDemoEmailVerified::class,
         ]);
 
+        // The clock override runs inside the session middleware so session
+        // cookies keep their real expiry while the application sees the test
+        // date.
         $middleware->web(append: [
+            SetE2eClock::class,
             ResolveTenant::class,
         ]);
 

@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class Timesheet extends Model
 {
@@ -47,6 +49,13 @@ class Timesheet extends Model
 
     const UNDERTIME = 'ut';
 
+    /**
+     * Rule version written by the punch-derived calculator. From this version
+     * on, `actual_ot` already includes night overtime, so the payroll mapper
+     * must not add `actual_nt_ot` again.
+     */
+    const RULE_VERSION_NIGHT_OT_INCLUDED = 2;
+
     protected $fillable = [
         'biometric_id',
         'rate_id',
@@ -68,6 +77,7 @@ class Timesheet extends Model
         'log_date' => 'date',
         'logs' => 'array',
         'logs_rates' => 'array',
+        'computed_at' => 'datetime',
         // 'to_date' => 'date',
     ];
 
@@ -274,10 +284,57 @@ class Timesheet extends Model
     }
 
     /**
+     * Everything a timekeeper should review on this day.
+     *
+     * @return list<string>
+     */
+    public function getExceptionFlagsAttribute(): array
+    {
+        $flags = [];
+
+        if ($this->has_missing_punch) {
+            $flags[] = 'Missing punch';
+        }
+
+        if ((int) ($this->late_minutes ?? 0) > 0) {
+            $flags[] = 'Late';
+        }
+
+        if ((int) ($this->undertime_minutes ?? 0) > 0) {
+            $flags[] = 'Undertime';
+        }
+
+        if ($this->schedule_id === null && $this->shift_id === null) {
+            $flags[] = 'No schedule';
+        }
+
+        if ($this->day_type === static::REST_DAY && (int) ($this->paid_minutes ?? 0) > 0) {
+            $flags[] = 'Rest-day work';
+        }
+
+        if ((bool) $this->is_absent) {
+            $flags[] = 'Absent';
+        }
+
+        return $flags;
+    }
+
+    public function getExceptionFlagsFormatAttribute(): string
+    {
+        $flags = $this->exception_flags;
+
+        return $flags === [] ? '—' : implode(', ', $flags);
+    }
+
+    /**
      * Actual hours worked, excluding the night/premium equivalents.
      */
     public function getWorkedHoursAttribute(): float
     {
+        if ($this->getAttribute('paid_minutes') !== null) {
+            return round(((int) $this->getAttribute('paid_minutes')) / 60, 2);
+        }
+
         $hours = 0.0;
         $hasLines = false;
 
@@ -437,353 +494,82 @@ class Timesheet extends Model
         return $this->am_logout ?? $this->pm_logout ?? $this->am_out_morning ?? null;
     }
 
-    public function addNightDifferential($model, $dayType = null, $timeIn = null, $timeOut = null, $nextDay = false)
+    /**
+     * Raw punches, as recorded, for the admin day detail.
+     */
+    public function getPunchesDisplayAttribute(): string
     {
-        // lets say the schedule is 10pm to 6am
-        // the night differential can be computed as follows
-        // we multiple first the 8 hours to 1.1 then we get 8.8 hrs
-        // we subtract 8 hours from 8.8 hours to get .8
-        // 0.8 should be the number of hours as night differential
-        if ((bool) get_setting('auto_compute_nt')) {
+        $ledger = Schema::hasTable('attendance_punches')
+            ? AttendancePunch::query()
+                ->where('timesheet_id', $this->getKey())
+                ->orderBy('punched_at')
+                ->get()
+            : collect();
 
-            // Get the time in and time out then check if the
-            // hours is included in night diff
-            $timeOutToday = 'today';
-
-            if ($nextDay == true) {
-                $timeOutToday = 'tomorrow';
-            }
-
-            $totalNightHours = night_difference(strtotime('today '.$timeIn), strtotime($timeOutToday.' '.$timeOut));
-
-            if ($totalNightHours > 0) {
-                $rateNight = Rate::where('code', $dayType)->first();
-
-                $regularHoursNight = 0;
-                if ($rateNight) {
-
-                    $actualTotalNightHours = $totalNightHours;
-                    $regularHoursNight = ($totalNightHours * $rateNight->nt) - $totalNightHours;
-
-                    if ($regularHoursNight > 0) {
-                        $model->actual_nt = $actualTotalNightHours;
-                        $model->addTime($dayType, Timesheet::RATE_NIGHT_DIFFERENTIAL, $regularHoursNight, $timeIn, $timeOut, $actualTotalNightHours);
-                    }
-                }
-            }
+        if ($ledger->isNotEmpty()) {
+            return $this->renderPunchLedger($ledger);
         }
+
+        $logs = collect($this->logs ?? [])->filter(fn ($log): bool => is_array($log) && isset($log['time']))->values();
+
+        if ($logs->isEmpty()) {
+            return '<p class="text-sm text-gray-500 dark:text-gray-400">No punches recorded.</p>';
+        }
+
+        $display = '<table class="w-full divide-y divide-gray-100 dark:divide-gray-700">';
+        $display .= '<thead class="bg-gray-50 dark:bg-gray-800"><tr>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Time</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Type</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Source</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Device</th>';
+        $display .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-700">';
+
+        foreach ($logs as $log) {
+            $type = (int) ($log['log_type'] ?? 0) === 0 ? 'In' : 'Out';
+
+            $display .= '<tr>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) $log['time']).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e($type).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) ($log['source'] ?? 'biometric')).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) ($log['device'] ?? '—')).'</td>';
+            $display .= '</tr>';
+        }
+
+        $display .= '</tbody></table>';
+
+        return $display;
     }
 
-    public function addOverTime($model, $dayType = null, $timeIn = null, $timeOut = null, $nextDay = false)
+    /**
+     * @param  Collection<int, AttendancePunch>  $punches
+     */
+    private function renderPunchLedger($punches): string
     {
-        $actualHoursOvertime = 0;
-        if ((bool) get_setting('auto_compute_overtime')) {
+        $display = '<table class="w-full divide-y divide-gray-100 dark:divide-gray-700">';
+        $display .= '<thead class="bg-gray-50 dark:bg-gray-800"><tr>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Punched</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Type</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Source</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Device</th>';
+        $display .= '<th class="text-left px-3 py-2 uppercase text-gray-500 text-xxs tracking-wide">Status</th>';
+        $display .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-gray-700">';
 
-            if ($model->schedule_id) {
-                // Check if the time out is enough to make overtime
-                $minutes = compute_minutes(
-                    $model->schedule?->time_in,
-                    $model->schedule?->time_out,
-                    $timeOut,
-                    $model->schedule,
-                    $model->log_date->format('Y-m-d')
-                );
+        foreach ($punches as $punch) {
+            $voided = $punch->isVoided();
 
-                // If minutes is more than enough
-                if ($minutes >= get_setting('minutes_qualified_overtime')) {
-
-                    $hours = $minutes / 60;
-
-                    $actualHours = $hours;
-
-                    $actualHoursOvertime = $actualHours;
-
-                    // Added
-                    $rate = Rate::where('code', $dayType)->first();
-                    $hours = ($hours * $rate->ot) - $hours;
-                    // Added end
-                    $model->actual_ot = $actualHoursOvertime;
-                    $model->addTime($dayType, Timesheet::RATE_OVERTIME, $hours, $timeIn, $timeOut, $actualHours);
-                }
-            }
+            $display .= '<tr'.($voided ? ' class="text-gray-400 line-through"' : '').'>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) $punch->punched_at?->format('Y-m-d H:i:s')).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e($punch->directionLabel()).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) $punch->source).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e((string) ($punch->device ?? '—')).'</td>';
+            $display .= '<td class="px-3 py-2 whitespace-nowrap text-sm">'.e($voided ? 'Voided: '.($punch->void_reason ?? '') : 'Active').'</td>';
+            $display .= '</tr>';
         }
 
-        return $actualHoursOvertime;
+        $display .= '</tbody></table>';
+
+        return $display;
     }
-
-    public $overtimeMinutes;
-
-    public $nightHours;
-
-    public $nightOvertimeHours;
-
-    public function addNightOverTime($model, $dayType = null, $timeIn = null, $timeOut = null, $nextDay = false)
-    {
-        if ((bool) get_setting('auto_compute_overtime') and (bool) get_setting('auto_compute_nt')) {
-
-            if ($model->schedule_id) {
-                // Check if the time out is enough to make overtime
-                $minutesOverTime = compute_minutes(
-                    $model->schedule?->time_in,
-                    $model->schedule?->time_out,
-                    $timeOut,
-                    $model->schedule,
-                    $model->log_date->format('Y-m-d')
-                );
-
-                $this->overtimeMinutes = $minutesOverTime;
-
-                $timeOutToday = 'today';
-
-                if ($nextDay) {
-                    $timeOutToday = 'tomorrow';
-                }
-
-                $totalNightHours = night_difference(strtotime('today '.$timeIn), strtotime($timeOutToday.' '.$timeOut));
-
-                $this->nightHours = $totalNightHours;
-
-                $nightOvertime = $minutesOverTime >= get_setting('minutes_qualified_overtime') && $totalNightHours > 0;
-
-                if ($nightOvertime) {
-
-                    // Add the actual overtime
-                    $hoursOvertime = $this->overtimeMinutes / 60;
-
-                    // Added
-                    $actualTotalNightHours = $totalNightHours;
-                    $actualHoursOvertime = $hoursOvertime;
-
-                    $rate = Rate::where('code', $dayType)->first();
-                    $totalNightHours = ($totalNightHours * $rate->nt) - $totalNightHours;
-                    $hoursOvertime = ($hoursOvertime * $rate->nt_ot) - $hoursOvertime;
-                    // Added end
-
-                    // Put hours over time
-                    $model->actual_nt = $actualTotalNightHours;
-                    $model->actual_nt_ot = $actualHoursOvertime;
-                    $model->addTime($dayType, Timesheet::RATE_NIGHT_DIFFERENTIAL, $totalNightHours, $timeIn, $timeOut, $actualTotalNightHours);
-                    $model->addTime($dayType, Timesheet::RATE_NIGHT_DIFFERENTIAL_OVERTIME, $hoursOvertime, $timeIn, $timeOut, $actualHoursOvertime);
-
-                    // Put hours over time
-                    // $model->addTime($dayType, Timesheet::RATE_OVERTIME, ($hoursOvertime - $totalNightHours), $timeIn, $timeOut);
-                    // $model->addTime($dayType, Timesheet::RATE_NIGHT_DIFFERENTIAL_OVERTIME, $totalNightHours, $timeIn, $timeOut);
-
-                }
-
-                return $nightOvertime;
-            }
-        }
-
-        return false;
-    }
-
-    public function addTime($dayType = null, $fieldRate = null, $hours = 0, $timeIn = null, $timeOut = null, $actualHours = 0)
-    {
-        // TODO cache me
-        $rate = Rate::where('code', $dayType)->first();
-        // $this->logs = ['0' => '07:59', '1' => '07:59'];
-
-        // Check if rd then change the timesheet day_type
-        if (substr($dayType, 0, 2) == static::REST_DAY) {
-            $this->day_type = static::REST_DAY;
-        } else {
-            $this->day_type = static::REGULAR_DAY;
-        }
-
-        $this->save();
-
-        $isLeave = false;
-        if (is_leave($rate?->code)) {
-            $isLeave = true;
-        }
-
-        $logRates = collect($this->logs_rates);
-
-        $index = $dayType.'-'.str_replace('_', '-', $fieldRate);
-        // $rateIndex = $fields->rate;
-
-        // If leave then lets use the code like pl or upl (Paid Leave and Unpaid Leave)
-        if ($isLeave) {
-            $index = $rate->code;
-        }
-
-        $hours = $hours;
-
-        if ($dayType == static::ABSENT) {
-            $hours = 8;
-            // Absent
-            $this->is_absent = true;
-            $this->save();
-        } else {
-            $this->is_absent = false;
-            $this->save();
-        }
-
-        $logRates[$index] = [
-            'hours' => $hours,
-            'actual' => $actualHours,
-            'rate' => $rate->{$fieldRate} ?? 1,
-            'is_rest_day' => $rate->is_rest_day,
-            'is_holiday' => $rate->is_holiday,
-            'logs' => [$timeIn, $timeOut],
-        ];
-
-        // If not absent then remove the absent item in array
-        if ($dayType != static::ABSENT) {
-            if (isset($logRates['absent-'])) {
-                unset($logRates['absent-']);
-            }
-        }
-
-        // If no hours then remove from array
-        if ($hours == 0 or $hours == null) {
-            unset($logRates[$index]);
-        }
-
-        $this->logs_rates = $logRates;
-
-        if (! $isLeave and $dayType != static::ABSENT) {
-            // Store the hours to a field like
-            // ->regular, ->ot, ->nt ->nt_ot
-            $this->{$fieldRate} = $hours;
-
-            // Store rates
-            // ->regular_rate, ->ot_rate, ->nt_rate ->nt_ot_rate
-            $this->{$fieldRate.'_rate'} = $rate->{$fieldRate};
-        }
-
-        // If no hours then remove from timesheet column
-        if ($hours == 0 or $hours == null) {
-            $this->{$fieldRate} = 0;
-
-            $this->{$fieldRate.'_rate'} = 0;
-        }
-
-        if ($dayType == static::ABSENT) {
-            // Absent, then remove all entries
-            $this->logs_rates = null;
-        }
-
-        if ($dayType == static::REST_DAY and $fieldRate == Rate::NO_LOG) {
-            // Rest day and selected no log then remove all entries
-            // and also set the rate code to regular
-            $this->day_rate_code = static::REGULAR_DAY;
-            $this->day_type = static::REST_DAY;
-            $this->logs_rates = null;
-        }
-
-        if ($timeIn) {
-            if ($timeIn >= '12:00') {
-                $this->pm_login = $timeIn;
-            } else {
-                $this->am_login = $timeIn;
-            }
-
-            if ($timeOut >= '12:00') {
-                $this->pm_logout = $timeOut;
-            } else {
-                $this->am_logout = $timeOut;
-            }
-
-            if ($timeIn >= '12:00' and $timeOut <= '11:59') {
-                $this->am_logout = null;
-                $this->am_out_morning = $timeOut;
-            }
-        }
-
-        $this->save();
-    }
-
-    // public function addTime($fields, $dayType = null, $fieldRate = null, $hours = null, $timeIn = null, $timeOut = null)
-    // {
-    //     // TODO cache me
-    //     $rate = Rate::where('code', $fields->day_type)->first();
-    //     // $this->logs = ['0' => '07:59', '1' => '07:59'];
-
-    //     // Check if rd then change the timesheet day_type
-    //     if (substr($fields->day_type, 0, 2) == static::REST_DAY) {
-    //         $this->day_type = static::REST_DAY;
-    //     } else {
-    //         $this->day_type = static::REGULAR_DAY;
-    //     }
-
-    //     $this->save();
-
-    //     $isLeave = false;
-    //     if (is_leave($rate->code)) {
-    //         $isLeave = true;
-    //     }
-
-    //     $logRates = collect($this->logs_rates);
-
-    //     $index = $fields->day_type.'-'.str_replace('_', '-', $fields->rate);
-    //     // $rateIndex = $fields->rate;
-
-    //     // If leave then lets use the code like pl or upl (Paid Leave and Unpaid Leave)
-    //     if ($isLeave) {
-    //         $index = $rate->code;
-    //     }
-
-    //     $hours = $fields->hours;
-
-    //     if ($fields->day_type == static::ABSENT) {
-    //         $hours = 8;
-    //         // Absent
-    //         $this->is_absent = true;
-    //         $this->save();
-    //     } else {
-    //         $this->is_absent = false;
-    //         $this->save();
-    //     }
-
-    //     $logRates[$index] = [
-    //         'hours' => $hours,
-    //         'rate' => $rate->{$fields->rate} ?? 1,
-    //         'is_rest_day' => $rate->is_rest_day,
-    //         'is_holiday' => $rate->is_holiday,
-    //         'logs' => [$fields->time_in, $fields->time_out],
-    //     ];
-
-    //     // If not absent then remove the absent item in array
-    //     if ($fields->day_type != static::ABSENT) {
-    //         if (isset($logRates['absent-'])) {
-    //             unset($logRates['absent-']);
-    //         }
-    //     }
-
-    //     // If no hours then remove from array
-    //     if ($hours == 0 or $hours == null) {
-    //         unset($logRates[$index]);
-    //     }
-
-    //     $this->logs_rates = $logRates;
-
-    //     if (! $isLeave and ! $fields->day_type == static::ABSENT) {
-    //         // Store the hours to a field like
-    //         // ->regular, ->ot, ->nt ->nt_ot
-    //         $this->{$fields->rate} = $hours;
-
-    //         // Store rates
-    //         // ->regular_rate, ->ot_rate, ->nt_rate ->nt_ot_rate
-    //         $this->{$fields->rate.'_rate'} = $rate->{$index};
-    //     }
-
-    //     if ($fields->day_type == static::ABSENT) {
-    //         // Absent, then remove all entries
-    //         $this->logs_rates = null;
-    //     }
-
-    //     if ($fields->day_type == static::REST_DAY and $fields->rate == Rate::NO_LOG) {
-    //         // Rest day and selected no log then remove all entries
-    //         // and also set the rate code to regular
-    //         $this->day_rate_code = static::REGULAR_DAY;
-    //         $this->day_type = static::REST_DAY;
-    //         $this->logs_rates = null;
-    //     }
-
-    //     $this->save();
-    // }
 
     public function getLogsDisplayAttribute()
     {

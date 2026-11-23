@@ -14,6 +14,7 @@ use App\Jurisdictions\Philippines\Statutory\Sss\SssBracket;
 use App\Jurisdictions\Philippines\Statutory\Sss\SssSchedule;
 use App\Jurisdictions\Support\PayrollPolicyData;
 use App\Models\Compensation;
+use App\Models\Timesheet;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Computation\BenefitFlags;
 use App\Services\Payroll\Computation\Config;
@@ -527,6 +528,10 @@ final class LegacyInput
             return;
         }
 
+        if (self::loadSnapshotTimesheets($run, $employees, $index)) {
+            return;
+        }
+
         $employeeIds = array_keys($index);
 
         $query = DB::table('timesheets')->whereIn('employee_id', $employeeIds);
@@ -540,7 +545,7 @@ final class LegacyInput
                 'employee_id', 'log_date', 'day_type', 'day_rate_code',
                 'is_absent', 'is_leave', 'is_paid_leave', 'leave_half_day',
                 'actual_regular', 'actual_ot', 'actual_nt', 'actual_nt_ot', 'ut',
-                'regular', 'ot', 'nt',
+                'regular', 'ot', 'nt', 'rule_version',
                 'logs', 'am_login', 'am_logout', 'pm_login', 'pm_logout', 'am_out_morning',
             ],
             static fn (string $column): bool => Schema::hasColumn('timesheets', $column),
@@ -608,6 +613,10 @@ final class LegacyInput
             // disjoint so the 10% differential is not paid twice.
             $ordinaryNight = max(0.0, $night - $nightOT);
 
+            // New-engine rows already include night overtime in actual_ot.
+            // Legacy rows carried it only in actual_nt_ot, so add it there.
+            $overtimeIncludesNight = (int) ($row->rule_version ?? 0) >= Timesheet::RULE_VERSION_NIGHT_OT_INCLUDED;
+
             $employees[$position]->timesheets[] = new TimesheetLine(
                 date: $date,
                 dayType: Rules::effectiveDayType(
@@ -615,7 +624,7 @@ final class LegacyInput
                     self::text($row->day_rate_code ?? null),
                 ),
                 hours: $hours,
-                overtime: $overtime + $nightOT,
+                overtime: $overtimeIncludesNight ? $overtime : $overtime + $nightOT,
                 night: $ordinaryNight,
                 nightOT: $nightOT,
                 undertime: $undertime,
@@ -626,6 +635,61 @@ final class LegacyInput
                 legacyHours: $legacy,
             );
         }
+    }
+
+    /**
+     * Read the frozen attendance lines when this run has been locked.
+     *
+     * @param  list<Employee>  $employees
+     * @param  array<int, int>  $index
+     */
+    private static function loadSnapshotTimesheets(Run $run, array $employees, array $index): bool
+    {
+        if ($run->payrollID <= 0 || ! Schema::hasTable('payroll_attendance_snapshots')) {
+            return false;
+        }
+
+        $query = DB::table('payroll_attendance_snapshots')->where('payroll_id', $run->payrollID);
+
+        if (Schema::hasColumn('payroll_attendance_snapshots', 'deleted_at')) {
+            $query->whereNull('deleted_at');
+        }
+
+        $rows = $query->orderBy('log_date')->get();
+
+        if ($rows->isEmpty()) {
+            return false;
+        }
+
+        foreach ($rows as $row) {
+            $position = $index[(int) $row->employee_id] ?? null;
+
+            if ($position === null) {
+                continue;
+            }
+
+            $night = max(0.0, (float) $row->night_minutes - (float) $row->night_ot_minutes) / 60;
+
+            $employees[$position]->timesheets[] = new TimesheetLine(
+                date: self::date($row->log_date),
+                dayType: Rules::effectiveDayType(
+                    (string) ($row->day_type ?? ''),
+                    self::text($row->day_rate_code ?? null),
+                ),
+                hours: (float) $row->regular_minutes / 60,
+                overtime: (float) $row->overtime_minutes / 60,
+                night: $night,
+                nightOT: (float) $row->night_ot_minutes / 60,
+                undertime: (float) $row->undertime_minutes / 60,
+                absent: (bool) $row->is_absent,
+                leave: (bool) $row->is_leave,
+                paidLeave: (bool) $row->is_paid_leave,
+                leaveFraction: (float) ($row->leave_fraction ?? 1),
+                legacyHours: false,
+            );
+        }
+
+        return true;
     }
 
     public static function frequencyApplies(string $frequency, Run $run, Config $config): bool

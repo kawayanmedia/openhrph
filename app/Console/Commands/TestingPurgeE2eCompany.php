@@ -32,6 +32,13 @@ class TestingPurgeE2eCompany extends Command
         DB::table('compensations')->whereIn('company_id', $companies)->delete();
         DB::table('rates')->whereIn('company_id', $companies)->delete();
         DB::table('schedules')->whereIn('company_id', $companies)->delete();
+        DB::table('attendance_punches')->whereIn('company_id', $companies)->delete();
+        DB::table('timesheet_requests')->whereIn('company_id', $companies)->delete();
+        DB::table('overtime_requests')->whereIn('company_id', $companies)->delete();
+        DB::table('attendance_schedule_overrides')->whereIn('company_id', $companies)->delete();
+        DB::table('attendance_schedule_assignments')->whereIn('company_id', $companies)->delete();
+        DB::table('attendance_shifts')->whereIn('company_id', $companies)->delete();
+        DB::table('hr_audit_events')->whereIn('company_id', $companies)->delete();
         DB::table('timesheets')->whereIn('company_id', $companies)->delete();
         DB::table('payrolls')->whereIn('company_id', $companies)->delete();
         DB::table('payroll_dates')->whereIn('company_id', $companies)->delete();
@@ -46,10 +53,11 @@ class TestingPurgeE2eCompany extends Command
         DB::table('groups')->whereIn('company_id', $companies)->delete();
         DB::table('company_user')->whereIn('company_id', $companies)->delete();
         User::query()->whereIn('company_id', $companies)
-            ->orWhereIn('email', [
+            ->orWhereIn('email', array_merge([
                 config('payroll.e2e.user_email'),
                 config('payroll.e2e.onboarding_user_email'),
-            ])
+                config('payroll.e2e.attendance_user_email'),
+            ], array_values((array) config('payroll.e2e.attendance_employee_emails', []))))
             ->delete();
         DB::table('companies')->whereIn('id', $companies)->delete();
 

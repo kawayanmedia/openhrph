@@ -7,10 +7,11 @@ use App\Livewire\Admin\Fields\Field;
 use App\Livewire\Admin\Filters\Filter;
 use App\Livewire\Admin\Support\FormData;
 use App\Livewire\Admin\Support\ResourceRegistry;
+use App\Models\AdminSavedView;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -60,6 +61,10 @@ class AdminIndex extends Component
 
     public bool $showDeleteModal = false;
 
+    public string $savedViewId = '';
+
+    public string $savedViewName = '';
+
     public function mount(string $resource): void
     {
         abort_unless(Auth::user()?->can(config('admin.gate')), 403);
@@ -84,6 +89,7 @@ class AdminIndex extends Component
             'cards' => $this->resource->cards(request()),
             'canCreate' => $this->resource::canCreateResource()
                 && $this->resource::allows('create', $this->resource::$model),
+            'savedViews' => $this->savedViews(),
         ])->layout('layouts.admin')->title($this->resource::pluralLabel());
     }
 
@@ -113,7 +119,7 @@ class AdminIndex extends Component
     protected function actions(): array
     {
         return array_values(array_filter($this->resource->actions(request()), function (Action $action) {
-            return ! $action->onlyOnIndexToolbar && ! $action->onlyOnDetail;
+            return ! $action->onlyOnIndexToolbar && ! $action->onlyOnDetail && ! $action->onlyBulk;
         }));
     }
 
@@ -129,6 +135,10 @@ class AdminIndex extends Component
     protected function bulkActions(): array
     {
         return array_values(array_filter($this->resource->actions(request()), function (Action $action) {
+            if ($action->onlyBulk) {
+                return true;
+            }
+
             return ! $action->onlyOnIndexToolbar
                 && ! $action->onlyOnDetail
                 && ! $action->onlyOnIndex
@@ -264,6 +274,107 @@ class AdminIndex extends Component
     public function updatedPerPage(): void
     {
         $this->resetPage();
+    }
+
+    /**
+     * @return Collection<int, AdminSavedView>
+     */
+    protected function savedViews(): Collection
+    {
+        if (! Schema::hasTable('admin_saved_views')) {
+            return collect();
+        }
+
+        return AdminSavedView::query()
+            ->where('user_id', Auth::id())
+            ->where('resource', $this->resourceKey)
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function applySavedView(int $id): void
+    {
+        $view = AdminSavedView::query()
+            ->where('user_id', Auth::id())
+            ->where('resource', $this->resourceKey)
+            ->findOrFail($id);
+
+        $query = is_array($view->query) ? $view->query : [];
+
+        $this->search = (string) ($query['search'] ?? '');
+        $this->filterValues = is_array($query['filterValues'] ?? null) ? $query['filterValues'] : [];
+        $this->sortAttribute = (string) ($query['sortAttribute'] ?? '');
+        $this->sortDirection = ($query['sortDirection'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+        $this->perPage = in_array((int) ($query['perPage'] ?? 25), [10, 25, 50, 100], true)
+            ? (int) $query['perPage']
+            : 25;
+
+        $this->savedViewId = (string) $view->id;
+        $this->savedViewName = $view->name;
+
+        $this->resetPage();
+    }
+
+    public function updatedSavedViewId(mixed $value): void
+    {
+        if ($value !== null && $value !== '') {
+            $this->applySavedView((int) $value);
+        }
+    }
+
+    public function saveView(): void
+    {
+        $name = trim($this->savedViewName);
+
+        if ($name === '') {
+            $this->addError('savedViewName', 'Enter a name for this view.');
+
+            return;
+        }
+
+        if (! Schema::hasTable('admin_saved_views')) {
+            $this->addError('savedViewName', 'Saved views are not available until migrations have run.');
+
+            return;
+        }
+
+        $view = AdminSavedView::query()->updateOrCreate(
+            [
+                'user_id' => Auth::id(),
+                'resource' => $this->resourceKey,
+                'name' => $name,
+            ],
+            [
+                'company_id' => Auth::user()?->company_id,
+                'query' => [
+                    'search' => $this->search,
+                    'filterValues' => $this->filterValues,
+                    'sortAttribute' => $this->sortAttribute,
+                    'sortDirection' => $this->sortDirection,
+                    'perPage' => $this->perPage,
+                ],
+            ],
+        );
+
+        $this->savedViewId = (string) $view->id;
+        $this->resetErrorBag('savedViewName');
+        session()->flash('admin.action', "View \"{$name}\" saved.");
+    }
+
+    public function deleteSavedView(): void
+    {
+        if ($this->savedViewId === '') {
+            return;
+        }
+
+        AdminSavedView::query()
+            ->where('user_id', Auth::id())
+            ->where('resource', $this->resourceKey)
+            ->whereKey((int) $this->savedViewId)
+            ->delete();
+
+        $this->savedViewId = '';
+        $this->savedViewName = '';
     }
 
     public function clearFilters(): void

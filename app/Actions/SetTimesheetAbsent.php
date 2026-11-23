@@ -29,6 +29,10 @@ class SetTimesheetAbsent extends BaseAction
             ->where('is_locked', false)
             ->where('is_absent', false)
             ->whereNull('logs_rates')
+            ->where(function ($query): void {
+                $query->whereNull('logs')
+                    ->orWhereIn('logs', ['', '[]', 'null']);
+            })
             ->whereNull('am_login')
             ->whereNull('pm_login')
             ->whereNotNull('schedule_id')

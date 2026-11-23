@@ -3,6 +3,7 @@
 namespace App\Services\Payroll;
 
 use App\Actions\GeneratePayrollDateAction;
+use App\Models\AttendanceShift;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
 use App\Models\EmploymentType;
@@ -436,7 +437,7 @@ class PayrollReadiness
                     key: 'work-schedule',
                     title: 'Assign work schedules',
                     description: 'Schedules and shifts determine tardiness, undertime and night differential.',
-                    complete: Schedule::query()->exists() || EmployeeSchedule::query()->exists(),
+                    complete: Schedule::query()->exists() || EmployeeSchedule::query()->exists() || AttendanceShift::query()->exists(),
                     required: false,
                     meta: null,
                     action: $this->link('Manage schedules', 'admin.resource.index', ['resource' => 'schedule']),

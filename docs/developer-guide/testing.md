@@ -72,12 +72,25 @@ Playwright lives in `e2e/`. The global setup runs:
 php artisan testing:seed-e2e-company
 ```
 
-It creates two isolated companies and writes `storage/e2e-fixtures.json`:
+It creates three isolated companies and writes `storage/e2e-fixtures.json`:
 
 - the pre-seeded company with a payroll group, employees, attendance, and a draft payroll used by the login, settings, office, and payroll specs;
-- `E2E Onboarding Co`, a bare tenant with only an owner account, used by `e2e/onboarding-payroll.spec.ts` to exercise the full setup journey.
+- `E2E Onboarding Co`, a bare tenant with only an owner account, used by `e2e/onboarding-payroll.spec.ts` to exercise the full setup journey;
+- `E2E Attendance Co`, a semi-monthly tenant with a day, night and split shift, three portal employees, two open cut-offs for November and one open payroll per cut-off, used by `e2e/attendance-payroll.spec.ts`.
 
 The onboarding spec creates the office, employment type, department, payroll group, employee, timesheets, recurring allowances, fixed and percentage deductions, a company loan, the payroll run, approval, and the payslip through the browser. The tests never touch real payroll data.
+
+The attendance spec signs each employee into the portal and punches time in and out for every weekday of November, then files an attendance correction and two overtime requests, has HR approve them, and runs both cut-offs through preview, processing, review, approval and payslips. It asserts the statutory premiums from the rate catalogue: overtime at 1.25×, night differential at 1.10× and no absence line for a fully punched period.
+
+### Shifting the clock for multi-day journeys
+
+The portal records the punch moment as "now", so the attendance spec shifts the application clock per request. A non-local environment rejects the header with `403`:
+
+```text
+X-E2E-Now: 2026-11-04T08:20:00+08:00
+```
+
+`App\Http\Middleware\SetE2eClock` applies the value with `Carbon::setTestNow()` and restores the real clock in a `finally` block, so no state leaks between requests or Octane workers. The middleware runs inside the session middleware, which keeps session cookies on their real expiry. Use `setClock()` and `clearClock()` from `e2e/support/clock.ts` rather than setting the header by hand.
 
 ```bash
 npm run e2e

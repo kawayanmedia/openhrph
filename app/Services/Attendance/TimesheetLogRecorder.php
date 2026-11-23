@@ -5,6 +5,7 @@ namespace App\Services\Attendance;
 use App\Gateways\GenerateTimesheetGateway;
 use App\Models\Device;
 use App\Models\Employee;
+use App\Models\Holiday;
 use App\Models\Timesheet;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -34,7 +35,10 @@ class TimesheetLogRecorder
 
     public const REASON_CLOSED = 'closed';
 
-    public function __construct(private readonly AttendancePeriod $period) {}
+    public function __construct(
+        private readonly AttendancePeriod $period,
+        private readonly WorkScheduleResolver $resolver,
+    ) {}
 
     /**
      * Find the timesheet for the punch's workday without creating it.
@@ -91,27 +95,32 @@ class TimesheetLogRecorder
     {
         $moment = CarbonImmutable::parse($moment);
         $today = $moment->startOfDay();
-        $schedule = $employee->schedule;
+        $time = ((int) $moment->format('G')) * 60 + ((int) $moment->format('i'));
 
-        if ($schedule === null) {
-            return $today;
-        }
+        foreach ([$today->subDay(), $today] as $candidate) {
+            $workday = $this->resolver->resolve($employee, $candidate);
+            $end = $workday->shiftEnd();
 
-        $shiftStart = $this->clock($schedule->time_in);
-        $shiftEnd = $this->clock($schedule->time_out);
+            if ($end === null || $end <= 24 * 60) {
+                continue;
+            }
 
-        if ($shiftStart === null || $shiftEnd === null || $shiftStart <= $shiftEnd) {
-            return $today;
-        }
-
-        if ($moment->format('H:i:s') >= $shiftStart) {
-            return $today;
+            // The tail of an overnight shift (06:00 for a 22:00-06:00 shift)
+            // belongs to the workday that started the evening before.
+            if ($candidate->isSameDay($today->subDay()) && $time <= $end - 24 * 60) {
+                return $candidate;
+            }
         }
 
         $previous = $this->findTimesheet($employee, $today->subDay());
 
         if ($previous !== null && $this->nextLogType($previous) === 1) {
-            return $today->subDay();
+            $previousWorkday = $this->resolver->resolve($employee, $today->subDay());
+            $end = $previousWorkday->shiftEnd();
+
+            if ($end !== null && $end > 24 * 60) {
+                return $today->subDay();
+            }
         }
 
         return $today;
@@ -209,6 +218,7 @@ class TimesheetLogRecorder
             'source' => $source,
             'device' => $device?->name,
             'recorded_at' => now()->toDateTimeString(),
+            'punched_at' => $moment->toDateTimeString(),
         ];
 
         if (! $this->appendLog($timesheet, $entry)) {
@@ -271,6 +281,8 @@ class TimesheetLogRecorder
             return false;
         }
 
+        app(PunchLedger::class)->record($timesheet, $entry);
+
         $timesheetDate = $timesheet->log_date?->toDateString();
         $logDate = $entry['log_date'] ?? $timesheetDate;
 
@@ -323,6 +335,10 @@ class TimesheetLogRecorder
      */
     private function punchMoment(Timesheet $timesheet, array $log): ?CarbonImmutable
     {
+        if (! empty($log['punched_at'])) {
+            return CarbonImmutable::parse($log['punched_at']);
+        }
+
         if (! empty($log['recorded_at'])) {
             return CarbonImmutable::parse($log['recorded_at']);
         }
@@ -353,11 +369,18 @@ class TimesheetLogRecorder
      */
     private function chronologicalKey(array $log): string
     {
-        if (! empty($log['recorded_at'])) {
-            return (string) $log['recorded_at'];
+        if (! empty($log['punched_at'])) {
+            return (string) $log['punched_at'];
         }
 
-        return trim(($log['log_date'] ?? '').' '.($log['time'] ?? ''));
+        $date = (string) ($log['log_date'] ?? '');
+        $time = (string) ($log['time'] ?? '');
+
+        if ($date !== '' && $time !== '') {
+            return trim($date.' '.$time);
+        }
+
+        return (string) ($log['recorded_at'] ?? '');
     }
 
     private function findTimesheet(Employee $employee, CarbonImmutable $day): ?Timesheet
@@ -371,16 +394,31 @@ class TimesheetLogRecorder
 
     private function createTimesheet(Employee $employee, CarbonImmutable $day): Timesheet
     {
+        $workday = $this->resolver->resolve($employee, $day);
+        $holiday = Holiday::query()->whereDate('date', $day->toDateString())->first();
+
         $timesheet = new Timesheet;
         $timesheet->employee_id = $employee->getKey();
         $timesheet->employee_number = $employee->employee_number;
         $timesheet->biometric_id = $employee->biometric_id;
         $timesheet->log_date = $day->toDateString();
-        $timesheet->day_type = Timesheet::REGULAR_DAY;
-        $timesheet->day_rate_code = Timesheet::REGULAR_DAY;
+        $timesheet->day_type = $workday->isRestDay ? Timesheet::REST_DAY : Timesheet::REGULAR_DAY;
+        $timesheet->day_rate_code = $timesheet->day_type;
         $timesheet->schedule_id = $employee->schedule_id;
+        $timesheet->shift_id = $workday->shiftId;
         $timesheet->office_id = $employee->office_id;
         $timesheet->department_id = $employee->department_id;
+
+        if ($holiday !== null) {
+            $timesheet->holiday_type = $holiday->holiday_type;
+            $timesheet->holiday_id = $holiday->getKey();
+            $timesheet->holiday_name = $holiday->name;
+            $timesheet->holiday_code = $holiday->code;
+            $timesheet->day_rate_code = $workday->isRestDay
+                ? Timesheet::REST_DAY.'-'.$holiday->code
+                : (string) $holiday->code;
+        }
+
         $timesheet->save();
 
         return $timesheet;
@@ -396,20 +434,16 @@ class TimesheetLogRecorder
             return false;
         }
 
-        $schedule = $timesheet->schedule;
+        $workday = $this->resolver->resolve($timesheet->employee, $timesheet->log_date, $timesheet);
+        $start = $workday->shiftStart();
 
-        if ($schedule === null) {
+        if ($start === null || ! $workday->crossesMidnight()) {
             return false;
         }
 
-        $shiftStart = $this->clock($schedule->time_in);
-        $shiftEnd = $this->clock($schedule->time_out);
+        $time = ((int) $moment->format('G')) * 60 + ((int) $moment->format('i'));
 
-        if ($shiftStart === null || $shiftEnd === null || $shiftStart <= $shiftEnd) {
-            return false;
-        }
-
-        return $moment->format('H:i:s') < $shiftStart;
+        return $time < $start;
     }
 
     private function mirrorTimeColumns(Timesheet $timesheet, CarbonImmutable $moment, int $logType, bool $overnight): void
@@ -438,16 +472,5 @@ class TimesheetLogRecorder
         } else {
             $timesheet->am_logout = $time;
         }
-    }
-
-    private function clock(?string $value): ?string
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        $value = substr($value, 0, 8);
-
-        return strlen($value) === 5 ? $value.':00' : $value;
     }
 }

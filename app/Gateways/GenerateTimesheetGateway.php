@@ -4,10 +4,10 @@ namespace App\Gateways;
 
 use App\Models\Employee;
 use App\Models\Holiday;
-use App\Models\PayrollGroup;
 use App\Models\Timesheet;
+use App\Services\Attendance\ResolvedWorkday;
+use App\Services\Attendance\WorkScheduleResolver;
 use Carbon\CarbonImmutable;
-use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 
 class GenerateTimesheetGateway
@@ -29,11 +29,11 @@ class GenerateTimesheetGateway
 
         $summary = ['created' => 0, 'updated' => 0, 'skipped' => 0];
 
-        if ($scheduleId === null || $dates === []) {
-            $summary['skipped'] = count($dates);
-
+        if ($dates === []) {
             return $summary;
         }
+
+        $resolver = app(WorkScheduleResolver::class);
 
         $start = $dates[0]->toDateString();
         $end = $dates[count($dates) - 1]->toDateString();
@@ -57,18 +57,35 @@ class GenerateTimesheetGateway
             $logDate = $date->toDateString();
             $timesheet = $existing->get($logDate);
 
-            if ($timesheet !== null && $timesheet->day_type !== null && $timesheet->day_rate_code !== null) {
-                // Keep the classification but follow a schedule reassignment so
-                // overtime and shift rules use the new schedule.
-                if ((int) $timesheet->schedule_id !== $scheduleId) {
-                    $timesheet->schedule_id = $scheduleId;
-                    $timesheet->save();
-                    $summary['updated']++;
+            $workday = $resolver->resolve($employee, $date);
 
-                    continue;
+            if ($this->hasNoSchedule($workday)) {
+                $summary['skipped']++;
+
+                continue;
+            }
+
+            if ($timesheet !== null && $timesheet->day_type !== null && $timesheet->day_rate_code !== null) {
+                // Keep the classification but follow a schedule or shift
+                // reassignment so overtime and premium rules use the new one.
+                $changed = false;
+
+                if ($scheduleId !== null && (int) $timesheet->schedule_id !== $scheduleId) {
+                    $timesheet->schedule_id = $scheduleId;
+                    $changed = true;
                 }
 
-                $summary['skipped']++;
+                if ($workday->shiftId !== null && (int) $timesheet->shift_id !== $workday->shiftId) {
+                    $timesheet->shift_id = $workday->shiftId;
+                    $changed = true;
+                }
+
+                if ($changed) {
+                    $timesheet->save();
+                    $summary['updated']++;
+                } else {
+                    $summary['skipped']++;
+                }
 
                 continue;
             }
@@ -85,11 +102,12 @@ class GenerateTimesheetGateway
                 $timesheet->department_id = $employee->department_id;
             }
 
-            $isRestDay = $this->isRestDay($date, $employee->payrollGroup);
+            $isRestDay = $workday->isRestDay;
             $holiday = $holidays->get($logDate);
 
             $timesheet->day_type = $isRestDay ? Timesheet::REST_DAY : Timesheet::REGULAR_DAY;
             $timesheet->schedule_id = $scheduleId;
+            $timesheet->shift_id = $workday->shiftId;
 
             if ($holiday !== null) {
                 $timesheet->holiday_type = $holiday->holiday_type;
@@ -133,17 +151,11 @@ class GenerateTimesheetGateway
         return $normalized;
     }
 
-    private function isRestDay(CarbonInterface $date, ?PayrollGroup $payrollGroup): bool
+    private function hasNoSchedule(ResolvedWorkday $workday): bool
     {
-        if ($payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONFRI) {
-            return $date->isSaturday() || $date->isSunday();
-        }
-
-        if ($payrollGroup?->days_year == PayrollGroup::NUMBER_WORKING_DAYS_MONSAT) {
-            return $date->isSunday();
-        }
-
-        return false;
+        return $workday->source === 'default'
+            && $workday->shiftId === null
+            && $workday->segments === [];
     }
 
     private function rateCode(bool $isRestDay, ?Holiday $holiday): string

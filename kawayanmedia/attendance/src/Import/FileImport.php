@@ -82,9 +82,14 @@ class FileImport implements AttendanceImport
                 $stat = '';
                 $logType = '';
             } else {
-                // Biometric machine use tabs to separate each logs
-                // Example:  2458	2013-03-13 16:58:11	1	1	1	0
-                [$employeeId, $dateTime, $stat, $logType] = explode("\t", $line);
+                // Biometric machine use tabs to separate each log.
+                // Example: 2458	2013-03-13 16:58:11	1	1	1	0
+                // Columns 3-5 are status flags; the last column is the punch
+                // direction (0 = in, 1 = out).
+                $parts = explode("\t", $line);
+                [$employeeId, $dateTime] = $parts;
+                $stat = $parts[2] ?? '';
+                $logType = $parts[5] ?? '0';
             }
 
             // Skip malformed lines before padding, otherwise an empty id

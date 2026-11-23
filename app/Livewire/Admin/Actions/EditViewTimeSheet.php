@@ -11,12 +11,22 @@ use App\Models\Rate;
 use App\Models\Schedule;
 use App\Models\Timesheet;
 use App\Services\Attendance\AttendancePeriod;
+use App\Services\Attendance\PunchLedger;
+use App\Services\Attendance\TimesheetCalculator;
 use App\Services\HrAudit;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Http\Request;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Collection;
 
+/**
+ * Correct one attendance day.
+ *
+ * The old editor wrote premium-equivalent hours through Timesheet::addTime().
+ * This one only classifies the day and, when asked, replaces the raw punches;
+ * every hour bucket is then derived by the shared TimesheetCalculator.
+ */
 class EditViewTimeSheet extends Action
 {
     use InteractsWithQueue, Queueable;
@@ -42,6 +52,7 @@ class EditViewTimeSheet extends Action
     public function handle(Request $request, array $fields, Collection $models): mixed
     {
         $period = app(AttendancePeriod::class);
+        $calculator = app(TimesheetCalculator::class);
 
         if ($models->contains(fn (Timesheet $model): bool => $this->isLocked($model, $period))) {
             return self::message('This timesheet is locked because payroll for the period has been approved or the cut-off is closed. Reopen the payroll before editing attendance.');
@@ -50,78 +61,97 @@ class EditViewTimeSheet extends Action
         foreach ($models as $model) {
             $before = $this->snapshot($model);
 
-            $model->day_rate_code = $fields['day_type'];
+            $code = (string) ($fields['day_type'] ?? $model->day_rate_code ?? Timesheet::REGULAR_DAY);
 
-            $model->is_paid_leave = $fields['day_type'] == Rate::PAID_LEAVE;
+            $model->day_rate_code = $code;
+            $model->is_paid_leave = $code === Rate::PAID_LEAVE;
+            $model->is_leave = in_array($code, [Rate::PAID_LEAVE, Rate::UNPAID_LEAVE], true);
+            $model->is_absent = $code === Timesheet::ABSENT;
+            $model->day_type = str_starts_with($code, Timesheet::REST_DAY)
+                ? Timesheet::REST_DAY
+                : Timesheet::REGULAR_DAY;
 
-            if ($fields['day_type'] == Rate::PAID_LEAVE or $fields['day_type'] == Rate::UNPAID_LEAVE) {
-                $model->is_leave = true;
+            if (! empty($fields['schedule_id'])) {
+                $model->schedule_id = (int) $fields['schedule_id'];
             }
-
-            $rate = $fields['rate'];
-
-            $regularHours = $fields['hours'];
-
-            // Reset the timesheet
-            $model->logs_rates = null;
-            $model->am_login = null;
-            $model->pm_login = null;
-            $model->am_logout = null;
-            $model->pm_logout = null;
-            $model->am_out_morning = null;
-
-            $model->regular = null;
-            $model->ot = null;
-            $model->nt = null;
-            $model->nt_ot = null;
-
-            $model->regular_rate = null;
-            $model->ot_rate = null;
-            $model->nt_rate = null;
-            $model->nt_ot_rate = null;
-
-            $model->actual_regular = null;
-            $model->actual_ot = null;
-            $model->actual_nt = null;
-            $model->actual_nt_ot = null;
 
             $model->save();
 
-            if ($fields['day_type'] == Timesheet::REST_DAY && $rate == Rate::NO_LOG) {
-                $model->day_type = Timesheet::REST_DAY;
-                $model->save();
+            $isNoLog = $model->is_leave || $model->is_absent;
 
-                $this->recordAudit($model, $before);
+            if (! $isNoLog && (bool) ($fields['replace_punches'] ?? false)) {
+                $error = $this->replacePunches($model, $fields);
 
-                continue;
-            }
-
-            if ($fields['day_type'] != Timesheet::ABSENT) {
-                // Check first of the overtime is also in night
-                $isOtNt = $model->addNightOverTime($model, $fields['day_type'], $fields['time_in'], $fields['time_out'], $fields['time_out_next_day']);
-
-                if ($isOtNt) {
-                    $regularHours = 8;
-                }
-
-                if (! $isOtNt) {
-                    $actualHoursOvertime = $model->addOverTime($model, $fields['day_type'], $fields['time_in'], $fields['time_out'], $fields['time_out_next_day']);
-
-                    if ($actualHoursOvertime != 0) {
-                        $regularHours = 8;
-                    }
-
-                    $model->addNightDifferential($model, $fields['day_type'], $fields['time_in'], $fields['time_out'], $fields['time_out_next_day']);
+                if ($error !== null) {
+                    return self::message($error);
                 }
             }
 
-            $model->actual_regular = $regularHours;
-            $model->addTime($fields['day_type'], $rate, $regularHours, $fields['time_in'], $fields['time_out'], $regularHours);
+            $calculator->compute($model);
 
             $this->recordAudit($model, $before);
         }
 
         return self::message('Timesheet has been updated.');
+    }
+
+    /**
+     * Replace the day's punches with the times entered in the form.
+     *
+     * The old punches stay in the audit snapshot; the append-only punch ledger
+     * (when present) records the replacement separately.
+     *
+     * @param  array<string, mixed>  $fields
+     */
+    private function replacePunches(Timesheet $model, array $fields): ?string
+    {
+        $timeIn = trim((string) ($fields['time_in'] ?? ''));
+        $timeOut = trim((string) ($fields['time_out'] ?? ''));
+
+        if ($timeIn === '' || $timeOut === '') {
+            return 'Enter both a time in and a time out, or clear "Replace raw punches".';
+        }
+
+        $date = $model->log_date;
+
+        if ($date === null) {
+            return 'This attendance day has no date.';
+        }
+
+        $nextDay = (bool) ($fields['time_out_next_day'] ?? false);
+        $outDate = CarbonImmutable::parse($date->toDateString());
+
+        if ($nextDay || $timeOut <= $timeIn) {
+            $outDate = $outDate->addDay();
+        }
+
+        $in = $this->punch($date->toDateString(), $timeIn, 0);
+        $out = $this->punch($outDate->toDateString(), $timeOut, 1);
+
+        $model->logs = [$in, $out];
+        $model->save();
+
+        app(PunchLedger::class)->replace($model, [$in, $out]);
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function punch(string $date, string $time, int $logType): array
+    {
+        $time = strlen($time) === 5 ? $time.':00' : $time;
+
+        return [
+            'log_date' => $date,
+            'time' => $time,
+            'log_type' => $logType,
+            'source' => 'manual',
+            'device' => null,
+            'recorded_at' => now()->toDateTimeString(),
+            'punched_at' => $date.' '.$time,
+        ];
     }
 
     private function isLocked(Timesheet $timesheet, AttendancePeriod $period): bool
@@ -147,8 +177,17 @@ class EditViewTimeSheet extends Action
             'ot' => $timesheet->getRawOriginal('ot'),
             'nt' => $timesheet->getRawOriginal('nt'),
             'nt_ot' => $timesheet->getRawOriginal('nt_ot'),
+            'actual_regular' => $timesheet->getRawOriginal('actual_regular'),
+            'actual_ot' => $timesheet->getRawOriginal('actual_ot'),
+            'actual_nt' => $timesheet->getRawOriginal('actual_nt'),
+            'actual_nt_ot' => $timesheet->getRawOriginal('actual_nt_ot'),
+            'paid_minutes' => $timesheet->getRawOriginal('paid_minutes'),
+            'scheduled_minutes' => $timesheet->getRawOriginal('scheduled_minutes'),
+            'late_minutes' => $timesheet->getRawOriginal('late_minutes'),
+            'undertime_minutes' => $timesheet->getRawOriginal('undertime_minutes'),
             'is_absent' => (bool) $timesheet->is_absent,
             'is_leave' => (bool) $timesheet->is_leave,
+            'logs' => $timesheet->logs,
             'logs_rates' => $timesheet->logs_rates,
         ];
     }
@@ -173,18 +212,14 @@ class EditViewTimeSheet extends Action
     {
         $dayType = $this->model->day_type;
 
-        // If absent
         if ($this->model->is_absent) {
             $dayType = Timesheet::ABSENT;
         }
 
         if ($this->model->holiday_code) {
-            // Check if rd
-            if ($this->model->day_type == Timesheet::REST_DAY) {
-                $dayType = Timesheet::REST_DAY.'-'.$this->model->holiday_code;
-            } else {
-                $dayType = $this->model->holiday_code;
-            }
+            $dayType = $this->model->day_type == Timesheet::REST_DAY
+                ? Timesheet::REST_DAY.'-'.$this->model->holiday_code
+                : $this->model->holiday_code;
         }
 
         return [
@@ -196,8 +231,7 @@ class EditViewTimeSheet extends Action
                 ->options(Schedule::pluck('name', 'id')->toArray())
                 ->default($this->model->schedule_id)
                 ->searchable()
-                ->sortable()
-                ->rules('required'),
+                ->sortable(),
 
             Select::make('Day Type', 'day_type')
                 ->options(rates())
@@ -205,31 +239,12 @@ class EditViewTimeSheet extends Action
                 ->sortable()
                 ->rules('required'),
 
-            Select::make('Rate', 'rate')
-                ->options(hour_rates($dayType))
-                ->sortable()
-                ->default($this->model->holiday_type ?? Timesheet::REGULAR_DAY)
-                ->rules('required')
-                ->hideFromIndex()
-                ->dependsOn(['day_type'], function (Select $field, Request $request, FormData $formData) {
-                    if ($formData->day_type) {
-                        $field->options(hour_rates($formData->day_type));
-                    }
-
-                    if (is_leave($formData->day_type) || $formData->day_type == Timesheet::ABSENT || $formData->day_type == Timesheet::UNDERTIME) {
-                        $field->hide();
-                        $field->rules();
-                    }
-                }),
-
             Text::make('Time In', 'time_in')
                 ->rules('required')
                 ->default($this->model->time_in ?? $this->model->schedule?->time_in ?? '08:00')
-                ->withMeta([
-                    'extraAttributes' => ['type' => 'time'],
-                ])
-                ->dependsOn(['day_type', 'rate'], function (Text $field, Request $request, FormData $formData) {
-                    if (is_leave($formData->day_type) || $formData->day_type == Timesheet::ABSENT || $formData->rate == Rate::NO_LOG) {
+                ->withMeta(['extraAttributes' => ['type' => 'time']])
+                ->dependsOn(['day_type'], function (Text $field, Request $request, FormData $formData): void {
+                    if (is_leave($formData->day_type) || $formData->day_type == Timesheet::ABSENT) {
                         $field->hide();
                         $field->rules();
                     }
@@ -238,21 +253,22 @@ class EditViewTimeSheet extends Action
             Text::make('Time Out', 'time_out')
                 ->rules('required')
                 ->default($this->model->time_out ?? $this->model->schedule?->time_out ?? '17:00')
-                ->withMeta([
-                    'extraAttributes' => ['type' => 'time'],
-                ])
-                ->dependsOn(['day_type', 'rate'], function (Text $field, Request $request, FormData $formData) {
-                    if (is_leave($formData->day_type) || $formData->day_type == Timesheet::ABSENT || $formData->rate == Rate::NO_LOG) {
+                ->withMeta(['extraAttributes' => ['type' => 'time']])
+                ->dependsOn(['day_type'], function (Text $field, Request $request, FormData $formData): void {
+                    if (is_leave($formData->day_type) || $formData->day_type == Timesheet::ABSENT) {
                         $field->hide();
                         $field->rules();
                     }
                 }),
 
-            Boolean::make('Time Out Next Day', 'time_out_next_day'),
+            Boolean::make('Time Out Next Day', 'time_out_next_day')
+                ->default(false),
 
-            Text::make('Hours', 'hours')
-                ->rules('required', 'numeric', 'min:0', 'max:24')
-                ->help(''),
+            Boolean::make('Replace raw punches', 'replace_punches')
+                ->default(false)
+                ->help('Write the times above as the day\'s punches. Leave off to keep the device, portal and correction punches.'),
+
+            Heading::make($this->model->punches_display)->asHtml(),
 
             Heading::make($this->model->logs_display)->asHtml(),
         ];

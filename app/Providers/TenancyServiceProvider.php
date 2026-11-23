@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\RestoreQueueTenant;
 use App\Listeners\SetDefaultTenant;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Auth\Events\Authenticated;
@@ -21,6 +22,7 @@ class TenancyServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(TenantContext::class);
+        $this->app->singleton(RestoreQueueTenant::class);
     }
 
     /**
@@ -36,18 +38,10 @@ class TenancyServiceProvider extends ServiceProvider
             return $tenantId === null ? [] : ['tenant_id' => $tenantId];
         });
 
-        Event::listen(JobProcessing::class, function (JobProcessing $event): void {
-            $tenantId = $event->job->payload()['tenant_id'] ?? null;
-
-            if ($tenantId !== null) {
-                app(TenantContext::class)->set((int) $tenantId);
-            }
-        });
+        Event::listen(JobProcessing::class, [RestoreQueueTenant::class, 'processing']);
 
         foreach ([JobProcessed::class, JobFailed::class, JobExceptionOccurred::class] as $event) {
-            Event::listen($event, function (): void {
-                app(TenantContext::class)->forget();
-            });
+            Event::listen($event, [RestoreQueueTenant::class, 'finished']);
         }
     }
 }

@@ -3,6 +3,7 @@
 use App\Actions\SetTimesheetAbsent;
 use App\Livewire\Admin\Actions\EditViewTimeSheet;
 use App\Livewire\Admin\AdminIndex;
+use App\Models\AdminSavedView;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Rate;
@@ -166,11 +167,10 @@ it('records a timesheet audit event when an edit is applied', function () {
 
     $fields = [
         'day_type' => Timesheet::REST_DAY,
-        'rate' => Rate::NO_LOG,
-        'hours' => 0,
         'time_in' => '08:00',
         'time_out' => '17:00',
         'time_out_next_day' => false,
+        'replace_punches' => false,
     ];
 
     (new EditViewTimeSheet($timesheet))->handle(request(), $fields, collect([$timesheet]));
@@ -221,4 +221,155 @@ it('includes the selected end date in the date filter', function () {
     Livewire::test(AdminIndex::class, ['resource' => 'timesheet'])
         ->set('filterValues.date-range-to', '2026-11-10')
         ->assertSee('E-0001');
+});
+
+it('records manual punches through the shared calculator', function () {
+    $timesheet = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $this->schedule->id,
+        'logs' => null,
+    ]);
+
+    $fields = [
+        'schedule_id' => $this->schedule->id,
+        'day_type' => Timesheet::REGULAR_DAY,
+        'time_in' => '08:00',
+        'time_out' => '17:00',
+        'time_out_next_day' => false,
+        'replace_punches' => true,
+    ];
+
+    $result = (new EditViewTimeSheet($timesheet))->handle(request(), $fields, collect([$timesheet]));
+
+    expect($result)->toContain('updated');
+
+    $fresh = $timesheet->fresh();
+
+    expect($fresh->logs)->toHaveCount(2)
+        ->and($fresh->logs[0]['source'])->toBe('manual')
+        ->and((int) $fresh->paid_minutes)->toBe(480)
+        ->and((float) $fresh->actual_regular)->toBe(8.0)
+        ->and((float) $fresh->actual_ot)->toBe(0.0);
+});
+
+it('marks leave without fabricating punches', function () {
+    $timesheet = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $this->schedule->id,
+        'logs' => null,
+    ]);
+
+    $fields = [
+        'day_type' => Rate::PAID_LEAVE,
+        'time_in' => '08:00',
+        'time_out' => '17:00',
+        'replace_punches' => true,
+    ];
+
+    (new EditViewTimeSheet($timesheet))->handle(request(), $fields, collect([$timesheet]));
+
+    $fresh = $timesheet->fresh();
+
+    expect((bool) $fresh->is_leave)->toBeTrue()
+        ->and((bool) $fresh->is_paid_leave)->toBeTrue()
+        ->and($fresh->logs)->toBeNull()
+        ->and((int) $fresh->paid_minutes)->toBe(0);
+});
+
+it('recomputes the selected days in bulk', function () {
+    $first = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-10',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $this->schedule->id,
+        'logs' => [
+            ['time' => '08:00:00', 'log_type' => 0],
+            ['time' => '17:00:00', 'log_type' => 1],
+        ],
+    ]);
+
+    $second = Timesheet::factory()->create([
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'log_date' => '2026-11-11',
+        'day_type' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $this->schedule->id,
+        'logs' => [
+            ['time' => '08:00:00', 'log_type' => 0],
+            ['time' => '17:00:00', 'log_type' => 1],
+        ],
+    ]);
+
+    Livewire::test(AdminIndex::class, ['resource' => 'timesheet'])
+        ->set('selected', [$first->id, $second->id])
+        ->call('openAction', 'RecomputeSelected')
+        ->call('runAction')
+        ->assertHasNoErrors();
+
+    expect((int) $first->refresh()->paid_minutes)->toBe(480)
+        ->and((int) $second->refresh()->paid_minutes)->toBe(480);
+});
+
+it('marks only eligible selected days absent in bulk', function () {
+    $base = [
+        'company_id' => $this->company->id,
+        'employee_id' => $this->employee->id,
+        'employee_number' => $this->employee->employee_number,
+        'day_type' => Timesheet::REGULAR_DAY,
+        'schedule_id' => $this->schedule->id,
+        'am_login' => null,
+        'am_logout' => null,
+        'pm_login' => null,
+        'pm_logout' => null,
+    ];
+
+    $eligibleOne = Timesheet::factory()->create(array_merge($base, ['log_date' => '2026-11-10']));
+    $eligibleTwo = Timesheet::factory()->create(array_merge($base, ['log_date' => '2026-11-11']));
+    $restDay = Timesheet::factory()->create(array_merge($base, [
+        'log_date' => '2026-11-12',
+        'day_type' => Timesheet::REST_DAY,
+    ]));
+
+    Livewire::test(AdminIndex::class, ['resource' => 'timesheet'])
+        ->set('selected', [$eligibleOne->id, $eligibleTwo->id, $restDay->id])
+        ->call('openAction', 'MarkSelectedAbsent')
+        ->call('runAction')
+        ->assertHasNoErrors();
+
+    expect((bool) $eligibleOne->refresh()->is_absent)->toBeTrue()
+        ->and((bool) $eligibleTwo->refresh()->is_absent)->toBeTrue()
+        ->and((bool) $restDay->refresh()->is_absent)->toBeFalse();
+});
+
+it('saves and applies a timesheet worklist view', function () {
+    $component = Livewire::test(AdminIndex::class, ['resource' => 'timesheet'])
+        ->set('search', 'Cruz')
+        ->set('filterValues.timesheet-exception', 'late')
+        ->set('savedViewName', 'Late Cruz days')
+        ->call('saveView')
+        ->assertHasNoErrors();
+
+    $view = AdminSavedView::query()
+        ->where('user_id', $this->user->id)
+        ->where('resource', 'timesheet')
+        ->where('name', 'Late Cruz days')
+        ->firstOrFail();
+
+    $component
+        ->set('search', '')
+        ->set('filterValues', [])
+        ->call('applySavedView', $view->id)
+        ->assertSet('search', 'Cruz')
+        ->assertSet('filterValues.timesheet-exception', 'late');
 });

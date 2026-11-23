@@ -75,6 +75,7 @@ class AttendanceCorrection
                 'source' => 'attendance_request',
                 'device' => null,
                 'recorded_at' => now()->toDateTimeString(),
+                'punched_at' => $moment->toDateTimeString(),
                 'request_id' => $request->getKey(),
             ];
 

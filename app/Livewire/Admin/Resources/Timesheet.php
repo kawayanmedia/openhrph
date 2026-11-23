@@ -7,7 +7,10 @@ use App\Livewire\Admin\Actions\EditViewTimeSheet;
 use App\Livewire\Admin\Actions\ExportCsv;
 use App\Livewire\Admin\Actions\GenerateTimeSheet;
 use App\Livewire\Admin\Actions\ImportTimeSheet;
+use App\Livewire\Admin\Actions\MarkSelectedAbsent;
 use App\Livewire\Admin\Actions\MarkTimesheetAbsent;
+use App\Livewire\Admin\Actions\RecomputeSelected;
+use App\Livewire\Admin\Actions\RecomputeTimeSheet;
 use App\Livewire\Admin\Fields\Badge;
 use App\Livewire\Admin\Fields\Date;
 use App\Livewire\Admin\Fields\ID;
@@ -17,6 +20,7 @@ use App\Livewire\Admin\Filters\DateRangeFrom;
 use App\Livewire\Admin\Filters\DateRangeTo;
 use App\Livewire\Admin\Filters\FieldsFilter;
 use App\Livewire\Admin\Filters\TimesheetEmployee;
+use App\Livewire\Admin\Filters\TimesheetException;
 use App\Livewire\Admin\Resource;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +32,7 @@ class Timesheet extends Resource
 
     public static string $title = 'id';
 
-    public static array $with = ['employee'];
+    public static array $with = ['employee', 'schedule'];
 
     public static string $group = 'Attendance';
 
@@ -90,6 +94,28 @@ class Timesheet extends Resource
                 return number_format((float) $this->worked_hours, 2);
             }),
 
+            Text::make('Regular', function () {
+                return number_format((float) $this->actual_regular, 2);
+            }),
+
+            Text::make('OT', function () {
+                return number_format((float) $this->actual_ot, 2);
+            }),
+
+            Text::make('Night', function () {
+                return number_format((float) $this->actual_nt, 2);
+            }),
+
+            Text::make('Late (min)', function () {
+                return (int) ($this->late_minutes ?? 0);
+            }),
+
+            Text::make('Undertime (min)', function () {
+                return (int) ($this->undertime_minutes ?? 0);
+            }),
+
+            Text::make('Flags', 'exception_flags_format'),
+
             Badge::make('Status', function () {
                 if ((bool) $this->is_locked) {
                     return 'Locked';
@@ -124,6 +150,7 @@ class Timesheet extends Resource
             new DateRangeFrom,
             new DateRangeTo,
             new TimesheetEmployee,
+            new TimesheetException,
             new FieldsFilter,
         ];
     }
@@ -150,6 +177,9 @@ class Timesheet extends Resource
                 'Status' => $model->is_locked ? 'Locked' : ($model->has_missing_punch ? 'Missing punch' : 'Open'),
             ]),
             (new EditViewTimeSheet($this->resource))->onlyOnTableRow(),
+            (new RecomputeTimeSheet($this->resource))->onlyOnTableRow(),
+            (new RecomputeSelected)->onlyBulk(),
+            (new MarkSelectedAbsent)->onlyBulk(),
         ];
     }
 

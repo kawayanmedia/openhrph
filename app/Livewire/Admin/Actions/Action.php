@@ -23,6 +23,8 @@ abstract class Action
 
     public bool $onlyOnIndexToolbar = false;
 
+    public bool $onlyBulk = false;
+
     public mixed $model = null;
 
     public function __construct(mixed $model = null)
@@ -59,6 +61,13 @@ abstract class Action
     public function onlyOnIndexToolbar(): static
     {
         $this->onlyOnIndexToolbar = true;
+
+        return $this;
+    }
+
+    public function onlyBulk(): static
+    {
+        $this->onlyBulk = true;
 
         return $this;
     }

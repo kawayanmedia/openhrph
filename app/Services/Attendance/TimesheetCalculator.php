@@ -2,21 +2,31 @@
 
 namespace App\Services\Attendance;
 
-use App\Models\Schedule;
+use App\Models\Rate;
 use App\Models\Timesheet;
+use Carbon\CarbonImmutable;
 
 /**
  * Derives the payable hour buckets from raw punches.
  *
- * The engine reads actual_regular/actual_ot/actual_nt/actual_nt_ot. Every
- * punch source funnels through here so the buckets are consistent, instead of
- * depending on someone opening and saving the day in the admin editor.
+ * The engine is the single source of truth for attendance hours. It works in
+ * minutes, deducts an unpaid break exactly once, and keeps the buckets
+ * disjoint in the way payroll expects:
+ *
+ *  - actual_regular: ordinary paid hours, capped at the scheduled paid minutes
+ *  - actual_ot:      overtime hours, including night overtime
+ *  - actual_nt:      all night hours (ordinary + overtime)
+ *  - actual_nt_ot:   the night subset of overtime
+ *
+ * `rule_version = 2` tells the payroll mapper that overtime already includes
+ * the night portion, so it must not add `actual_nt_ot` a second time. Legacy
+ * rows keep their old meaning.
  */
 final class TimesheetCalculator
 {
-    public const NIGHT_START_MINUTES = 22 * 60;
+    public const RULE_VERSION = 2;
 
-    public const NIGHT_END_MINUTES = 6 * 60;
+    public function __construct(private readonly WorkScheduleResolver $resolver) {}
 
     public function compute(Timesheet $timesheet): Timesheet
     {
@@ -24,46 +34,67 @@ final class TimesheetCalculator
             return $timesheet;
         }
 
-        $pairs = $this->pairs($timesheet);
+        $workday = $this->resolver->resolve($timesheet->employee, $timesheet->log_date, $timesheet);
+        $pairs = $this->pairs($timesheet, $workday);
 
-        // An incomplete punch is a missing punch; keep any hours already
-        // computed rather than zeroing them.
-        if ($pairs === []) {
-            return $timesheet;
-        }
-
-        $schedule = $timesheet->schedule ?? $timesheet->employee?->schedule;
-        $scheduled = $this->scheduledMinutes($timesheet, $schedule);
-
-        $regular = 0;
-        $overtime = 0;
-        $night = 0;
-        $nightOT = 0;
+        $paid = [];
 
         foreach ($pairs as [$start, $end]) {
-            $worked = $end - $start;
-            $regularMinutes = min($worked, max(0, $scheduled - $regular));
-            $otMinutes = max(0, $worked - $regularMinutes);
-
-            $regular += $regularMinutes;
-            $overtime += $otMinutes;
-            $night += $this->nightOverlap($start, $end);
-
-            if ($otMinutes > 0) {
-                $nightOT += $this->nightOverlap($end - $otMinutes, $end);
-            }
+            $paid = array_merge($paid, TimeInterval::subtract([[$start, $end]], $workday->breaks));
         }
 
-        $timesheet->actual_regular = $this->hours($regular);
-        $timesheet->actual_ot = $this->hours($overtime);
-        $timesheet->actual_nt = $this->hours($night);
-        $timesheet->actual_nt_ot = $this->hours($nightOT);
+        $paid = TimeInterval::normalize($paid);
+        $paidMinutes = TimeInterval::sum($paid);
+        $scheduledMinutes = $workday->scheduledMinutes();
+
+        $regularMinutes = min($paidMinutes, $scheduledMinutes);
+        $overtimeMinutes = max(0, $paidMinutes - $regularMinutes);
+
+        // Approved overtime may exceed what the punches show (work performed
+        // without a punch, or an approval covering the whole request). Pay the
+        // larger of the two so a recompute cannot erase an approval and an
+        // approval cannot be added twice.
+        $approvedOtMinutes = max(0, (int) ($timesheet->getAttribute('approved_ot_minutes') ?? 0));
+        $payableOvertimeMinutes = max($overtimeMinutes, $approvedOtMinutes);
+
+        $nightMinutes = TimeInterval::overlap($paid, $workday->nightIntervals());
+        $nightOvertimeMinutes = TimeInterval::overlap(
+            TimeInterval::tail($paid, $overtimeMinutes),
+            $workday->nightIntervals(),
+        );
+
+        $lateMinutes = $workday->isScheduledWorkday()
+            ? $this->lateMinutes($paid, $workday)
+            : 0;
+
+        $undertimeMinutes = $this->undertimeMinutes($timesheet, $workday, $pairs, $paidMinutes, $scheduledMinutes);
+
+        $timesheet->actual_regular = $this->hours($regularMinutes);
+        $timesheet->actual_ot = $this->hours($payableOvertimeMinutes);
+        $timesheet->actual_nt = $this->hours($nightMinutes);
+        $timesheet->actual_nt_ot = $this->hours($nightOvertimeMinutes);
 
         // Keep the legacy mirrors aligned for reports that still read them.
-        $timesheet->regular = $this->hours($regular);
-        $timesheet->ot = $this->hours($overtime);
-        $timesheet->nt = $this->hours($night);
-        $timesheet->nt_ot = $this->hours($nightOT);
+        $timesheet->regular = $this->hours($regularMinutes);
+        $timesheet->ot = $this->hours($payableOvertimeMinutes);
+        $timesheet->nt = $this->hours($nightMinutes);
+        $timesheet->nt_ot = $this->hours($nightOvertimeMinutes);
+
+        $timesheet->scheduled_minutes = $scheduledMinutes;
+        $timesheet->paid_minutes = $paidMinutes;
+        $timesheet->late_minutes = $lateMinutes;
+        $timesheet->undertime_minutes = $undertimeMinutes;
+        $timesheet->computed_at = now();
+        $timesheet->rule_version = self::RULE_VERSION;
+
+        $timesheet->logs_rates = $this->logsRates(
+            $timesheet,
+            $regularMinutes,
+            $payableOvertimeMinutes,
+            $nightMinutes,
+            $nightOvertimeMinutes,
+            $paid,
+        );
 
         $timesheet->save();
 
@@ -73,18 +104,21 @@ final class TimesheetCalculator
     /**
      * Pair the punch sequence into complete in/out spans, in minutes.
      *
+     * A time-out earlier than the time-in belongs to the next calendar day,
+     * which is how an overnight 22:00-06:00 punch pair is measured.
+     *
      * @return list<array{0: int, 1: int}>
      */
-    private function pairs(Timesheet $timesheet): array
+    private function pairs(Timesheet $timesheet, ResolvedWorkday $workday): array
     {
-        // Keep the stored order: the recorder already sorts by recorded_at,
-        // which is what distinguishes an overnight out from the next morning.
         $logs = collect($timesheet->logs ?? [])
             ->filter(fn ($log) => isset($log['time']))
             ->values();
 
         $pairs = [];
         $start = null;
+        $previousEnd = null;
+        $shiftStart = $workday->shiftStart();
 
         foreach ($logs as $log) {
             $minutes = $this->minutes((string) $log['time']);
@@ -102,75 +136,154 @@ final class TimesheetCalculator
 
             $end = $minutes;
 
+            // A span that is earlier than the previous one belongs to the
+            // following day. This keeps a 22:00-02:00 + 03:00-06:00 split on
+            // the same workday instead of folding it into the morning.
+            if ($previousEnd !== null && $start < $previousEnd) {
+                $start += 24 * 60;
+                $end += 24 * 60;
+            } elseif ($previousEnd === null && $shiftStart !== null && $start < $shiftStart - 12 * 60) {
+                $start += 24 * 60;
+                $end += 24 * 60;
+            }
+
             if ($end <= $start) {
                 $end += 24 * 60;
             }
 
             $pairs[] = [$start, $end];
+            $previousEnd = $end;
             $start = null;
         }
 
         return $pairs;
     }
 
-    private function scheduledMinutes(Timesheet $timesheet, ?Schedule $schedule): int
+    /**
+     * @param  list<array{0: int, 1: int}>  $paid
+     */
+    private function lateMinutes(array $paid, ResolvedWorkday $workday): int
     {
-        if ($schedule !== null) {
-            $minutes = 0;
+        $late = 0;
+        $grace = max(0, $workday->graceMinutes);
 
-            foreach ([[$schedule->am_in, $schedule->am_out], [$schedule->pm_in, $schedule->pm_out]] as [$in, $out]) {
-                if ($in === null || $out === null) {
-                    continue;
+        foreach ($workday->paidSegments() as [$segmentStart, $segmentEnd]) {
+            $arrival = null;
+
+            foreach ($paid as [$start, $end]) {
+                if ($start >= $segmentStart - 3 * 60 && $start < $segmentEnd) {
+                    $arrival = $start;
+
+                    break;
                 }
-
-                $start = $this->minutes((string) $in);
-                $end = $this->minutes((string) $out);
-
-                if ($end <= $start) {
-                    $end += 24 * 60;
-                }
-
-                $minutes += $end - $start;
             }
 
-            if ($minutes > 0) {
-                if ($schedule->break_time_start !== null && $schedule->break_time_end !== null) {
-                    $breakStart = $this->minutes((string) $schedule->break_time_start);
-                    $breakEnd = $this->minutes((string) $schedule->break_time_end);
-
-                    if ($breakEnd > $breakStart) {
-                        $minutes -= $breakEnd - $breakStart;
-                    }
-                }
-
-                return max(0, $minutes);
+            if ($arrival === null) {
+                continue;
             }
+
+            $late += max(0, $arrival - $segmentStart - $grace);
         }
 
-        $hours = (int) ($timesheet->employee?->payrollGroup?->hours_day ?? 8);
-
-        return max(1, $hours) * 60;
+        return $late;
     }
 
-    private function nightOverlap(int $start, int $end): int
-    {
-        if ($end <= $start) {
+    /**
+     * @param  list<array{0: int, 1: int}>  $pairs
+     */
+    private function undertimeMinutes(
+        Timesheet $timesheet,
+        ResolvedWorkday $workday,
+        array $pairs,
+        int $paidMinutes,
+        int $scheduledMinutes,
+    ): int {
+        if ($pairs === [] || $scheduledMinutes <= 0) {
             return 0;
         }
 
-        $minutes = 0;
-
-        for ($offset = -1; $offset <= 2; $offset++) {
-            $eveningStart = $offset * 24 * 60 + self::NIGHT_START_MINUTES;
-            $eveningEnd = $offset * 24 * 60 + 24 * 60;
-            $minutes += max(0, min($end, $eveningEnd) - max($start, $eveningStart));
-
-            $morningStart = $offset * 24 * 60;
-            $morningEnd = $offset * 24 * 60 + self::NIGHT_END_MINUTES;
-            $minutes += max(0, min($end, $morningEnd) - max($start, $morningStart));
+        if (! $workday->isScheduledWorkday() || $this->isLeaveOrAbsent($timesheet)) {
+            return 0;
         }
 
-        return $minutes;
+        // Do not raise undertime at lunchtime; wait until the shift ended.
+        if (! $this->workdayHasEnded($timesheet, $workday)) {
+            return 0;
+        }
+
+        return max(0, $scheduledMinutes - $paidMinutes);
+    }
+
+    private function isLeaveOrAbsent(Timesheet $timesheet): bool
+    {
+        if ((bool) $timesheet->is_leave || (bool) $timesheet->is_absent) {
+            return true;
+        }
+
+        return in_array((string) $timesheet->day_rate_code, [Rate::PAID_LEAVE, Rate::UNPAID_LEAVE], true);
+    }
+
+    private function workdayHasEnded(Timesheet $timesheet, ResolvedWorkday $workday): bool
+    {
+        $date = $timesheet->log_date;
+
+        if ($date === null) {
+            return false;
+        }
+
+        $endMinutes = $workday->shiftEnd() ?? $workday->defaultMinutes;
+        $end = CarbonImmutable::parse($date->toDateString())->startOfDay()->addMinutes($endMinutes);
+
+        return $end->lessThanOrEqualTo(now());
+    }
+
+    /**
+     * Rebuild the display-friendly rate lines so the admin screen shows the
+     * same numbers payroll reads.
+     *
+     * @param  list<array{0: int, 1: int}>  $paid
+     */
+    private function logsRates(
+        Timesheet $timesheet,
+        int $regular,
+        int $overtime,
+        int $night,
+        int $nightOvertime,
+        array $paid,
+    ): ?array {
+        $code = (string) ($timesheet->day_rate_code ?: $timesheet->day_type ?: Timesheet::REGULAR_DAY);
+        $rate = Rate::query()->where('code', $code)->first();
+        $first = $paid[0] ?? null;
+        $last = $paid === [] ? null : $paid[count($paid) - 1];
+        $logs = [$first[0] ?? null, $last[1] ?? null];
+
+        $lines = [
+            'regular' => $regular,
+            'ot' => $overtime,
+            'nt' => $night,
+            'nt_ot' => $nightOvertime,
+        ];
+
+        $result = [];
+
+        foreach ($lines as $bucket => $minutes) {
+            if ($minutes <= 0) {
+                continue;
+            }
+
+            $result[$code.'-'.str_replace('_', '-', $bucket)] = [
+                'hours' => $this->hours($minutes),
+                'actual' => $this->hours($minutes),
+                'rate' => $bucket === 'regular'
+                    ? (float) ($rate->regular ?? 1.0)
+                    : (float) ($rate->{$bucket} ?? 1.0),
+                'is_rest_day' => (bool) ($rate->is_rest_day ?? false),
+                'is_holiday' => (bool) ($rate->is_holiday ?? false),
+                'logs' => $logs,
+            ];
+        }
+
+        return $result === [] ? null : $result;
     }
 
     private function minutes(string $time): int

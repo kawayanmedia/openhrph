@@ -56,35 +56,14 @@ class TimesheetImport
                 continue;
             }
 
+            $seen = [];
+
             foreach ($days as $date => $logs) {
                 if (! is_string($date) || preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) !== 1) {
                     $summary['invalid'] += count($logs);
 
                     continue;
                 }
-
-                try {
-                    $day = CarbonImmutable::parse($date)->startOfDay();
-                } catch (Throwable) {
-                    $summary['invalid'] += count($logs);
-
-                    continue;
-                }
-
-                $timesheet = $this->recorder->findForDate($employee, $day);
-
-                $blocked = $timesheet === null
-                    ? $this->period->isClosedFor($employee, $day)
-                    : ! $this->recorder->canRecord($employee, $timesheet);
-
-                if ($blocked) {
-                    $summary['blocked'] += count($logs);
-
-                    continue;
-                }
-
-                $timesheet ??= $this->recorder->ensureForDate($employee, $day);
-                $summary['timesheets']++;
 
                 foreach ($logs as $log) {
                     $time = $log['time'] ?? null;
@@ -95,14 +74,46 @@ class TimesheetImport
                         continue;
                     }
 
+                    try {
+                        $moment = CarbonImmutable::parse($date.' '.$time);
+                    } catch (Throwable) {
+                        $summary['invalid']++;
+
+                        continue;
+                    }
+
+                    // An overnight time-out in the file can belong to the
+                    // previous day's shift, so resolve the workday per punch.
+                    $workday = $this->recorder->workdayFor($employee, $moment);
+                    $key = $workday->toDateString();
+
+                    $timesheet = $this->recorder->findForDate($employee, $workday);
+
+                    $blocked = $timesheet === null
+                        ? $this->period->isClosedFor($employee, $workday)
+                        : ! $this->recorder->canRecord($employee, $timesheet);
+
+                    if ($blocked) {
+                        $summary['blocked']++;
+
+                        continue;
+                    }
+
+                    if (! isset($seen[$key])) {
+                        $timesheet ??= $this->recorder->ensureForDate($employee, $workday);
+                        $seen[$key] = true;
+                        $summary['timesheets']++;
+                    }
+
                     $entry = [
                         'employee_id' => (string) $biometricId,
-                        'log_date' => $day->toDateString(),
+                        'log_date' => $key,
                         'time' => $time,
                         'log_type' => (int) ($log['log_type'] ?? 0) === 1 ? 1 : 0,
                         'source' => 'import',
                         'device' => null,
                         'recorded_at' => now()->toDateTimeString(),
+                        'punched_at' => $moment->toDateTimeString(),
                     ];
 
                     if ($this->recorder->appendLog($timesheet, $entry)) {
