@@ -184,6 +184,15 @@ class SchedulesSheet extends SheetDefinition
         }
     }
 
+    public function warnings(array $values, ReferenceIndex $references, bool $creating): array
+    {
+        if (($values['is_default'] ?? false) === true) {
+            return ['This will become the default schedule; the current default will be unset.'];
+        }
+
+        return [];
+    }
+
     public function afterSave(Model $model, array $values, bool $creating): void
     {
         if (! $model->getAttribute('is_default')) {

@@ -29,6 +29,13 @@ class DataImport extends Component
      */
     public array $summary = [];
 
+    /**
+     * @var array<string, mixed>
+     */
+    public array $preview = [];
+
+    public bool $previewed = false;
+
     public function mount(): void
     {
         abort_unless(Auth::user()?->can(config('admin.gate')), 403);
@@ -40,7 +47,11 @@ class DataImport extends Component
         $this->validateOnly('file', $this->rules());
     }
 
-    public function import(WorkbookImporter $importer): void
+    /**
+     * Named for the action, not the payload: a `preview()` action would be
+     * shadowed by the `$preview` property in Livewire's browser-side proxy.
+     */
+    public function previewWorkbook(WorkbookImporter $importer): void
     {
         $this->resetResult();
         $this->validate($this->rules());
@@ -54,9 +65,43 @@ class DataImport extends Component
         }
 
         try {
+            $preview = $importer->preview($path, (string) $this->file->getClientOriginalExtension());
+        } catch (ImportFormatException $exception) {
+            $this->problems = [ImportProblem::workbook($exception->getMessage())->toArray()];
+
+            return;
+        }
+
+        $this->preview = $preview->toArray();
+        $this->problems = $this->preview['problems'];
+        $this->previewed = true;
+    }
+
+    public function import(WorkbookImporter $importer): void
+    {
+        $this->validate($this->rules());
+
+        if (! $this->previewed || $this->problems !== []) {
+            $this->addError('file', 'Preview the workbook first and fix any problems before importing.');
+
+            return;
+        }
+
+        $path = $this->file?->getRealPath();
+
+        if (! is_string($path) || $path === '') {
+            $this->addError('file', 'The upload could not be read. Please choose the file again.');
+
+            return;
+        }
+
+        try {
             $report = $importer->import($path, (string) $this->file->getClientOriginalExtension());
 
             $this->summary = $report->toArray();
+            $this->preview = [];
+            $this->problems = [];
+            $this->previewed = false;
             $this->file = null;
 
             session()->flash('admin.action', sprintf(
@@ -67,8 +112,10 @@ class DataImport extends Component
             ));
         } catch (ImportValidationException $exception) {
             $this->problems = $exception->toArray();
+            $this->previewed = false;
         } catch (ImportFormatException $exception) {
             $this->problems = [ImportProblem::workbook($exception->getMessage())->toArray()];
+            $this->previewed = false;
         }
     }
 
@@ -167,6 +214,8 @@ class DataImport extends Component
     {
         $this->problems = [];
         $this->summary = [];
+        $this->preview = [];
+        $this->previewed = false;
         $this->resetErrorBag('file');
     }
 }

@@ -54,6 +54,11 @@ class PositionsSheet extends SheetDefinition
         return 'code';
     }
 
+    public function referenceColumns(): array
+    {
+        return ['department' => 'department'];
+    }
+
     public function columns(): array
     {
         return [

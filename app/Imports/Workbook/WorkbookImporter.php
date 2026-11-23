@@ -41,6 +41,11 @@ final class WorkbookImporter
     private array $letters = [];
 
     /**
+     * @var array<string, array<int, string>>
+     */
+    private array $mappedColumns = [];
+
+    /**
      * @var array<int, ImportProblem>
      */
     private array $problems = [];
@@ -58,6 +63,28 @@ final class WorkbookImporter
      * @throws ImportValidationException
      */
     public function import(string $path, string $extension): ImportReport
+    {
+        $this->analyse($path, $extension);
+
+        if ($this->problems !== []) {
+            throw new ImportValidationException($this->problems);
+        }
+
+        return DB::transaction(fn (): ImportReport => $this->persist());
+    }
+
+    /**
+     * Validate the workbook and describe what an import would do, without
+     * writing anything.
+     */
+    public function preview(string $path, string $extension, ?int $rowLimit = null): ImportPreview
+    {
+        $this->analyse($path, $extension);
+
+        return $this->buildPreview($rowLimit ?? (int) config('imports.preview_rows', 5));
+    }
+
+    private function analyse(string $path, string $extension): void
     {
         $this->reset();
 
@@ -79,12 +106,6 @@ final class WorkbookImporter
 
         $this->validateReferences();
         $this->sortProblems();
-
-        if ($this->problems !== []) {
-            throw new ImportValidationException($this->problems);
-        }
-
-        return DB::transaction(fn (): ImportReport => $this->persist());
     }
 
     private function reset(): void
@@ -93,6 +114,7 @@ final class WorkbookImporter
         $this->rows = [];
         $this->invalidRows = [];
         $this->letters = [];
+        $this->mappedColumns = [];
         $this->problems = [];
         $this->references = null;
     }
@@ -162,6 +184,11 @@ final class WorkbookImporter
         foreach ($map as $index => $column) {
             $this->letters[$definition->key()][$column->key] = Coordinate::stringFromColumnIndex($index + 1);
         }
+
+        $this->mappedColumns[$definition->key()] = array_values(array_map(
+            static fn (Column $column): string => $column->key,
+            $map,
+        ));
 
         $this->validateRows($definition, $data, $map);
         $this->validateUniqueKeys($definition);
@@ -594,6 +621,147 @@ final class WorkbookImporter
         }
 
         $this->references = $references;
+    }
+
+    private function buildPreview(int $rowLimit): ImportPreview
+    {
+        $rowLimit = max(1, $rowLimit);
+        $sheets = [];
+        $emptySheets = [];
+        $totals = ['created' => 0, 'updated' => 0, 'total' => 0];
+
+        foreach ($this->workbook->sheets() as $definition) {
+            $data = $this->data[$definition->key()] ?? null;
+
+            if ($data === null) {
+                continue;
+            }
+
+            if ($data->isEmpty()) {
+                $emptySheets[] = $definition->title();
+
+                continue;
+            }
+
+            $existingKeys = $definition->existingNaturalKeys();
+            $validRows = $this->validRows($definition);
+            $created = 0;
+            $updated = 0;
+
+            foreach ($validRows as $row) {
+                $key = $definition->naturalKey($row['values']);
+
+                if ($key !== null && isset($existingKeys[$key])) {
+                    $updated++;
+                } else {
+                    $created++;
+                }
+            }
+
+            $previewRows = [];
+
+            foreach (array_slice($validRows, 0, $rowLimit) as $row) {
+                $key = $definition->naturalKey($row['values']);
+                $isUpdate = $key !== null && isset($existingKeys[$key]);
+                $values = [];
+                $references = [];
+
+                foreach ($this->mappedColumns[$definition->key()] ?? [] as $columnKey) {
+                    $column = $definition->column($columnKey);
+
+                    if ($column === null) {
+                        continue;
+                    }
+
+                    $value = $row['values'][$columnKey] ?? null;
+                    $values[$column->heading] = $this->displayValue($value);
+
+                    $referenceType = $definition->referenceColumns()[$columnKey] ?? null;
+
+                    if ($referenceType === null || $value === null) {
+                        continue;
+                    }
+
+                    $details = $this->references?->details($referenceType, (string) $value);
+
+                    if ($details === null) {
+                        continue;
+                    }
+
+                    $references[$column->heading] = $details['status'] === 'new'
+                        ? 'new · '.$details['location']
+                        : 'existing';
+                }
+
+                $previewRows[] = [
+                    'row' => $row['row'],
+                    'action' => $isUpdate ? 'update' : 'create',
+                    'values' => $values,
+                    'references' => $references,
+                    'warnings' => $definition->warnings(
+                        $row['values'],
+                        $this->references ?? new ReferenceIndex,
+                        ! $isUpdate,
+                    ),
+                ];
+            }
+
+            $visibleColumns = [];
+
+            foreach ($this->mappedColumns[$definition->key()] ?? [] as $columnKey) {
+                $column = $definition->column($columnKey);
+
+                if ($column === null) {
+                    continue;
+                }
+
+                foreach ($validRows as $validRow) {
+                    if ($this->displayValue($validRow['values'][$columnKey] ?? null) !== '') {
+                        $visibleColumns[] = $column->heading;
+
+                        break;
+                    }
+                }
+            }
+
+            $sheets[] = [
+                'key' => $definition->key(),
+                'title' => $definition->title(),
+                'created' => $created,
+                'updated' => $updated,
+                'total' => $created + $updated,
+                'columns' => $visibleColumns,
+                'rows' => $previewRows,
+            ];
+
+            $totals['created'] += $created;
+            $totals['updated'] += $updated;
+        }
+
+        $totals['total'] = $totals['created'] + $totals['updated'];
+
+        return new ImportPreview($this->problems, $sheets, $totals, $emptySheets);
+    }
+
+    private function displayValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+
+        if (is_float($value)) {
+            if (floor($value) === $value) {
+                return (string) (int) $value;
+            }
+
+            return rtrim(rtrim(number_format($value, 4, '.', ''), '0'), '.');
+        }
+
+        return (string) $value;
     }
 
     private function persist(): ImportReport

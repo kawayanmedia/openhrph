@@ -11,7 +11,7 @@
 
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
-            <form wire:submit="import" class="ui-form-card" novalidate>
+            <form wire:submit="previewWorkbook" class="ui-form-card" novalidate>
                 <div class="ui-form-card-header">
                     <h2 class="text-base font-semibold text-navy-900 dark:text-white">Upload workbook</h2>
                     <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
@@ -57,10 +57,10 @@
 
                     <button type="submit"
                             wire:loading.attr="disabled"
-                            wire:target="file,import"
+                            wire:target="file,previewWorkbook"
                             class="ui-btn-primary">
-                        <span wire:loading.remove wire:target="import">Validate and import</span>
-                        <span wire:loading wire:target="import">Validating…</span>
+                        <span wire:loading.remove wire:target="previewWorkbook">{{ $previewed ? 'Preview again' : 'Preview workbook' }}</span>
+                        <span wire:loading wire:target="previewWorkbook">Previewing…</span>
                     </button>
                 </div>
             </form>
@@ -126,6 +126,124 @@
                 </div>
             @endif
 
+            @if ($previewed && $preview !== [])
+                <div class="ui-card overflow-hidden">
+                    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-navy-800">
+                        <div>
+                            <h2 class="text-base font-semibold text-navy-900 dark:text-white">Preview</h2>
+                            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                @if ($preview['totals']['total'] > 0)
+                                    {{ $preview['totals']['created'] }} to create · {{ $preview['totals']['updated'] }} to update
+                                @else
+                                    No valid rows to import.
+                                @endif
+                            </p>
+                        </div>
+
+                        @if ($preview['clean'] && $preview['totals']['total'] > 0)
+                            <button type="button"
+                                    wire:click="import"
+                                    wire:loading.attr="disabled"
+                                    wire:target="import"
+                                    class="ui-btn-primary shrink-0">
+                                <span wire:loading.remove wire:target="import">
+                                    Import {{ $preview['totals']['total'] }} {{ \Illuminate\Support\Str::plural('record', $preview['totals']['total']) }}
+                                </span>
+                                <span wire:loading wire:target="import">Importing…</span>
+                            </button>
+                        @endif
+                    </div>
+
+                    @if (! $preview['clean'])
+                        <div class="border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                            Fix the problems above, then preview the workbook again. Importing stays disabled until the preview is clean.
+                        </div>
+                    @endif
+
+                    <div class="divide-y divide-slate-100 dark:divide-navy-800">
+                        @forelse ($preview['sheets'] as $sheet)
+                            <div class="px-5 py-4" wire:key="preview-{{ $sheet['key'] }}">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="text-sm font-semibold text-navy-900 dark:text-white">{{ $sheet['title'] }}</h3>
+                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                        {{ $sheet['created'] }} new
+                                    </span>
+                                    <span class="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+                                        {{ $sheet['updated'] }} update
+                                    </span>
+                                </div>
+
+                                @if ($sheet['rows'] === [])
+                                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                        No valid rows to preview for this sheet.
+                                    </p>
+                                @else
+                                    <div class="mt-3 overflow-x-auto rounded-lg border border-slate-200 dark:border-navy-800">
+                                        <table class="min-w-full text-sm">
+                                            <thead class="bg-slate-50 dark:bg-navy-950">
+                                                <tr class="text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                    <th class="px-3 py-2 font-semibold">Row</th>
+                                                    <th class="px-3 py-2 font-semibold">Action</th>
+                                                    @foreach ($sheet['columns'] as $column)
+                                                        <th class="whitespace-nowrap px-3 py-2 font-semibold">{{ $column }}</th>
+                                                    @endforeach
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100 dark:divide-navy-800">
+                                                @foreach ($sheet['rows'] as $row)
+                                                    <tr class="align-top">
+                                                        <td class="whitespace-nowrap px-3 py-2 text-slate-500 dark:text-slate-400">{{ $row['row'] }}</td>
+                                                        <td class="whitespace-nowrap px-3 py-2">
+                                                            @if ($row['action'] === 'create')
+                                                                <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">New</span>
+                                                            @else
+                                                                <span class="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">Update</span>
+                                                            @endif
+                                                        </td>
+                                                        @foreach ($sheet['columns'] as $column)
+                                                            <td class="whitespace-nowrap px-3 py-2 text-slate-700 dark:text-slate-200">
+                                                                {{ $row['values'][$column] ?? '' }}
+                                                                @isset($row['references'][$column])
+                                                                    <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-medium text-slate-600 dark:bg-navy-800 dark:text-slate-300">
+                                                                        {{ $row['references'][$column] }}
+                                                                    </span>
+                                                                @endisset
+                                                            </td>
+                                                        @endforeach
+                                                    </tr>
+                                                    @if ($row['warnings'] !== [])
+                                                        <tr>
+                                                            <td colspan="{{ count($sheet['columns']) + 2 }}" class="bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                                                                <ul class="space-y-1">
+                                                                    @foreach ($row['warnings'] as $warning)
+                                                                        <li>{{ $warning }}</li>
+                                                                    @endforeach
+                                                                </ul>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="px-5 py-6 text-sm text-slate-500 dark:text-slate-400">
+                                No sheets in this workbook contain data.
+                            </div>
+                        @endforelse
+                    </div>
+
+                    @if ($preview['empty_sheets'] !== [])
+                        <div class="border-t border-slate-200 px-5 py-3 text-xs text-slate-500 dark:border-navy-800 dark:text-slate-400">
+                            Skipped {{ \Illuminate\Support\Str::plural('empty sheet', count($preview['empty_sheets'])) }}:
+                            {{ implode(', ', $preview['empty_sheets']) }}
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             @if ($summary !== [])
                 <div class="rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
                     <div class="border-b border-emerald-200 px-5 py-4 dark:border-emerald-500/30">
@@ -170,7 +288,8 @@
                 <h2 class="text-sm font-semibold text-navy-900 dark:text-white">How it works</h2>
 
                 <ul class="mt-3 space-y-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                    <li>Everything is validated first. One bad cell stops the whole import.</li>
+                    <li>Preview first: nothing is written until you confirm a clean preview.</li>
+                    <li>Everything is validated before importing. One bad cell stops the whole import.</li>
                     <li>Rows are matched on their key columns, so existing records are updated instead of duplicated.</li>
                     <li>Blank cells leave an existing value unchanged.</li>
                     <li>A reference such as Office must be in the workbook or already exist for your company.</li>

@@ -234,6 +234,60 @@ abstract class SheetDefinition
     }
 
     /**
+     * Natural keys already stored, so a preview can say create vs update
+     * without querying per row.
+     *
+     * @return array<string, true>
+     */
+    public function existingNaturalKeys(): array
+    {
+        $columns = $this->keyColumns();
+
+        if ($columns === []) {
+            return [];
+        }
+
+        $keys = [];
+
+        foreach ($this->model()::query()->get($columns) as $model) {
+            $values = [];
+
+            foreach ($columns as $column) {
+                $values[$column] = $model->getAttribute($column);
+            }
+
+            $key = $this->naturalKey($values);
+
+            if ($key !== null) {
+                $keys[$key] = true;
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Columns that point at another record, keyed by column key => reference type.
+     *
+     * @return array<string, string>
+     */
+    public function referenceColumns(): array
+    {
+        return [];
+    }
+
+    /**
+     * Non-blocking notes shown in the preview for a row.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<int, string>
+     */
+    public function warnings(array $values, ReferenceIndex $references, bool $creating): array
+    {
+        return [];
+    }
+
+    /**
      * @param  array<string, mixed>  $values
      */
     public function afterSave(Model $model, array $values, bool $creating): void

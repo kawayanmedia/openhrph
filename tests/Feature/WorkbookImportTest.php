@@ -150,6 +150,138 @@ it('imports every sheet of one workbook in dependency order', function () {
         ->and((int) $employee->basic_salary)->toBe(50000);
 });
 
+it('previews create counts and rows without writing anything', function () {
+    [$company] = importTenant();
+
+    $path = importWorkbookFile(validImportSheets());
+
+    try {
+        $preview = app(WorkbookImporter::class)->preview($path, 'xlsx');
+    } finally {
+        @unlink($path);
+    }
+
+    expect($preview->isClean())->toBeTrue()
+        ->and($preview->totals['created'])->toBe(6)
+        ->and($preview->totals['updated'])->toBe(0)
+        ->and($preview->totals['total'])->toBe(6)
+        ->and($preview->emptySheets)->toBe([]);
+
+    $employees = collect($preview->sheets)->firstWhere('title', 'Employees');
+
+    expect($employees['created'])->toBe(1)
+        ->and($employees['rows'][0]['action'])->toBe('create')
+        ->and($employees['rows'][0]['values']['Employee Number'])->toBe('EMP-0001')
+        ->and($employees['rows'][0]['references']['Office'])->toContain('new');
+
+    $groups = collect($preview->sheets)->firstWhere('title', 'Payroll Groups');
+
+    expect($groups['rows'][0]['warnings'])->toContain(
+        'This will become the default payroll group; the current default will be unset.',
+    );
+
+    expect(Office::withoutTenant()->count())->toBe(0)
+        ->and(Employee::withoutTenant()->count())->toBe(0);
+});
+
+it('previews updates for records that already exist', function () {
+    [$company] = importTenant();
+
+    $first = importWorkbookFile(validImportSheets());
+    app(WorkbookImporter::class)->import($first, 'xlsx');
+    @unlink($first);
+
+    $second = importWorkbookFile([
+        'Offices' => [
+            ['Name', 'Code'],
+            ['Head Office', 'HO-NEW'],
+        ],
+        'Employees' => [
+            ['Employee Number', 'Last Name', 'First Name', 'Office', 'Department', 'Employment Type', 'Payment Type', 'Basic Salary'],
+            ['EMP-0001', 'Doe', 'Jane', 'Head Office', 'Finance', 'Regular', 'monthly', '60000'],
+        ],
+    ]);
+
+    try {
+        $preview = app(WorkbookImporter::class)->preview($second, 'xlsx');
+    } finally {
+        @unlink($second);
+    }
+
+    expect($preview->totals['updated'])->toBe(2)
+        ->and($preview->totals['created'])->toBe(0);
+
+    $employees = collect($preview->sheets)->firstWhere('title', 'Employees');
+
+    expect($employees['rows'][0]['action'])->toBe('update');
+});
+
+it('labels references that already exist in the preview', function () {
+    [$company] = importTenant();
+
+    Office::factory()->create(['name' => 'Makati Branch']);
+    Department::create(['name' => 'Operations']);
+
+    $path = importWorkbookFile([
+        'Employees' => [
+            ['Employee Number', 'Last Name', 'First Name', 'Office', 'Department', 'Employment Type', 'Payment Type', 'Basic Salary'],
+            ['EMP-3000', 'Cruz', 'Ana', 'Makati Branch', 'Operations', 'Regular', 'monthly', '750'],
+        ],
+    ]);
+
+    try {
+        $preview = app(WorkbookImporter::class)->preview($path, 'xlsx');
+    } finally {
+        @unlink($path);
+    }
+
+    $employees = collect($preview->sheets)->firstWhere('title', 'Employees');
+
+    expect($employees['rows'][0]['references']['Office'])->toBe('existing')
+        ->and($employees['rows'][0]['references']['Department'])->toBe('existing');
+});
+
+it('lists empty sheets in the preview', function () {
+    [$company] = importTenant();
+
+    $path = importWorkbookFile([
+        'Offices' => [
+            ['Name'],
+            ['Head Office'],
+        ],
+        'Departments' => [
+            ['Name', 'Code'],
+        ],
+    ]);
+
+    try {
+        $preview = app(WorkbookImporter::class)->preview($path, 'xlsx');
+    } finally {
+        @unlink($path);
+    }
+
+    expect($preview->emptySheets)->toContain('Departments');
+});
+
+it('previews problems without writing anything', function () {
+    [$company] = importTenant();
+
+    $sheets = validImportSheets();
+    $sheets['Employees'][1][4] = 'Missing Office';
+
+    $path = importWorkbookFile($sheets);
+
+    try {
+        $preview = app(WorkbookImporter::class)->preview($path, 'xlsx');
+    } finally {
+        @unlink($path);
+    }
+
+    expect($preview->isClean())->toBeFalse()
+        ->and($preview->problems)->toHaveCount(1)
+        ->and(Office::withoutTenant()->count())->toBe(0);
+});
+
 it('imports the full payroll group details and generates payroll dates', function () {
     [$company] = importTenant();
 
@@ -428,7 +560,80 @@ it('rejects the same biometric id on two employees in one sheet', function () {
     expect($problems->pluck('message')->implode(' '))->toContain('Biometric ID must be unique');
 });
 
-it('shows the problems on the import page and writes nothing', function () {
+it('never gives a public property the same name as a Livewire action', function () {
+    // Livewire's browser proxy resolves data properties before actions, so a
+    // property named like an action makes the action uncallable in the page.
+    $component = new ReflectionClass(DataImport::class);
+
+    $properties = array_map(
+        static fn (ReflectionProperty $property): string => $property->getName(),
+        $component->getProperties(ReflectionProperty::IS_PUBLIC),
+    );
+
+    $actions = array_map(
+        static fn (ReflectionMethod $method): string => $method->getName(),
+        array_filter(
+            $component->getMethods(ReflectionMethod::IS_PUBLIC),
+            static fn (ReflectionMethod $method): bool => $method->getDeclaringClass()->getName() === DataImport::class,
+        ),
+    );
+
+    expect(array_intersect($properties, $actions))->toBe([]);
+});
+
+it('previews on the import page without writing anything', function () {
+    Storage::fake('local');
+
+    [$company, $owner] = importTenant();
+
+    $component = Livewire::actingAs($owner)
+        ->test(DataImport::class)
+        ->set('file', UploadedFile::fake()->createWithContent('workbook.xlsx', importWorkbookBytes(validImportSheets())))
+        ->call('previewWorkbook');
+
+    expect($component->get('previewed'))->toBeTrue()
+        ->and($component->get('preview')['clean'])->toBeTrue()
+        ->and($component->get('preview')['totals']['total'])->toBe(6)
+        ->and($component->get('problems'))->toBe([]);
+
+    expect(Office::withoutTenant()->count())->toBe(0)
+        ->and(Employee::withoutTenant()->count())->toBe(0);
+});
+
+it('refuses to import before a preview', function () {
+    Storage::fake('local');
+
+    [$company, $owner] = importTenant();
+
+    $component = Livewire::actingAs($owner)
+        ->test(DataImport::class)
+        ->set('file', UploadedFile::fake()->createWithContent('workbook.xlsx', importWorkbookBytes(validImportSheets())))
+        ->call('import')
+        ->assertHasErrors('file');
+
+    expect($component->get('summary'))->toBe([])
+        ->and(Office::withoutTenant()->count())->toBe(0);
+});
+
+it('imports a valid workbook after a clean preview', function () {
+    Storage::fake('local');
+
+    [$company, $owner] = importTenant();
+
+    $component = Livewire::actingAs($owner)
+        ->test(DataImport::class)
+        ->set('file', UploadedFile::fake()->createWithContent('workbook.xlsx', importWorkbookBytes(validImportSheets())))
+        ->call('previewWorkbook')
+        ->call('import');
+
+    expect($component->get('problems'))->toBe([])
+        ->and($component->get('previewed'))->toBeFalse()
+        ->and($component->get('summary'))->toHaveKey('Employees');
+
+    expect(Employee::query()->where('employee_number', 'EMP-0001')->exists())->toBeTrue();
+});
+
+it('blocks import when the preview has problems', function () {
     Storage::fake('local');
 
     [$company, $owner] = importTenant();
@@ -439,29 +644,15 @@ it('shows the problems on the import page and writes nothing', function () {
     $component = Livewire::actingAs($owner)
         ->test(DataImport::class)
         ->set('file', UploadedFile::fake()->createWithContent('workbook.xlsx', importWorkbookBytes($sheets)))
-        ->call('import');
+        ->call('previewWorkbook')
+        ->call('import')
+        ->assertHasErrors('file');
 
     expect($component->get('problems'))->toHaveCount(1)
         ->and($component->get('problems')[0]['row'])->toBe(2)
         ->and($component->get('summary'))->toBe([]);
 
     expect(Office::withoutTenant()->count())->toBe(0);
-});
-
-it('imports a valid workbook from the import page', function () {
-    Storage::fake('local');
-
-    [$company, $owner] = importTenant();
-
-    $component = Livewire::actingAs($owner)
-        ->test(DataImport::class)
-        ->set('file', UploadedFile::fake()->createWithContent('workbook.xlsx', importWorkbookBytes(validImportSheets())))
-        ->call('import');
-
-    expect($component->get('problems'))->toBe([])
-        ->and($component->get('summary'))->toHaveKey('Employees');
-
-    expect(Employee::query()->where('employee_number', 'EMP-0001')->exists())->toBeTrue();
 });
 
 it('imports the generated sample workbook without any problems', function () {

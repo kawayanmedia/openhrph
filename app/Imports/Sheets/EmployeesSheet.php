@@ -46,6 +46,36 @@ class EmployeesSheet extends SheetDefinition
         return ['biometric_id'];
     }
 
+    public function referenceColumns(): array
+    {
+        return [
+            'office' => 'office',
+            'department' => 'department',
+            'employment_type' => 'employment_type',
+            'payroll_group' => 'payroll_group',
+            'position' => 'position',
+        ];
+    }
+
+    public function warnings(array $values, ReferenceIndex $references, bool $creating): array
+    {
+        $warnings = [];
+        $position = $values['position'] ?? null;
+
+        if ($position !== null && $references->status('position', (string) $position) === null) {
+            $warnings[] = sprintf(
+                'Position "%s" does not match a Positions record; it will be stored as a free-text title.',
+                $position,
+            );
+        }
+
+        if ($creating && ! isset($values['payroll_group'])) {
+            $warnings[] = 'No payroll group set; assign one before running payroll.';
+        }
+
+        return $warnings;
+    }
+
     public function columns(): array
     {
         return [

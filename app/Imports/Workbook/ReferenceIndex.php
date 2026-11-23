@@ -79,4 +79,29 @@ final class ReferenceIndex
             ?? $this->pending[$type]['codes'][$key]
             ?? null;
     }
+
+    /**
+     * Whether a reference already exists or will be created by this workbook.
+     *
+     * @return array{status: string, location: string|null}|null
+     */
+    public function details(string $type, string $value): ?array
+    {
+        if ($this->id($type, $value) !== null) {
+            return ['status' => 'existing', 'location' => null];
+        }
+
+        $location = $this->pendingLocation($type, $value);
+
+        if ($location !== null) {
+            return ['status' => 'new', 'location' => $location];
+        }
+
+        return null;
+    }
+
+    public function status(string $type, string $value): ?string
+    {
+        return $this->details($type, $value)['status'] ?? null;
+    }
 }
