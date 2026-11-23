@@ -18,9 +18,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * Creates an isolated company with a payroll group, employees, attendance and a
- * draft payroll for the browser test suite. Every row is namespaced with the
- * E2E prefix so `testing:purge-e2e-company` can remove it again.
+ * Creates the isolated tenants the browser suite runs against: a payroll company,
+ * a bare onboarding company and an attendance company with three shifts and two
+ * semi-monthly cut-offs. Every row is namespaced with the E2E prefix so
+ * `testing:purge-e2e-company` can remove it again.
  */
 class TestingSeedE2eCompany extends Command
 {
