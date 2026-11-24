@@ -1,28 +1,29 @@
-<div class="px-4 py-5 sm:p-6">
-    <div class="border-b border-gray-200 pb-5 sm:flex sm:items-center sm:justify-between">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">Leave Application</h3>
+<div class="ui-card p-5 sm:p-6">
+    <div class="border-b border-slate-200 dark:border-navy-800 pb-5 sm:flex sm:items-center sm:justify-between">
+        <h3 class="text-lg font-semibold leading-6 text-navy-900 dark:text-white">Leave Application</h3>
     </div>
     <form class="space-y-6" wire:submit="submit">
 
-        <div class="bg-white px-4 py-5 shadow sm:rounded-lg sm:p-6">
+        <div class="ui-card p-5 sm:p-6">
             <div class="md:grid md:grid-cols-3 md:gap-6">
                 <div class="md:col-span-1">
-                    <h3 class="text-lg font-medium leading-6 text-gray-900">Full Name</h3>
-                    <p class="mt-1 text-sm text-gray-500">Available Leave Credits</p>
+                    <h3 class="text-lg font-semibold leading-6 text-navy-900 dark:text-white">Full Name</h3>
+                    <p class="mt-1 text-sm font-semibold text-navy-900 dark:text-white">{{ $employee?->fullname ?: 'Employee' }}</p>
+                    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Available Leave Credits</p>
 
                     <div class="px-6 py-5 text-center text-sm font-medium">
-                        <span class="text-gray-900">{{ $employee?->total_vacation_leave }}</span>
-                        <span class="text-gray-600">Vacation days left</span>
+                        <span class="text-navy-900 dark:text-white">{{ $employee?->total_vacation_leave ?? 0 }}</span>
+                        <span class="text-slate-600 dark:text-slate-300">Vacation days left</span>
                     </div>
 
                     <div class="px-6 py-5 text-center text-sm font-medium">
-                        <span class="text-gray-900">{{ $employee?->total_sick_leave }}</span>
-                        <span class="text-gray-600">Sick days left</span>
+                        <span class="text-navy-900 dark:text-white">{{ $employee?->total_sick_leave ?? 0 }}</span>
+                        <span class="text-slate-600 dark:text-slate-300">Sick days left</span>
                     </div>
 
                     <div class="px-6 py-5 text-center text-sm font-medium">
-                        <span class="text-gray-900">{{ $employee?->total_personal_leave }}</span>
-                        <span class="text-gray-600">Personal days left</span>
+                        <span class="text-navy-900 dark:text-white">{{ $employee?->total_personal_leave ?? 0 }}</span>
+                        <span class="text-slate-600 dark:text-slate-300">Personal days left</span>
                     </div>
 
                 </div>
@@ -30,18 +31,18 @@
                     <div class="grid grid-cols-6 gap-6">
 
                         <!-- <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">First Name</label>
-                            <input wire:model.live="from" type="text" id="from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <label for="from" class="ui-label">First Name</label>
+                            <input wire:model.live="from" type="text" id="from" class="ui-input mt-1">
                         </div>
 
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">Last Name</label>
-                            <input wire:model.live="from" type="text" id="from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <label for="from" class="ui-label">Last Name</label>
+                            <input wire:model.live="from" type="text" id="from" class="ui-input mt-1">
                         </div> -->
 
                         <div class="col-span-6 sm:col-span-6">
-                            <label for="country" class="block text-sm font-medium text-gray-700">Leave Type</label>
-                            <select wire:model.live="leaveTypeId" id="country" name="country" autocomplete="country-name" class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
+                            <label for="country" class="ui-label">Leave Type</label>
+                            <select wire:model.live="leaveTypeId" id="country" name="country" autocomplete="country-name" class="ui-select mt-1">
                                 @foreach ($leaveOptions as $key => $val )
                                 <option value="{{ $key }}">{{ $val }}</option>
                                 @endforeach
@@ -49,61 +50,61 @@
                         </div>
 
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">From</label>
-                            <input wire:model.live="dateFrom" type="date" id="from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                            @error('dateFrom') <span class="mt-2 text-red-600">{{ $message }}</span> @enderror
+                            <label for="from" class="ui-label">From</label>
+                            <input wire:model.live="dateFrom" type="date" id="from" class="ui-input mt-1">
+                            @error('dateFrom') <span class="mt-2 text-rose-600 dark:text-rose-400">{{ $message }}</span> @enderror
                         </div>
 
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="to" class="block text-sm font-medium text-gray-700">To</label>
-                            <input wire:model.live="dateTo" type="date" id="to" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                            @error('dateTo') <span class="mt-2 text-red-600">{{ $message }}</span> @enderror
-                        </div>
-
-
-                        <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">With Pay Number of days</label>
-                            <input wire:model.live="daysWithPay" readonly type="number" step="0.5" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                        </div>
-
-                        <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">Without Pay Number of days</label>
-                            <input wire:model.live="daysWithoutPay" readonly type="number" step="0.5" min="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <label for="to" class="ui-label">To</label>
+                            <input wire:model.live="dateTo" type="date" id="to" class="ui-input mt-1">
+                            @error('dateTo') <span class="mt-2 text-rose-600 dark:text-rose-400">{{ $message }}</span> @enderror
                         </div>
 
 
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">File Attachment</label>
-                            <input wire:model.live="attachments" type="file" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <label for="from" class="ui-label">With Pay Number of days</label>
+                            <input wire:model.live="daysWithPay" readonly type="number" step="0.5" min="0" class="ui-input mt-1">
                         </div>
 
                         <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">Reason</label>
-                            <input wire:model.live="reason" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                            @error('reason') <span class="mt-2 text-red-600">{{ $message }}</span> @enderror
+                            <label for="from" class="ui-label">Without Pay Number of days</label>
+                            <input wire:model.live="daysWithoutPay" readonly type="number" step="0.5" min="0" class="ui-input mt-1">
+                        </div>
+
+
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="from" class="ui-label">File Attachment</label>
+                            <input wire:model.live="attachments" type="file" class="ui-input mt-1">
+                        </div>
+
+                        <div class="col-span-6 sm:col-span-3">
+                            <label for="from" class="ui-label">Reason</label>
+                            <input wire:model.live="reason" type="text" class="ui-input mt-1">
+                            @error('reason') <span class="mt-2 text-rose-600 dark:text-rose-400">{{ $message }}</span> @enderror
                         </div>
 
                         <!-- <div class="col-span-6 sm:col-span-3">
-                            <label for="from" class="block text-sm font-medium text-gray-700">Date</label>
-                            <input wire:model.live="dateApply" type="date" id="from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                            <label for="from" class="ui-label">Date</label>
+                            <input wire:model.live="dateApply" type="date" id="from" class="ui-input mt-1">
                         </div> -->
 
                         <div class="col-span-6 sm:col-span-3">
 
                             <div>
-                                <label for="to" class="block text-sm font-medium text-gray-700">Options</label>
+                                <label for="to" class="ui-label">Options</label>
 
                                 <fieldset class="mt-4">
                                     <legend class="sr-only">Notification method</legend>
                                     <div class="space-y-4 sm:flex sm:items-center sm:space-y-0 sm:space-x-10">
                                         <div class="flex items-center">
-                                            <input id="whole" wire:model.live="isWholeDay" value="true" type="radio" checked class="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500">
-                                            <label for="whole" class="ml-3 block text-sm font-medium text-gray-700">Whole Day</label>
+                                            <input id="whole" wire:model.live="isWholeDay" value="true" type="radio" checked class="h-4 w-4 border-slate-300 dark:border-navy-700 text-teal-700 dark:text-teal-300 focus:ring-teal-500">
+                                            <label for="whole" class="ml-3 ui-label">Whole Day</label>
                                         </div>
 
                                         <div class="flex items-center">
-                                            <input id="half" wire:model.live="isWholeDay" value="false" type="radio" class="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500">
-                                            <label for="half" class="ml-3 block text-sm font-medium text-gray-700">Half Day</label>
+                                            <input id="half" wire:model.live="isWholeDay" value="false" type="radio" class="h-4 w-4 border-slate-300 dark:border-navy-700 text-teal-700 dark:text-teal-300 focus:ring-teal-500">
+                                            <label for="half" class="ml-3 ui-label">Half Day</label>
                                         </div>
 
 
@@ -119,8 +120,8 @@
         </div>
 
         <div class="flex justify-end">
-            <a href="{{ route('portal.leaves') }}" wire:navigate class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Cancel</a>
-            <button wire:click.prevent="applyLeave" class="ml-3 inline-flex justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Apply</button>
+            <a href="{{ route('portal.leaves') }}" wire:navigate class="rounded-md border border-slate-300 dark:border-navy-700 bg-white dark:bg-navy-900 py-2 px-4 text-sm font-medium text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:bg-navy-800/40 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">Cancel</a>
+            <button wire:click.prevent="applyLeave" class="ml-3 inline-flex justify-center rounded-md border border-transparent bg-teal-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">Apply</button>
         </div>
     </form>
 </div>

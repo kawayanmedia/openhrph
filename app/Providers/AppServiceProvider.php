@@ -106,7 +106,7 @@ class AppServiceProvider extends ServiceProvider
                 return true;
             }
 
-            if ($user->owner) {
+            if ($user->owner || $user->ownsAnyCompany()) {
                 return true;
             }
 

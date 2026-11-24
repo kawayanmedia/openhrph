@@ -1,61 +1,47 @@
-<div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
-  <div class="sm:mx-auto sm:w-full sm:max-w-md">
-    <!-- <img class="mx-auto h-12 w-auto" src="https://tailwindui.com/img/logos/mark.svg?color=primary&shade=600" alt="Your Company"> -->
-    <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
-    <!-- <p class="mt-2 text-center text-sm text-gray-600">
-      Or
-      <a href="#" class="font-medium text-primary-600 hover:text-primary-500">start your 14-day free trial</a>
-    </p> -->
-  </div>
-
-  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-      <form class="space-y-6" method="POST">
-        <div>
-            @if($hasError)
-            <center><a href="#" class="font-medium text-red-600">{{ $errorMessage }}</a></center>
-            @endif
-          <label for="email" class="block text-sm font-medium text-gray-700">Email address</label>
-          <div class="mt-1">
-            <input wire:model="email" id="email" name="email" type="email" autocomplete="email" required class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
-          </div>
-        </div>
-
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-          <div class="mt-1">
-            <input wire:model="password" id="password" name="password" type="password" autocomplete="current-password" required class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm">
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <div class="flex items-center">
-            <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500">
-            <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label>
-          </div>
-
-          <div class="text-sm">
-            <a href="#" class="font-medium text-primary-600 hover:text-primary-500">Forgot your password?</a>
-          </div>
-        </div>
-
-        <div>
-          <button wire:click="login" type="button" wire:loading.attr="disabled" class="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">Sign in</button>
-        </div>
-      </form>
-
-      <div class="mt-6">
-        <div class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-gray-300"></div>
-          </div>
-          <div class="relative flex justify-center text-sm">
-            <!-- <span class="bg-white px-2 text-gray-500">Or continue with</span> -->
-          </div>
-        </div>
-
-
-      </div>
+<div class="ui-card p-6 sm:p-8">
+    <div class="mb-6">
+        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-500/15 text-sm font-bold text-teal-700 dark:text-teal-300">
+            {{ strtoupper(substr(portal_company_name(), 0, 1)) }}
+        </span>
+        <h2 class="mt-4 text-2xl font-semibold tracking-tight text-navy-900 dark:text-white">Sign in to your account</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Use the e-mail address on your employee record.</p>
     </div>
-  </div>
+
+    @if ($hasError)
+        <div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+            {{ $errorMessage }}
+        </div>
+    @endif
+
+    <form wire:submit="login" class="space-y-5">
+        <div>
+            <label for="email" class="ui-label">Email address</label>
+            <input id="email" type="email" wire:model="email" autocomplete="email" required class="ui-input" placeholder="you@company.com">
+            @error('email') <p class="ui-error">{{ $message }}</p> @enderror
+        </div>
+
+        <div>
+            <label for="password" class="ui-label">Password</label>
+            <input id="password" type="password" wire:model="password" autocomplete="current-password" required class="ui-input" placeholder="••••••••">
+            @error('password') <p class="ui-error">{{ $message }}</p> @enderror
+        </div>
+
+        <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+            <input type="checkbox" class="ui-checkbox" name="remember">
+            Remember me on this device
+        </label>
+
+        <button type="submit" class="ui-btn-primary w-full" wire:loading.attr="disabled" wire:target="login">
+            <span wire:loading.remove wire:target="login">Sign in</span>
+            <span wire:loading wire:target="login">Signing in…</span>
+        </button>
+    </form>
+
+    <p class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+        Forgot your password? Contact your HR administrator.
+    </p>
+
+    <div class="mt-6 border-t border-slate-200 pt-4 text-center dark:border-navy-800">
+        <a href="{{ route('portal.jobs') }}" wire:navigate class="text-sm font-medium text-teal-700 hover:underline dark:text-teal-300">View job opportunities</a>
+    </div>
 </div>

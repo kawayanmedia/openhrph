@@ -1,6 +1,6 @@
-<div class="px-4 py-5 sm:p-6">
-    <div class="border-b border-gray-200 pb-5 sm:flex sm:items-center sm:justify-between">
-        <h3 class="text-lg font-medium leading-6 text-gray-900">{{ $title }}</h3>
+<div class="ui-card p-5 sm:p-6">
+    <div class="border-b border-slate-200 dark:border-navy-800 pb-5 sm:flex sm:items-center sm:justify-between">
+        <h3 class="text-lg font-semibold leading-6 text-navy-900 dark:text-white">{{ $title }}</h3>
         <div class="mt-3 sm:mt-0 sm:ml-4">
         </div>
     </div>
@@ -20,7 +20,7 @@
       From: "opacity-100"
       To: "opacity-0"
   -->
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <div class="fixed inset-0 bg-slate-50 dark:bg-navy-800/400 bg-opacity-75 transition-opacity"></div>
 
             <div class="fixed inset-0 z-10 overflow-y-auto">
                 <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
@@ -34,7 +34,7 @@
           From: "opacity-100 translate-y-0 sm:scale-100"
           To: "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
       -->
-                    <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
+                    <div class="relative transform overflow-hidden rounded-lg bg-white dark:bg-navy-900 px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm sm:p-6">
                         <div>
                             <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
                                 <!-- Heroicon name: outline/check -->
@@ -43,14 +43,14 @@
                                 </svg>
                             </div>
                             <div class="mt-3 text-center sm:mt-5">
-                                <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Job application has been sent!</h3>
+                                <h3 class="text-lg font-semibold leading-6 text-navy-900 dark:text-white" id="modal-title">Job application has been sent!</h3>
                                 <div class="mt-2">
-                                    <p class="text-sm text-gray-500">Some other messages here!!</p>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Some other messages here!!</p>
                                 </div>
                             </div>
                         </div>
                         <div class="mt-5 sm:mt-6">
-                            <a href="{{ route('portal.jobs') }}" class="inline-flex w-full justify-center rounded-md border border-transparent bg-primary-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 sm:text-sm">Go back to home.</a>
+                            <a href="{{ route('portal.jobs') }}" class="inline-flex w-full justify-center rounded-md border border-transparent bg-teal-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 sm:text-sm">Go back to home.</a>
                         </div>
                     </div>
                 </div>
@@ -65,7 +65,7 @@
                 @if (count($rows) != 0)
 
                 @else
-                <div class="text-gray-500">Nothing here...</div>
+                <div class="text-slate-500 dark:text-slate-400">Nothing here...</div>
                 @endif
             </div>
         </div>

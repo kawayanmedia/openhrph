@@ -42,6 +42,19 @@ The employee now appears in the list and can be selected in attendance and payro
 
 Changes to salary, payroll group, or schedule can affect future payroll runs. Review the payroll preview after making these changes.
 
+## Bank and payment details
+
+Payroll uses an employee's bank details when it generates a bank-credit file.
+
+1. Open the employee and select **Edit**.
+2. In the **Bank & payment** section, choose the **Pay mode** (bank credit, cash, or cheque).
+3. Choose the company **Disbursement bank** and enter the account name, account number, and branch.
+4. Save.
+
+Only employees with **Pay mode = Bank credit**, a positive net pay, and an account number are
+included in a bank file. The payroll bank-file screen lists any bank-paid employee who is missing
+an account number so you can correct the record before generating the file.
+
 ## Related employee records
 
 The employee detail page can show related records such as:

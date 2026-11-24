@@ -44,6 +44,11 @@
                     Reopen
                 </button>
             @endif
+
+            @if (in_array($status, ['processed', 'approved', 'closed'], true))
+                <a href="{{ route('admin.payroll.bank-file', $payroll) }}" class="ui-btn-secondary">Bank file</a>
+                <a href="{{ route('admin.reports.remittances', ['payroll' => $payroll->getKey()]) }}" class="ui-btn-secondary">Remittances</a>
+            @endif
         </div>
     </div>
 

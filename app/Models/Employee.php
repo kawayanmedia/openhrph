@@ -62,6 +62,11 @@ class Employee extends Model implements HasMedia
         'is_minimum_wage',
         'region',
         'industry',
+        'bank_id',
+        'bank_account_name',
+        'bank_account_number',
+        'bank_branch',
+        'pay_mode',
     ];
 
     protected $appends = ['fullname', 'office_name'];
@@ -190,6 +195,11 @@ class Employee extends Model implements HasMedia
         return $this->belongsTo(Department::class);
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function employmentType()
     {
         return $this->belongsTo(EmploymentType::class);
@@ -203,6 +213,14 @@ class Employee extends Model implements HasMedia
     public function payrollGroup()
     {
         return $this->belongsTo(PayrollGroup::class);
+    }
+
+    /**
+     * The employee's payroll disbursement bank account.
+     */
+    public function bank()
+    {
+        return $this->belongsTo(CompanyBank::class, 'bank_id');
     }
 
     public function schedule()

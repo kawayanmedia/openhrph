@@ -68,16 +68,32 @@ If your account belongs to more than one company, a company switch appears at th
 
 If you only belong to one company, the switch is not shown.
 
+## Create another company
+
+Company owners can add companies under their own account. Each new company starts with its own
+settings, Administrator group, payroll group and dates, office, department, employment types, and
+a **Generic Bank Credit** bank-file template.
+
+1. Open **Settings → Company → Companies**.
+2. Select **Create Company**.
+3. Enter the company name, code, trade name, statutory identifiers (TIN, RDO, SSS, PhilHealth, HDMF), and contact details.
+4. Save. OpenHR PH creates the company, makes you its owner, and seeds the defaults.
+5. Switch to the new company from the company switcher in the header.
+
+The company inherits the installation sector and country. If the installation is Government, the
+company remits GSIS instead of SSS.
+
 ## Find your way around
 
 The left sidebar contains the areas your group allows:
 
 - **Dashboard** — an overview of the workspace.
 - **Requests** — leave, attendance, schedule adjustment, overtime, undertime, and official business requests.
-- **Settings** — company settings, offices, departments, announcements, job vacancies, employment types, groups, employees, users, certificates, and trainings.
+- **Reports** — Government Remittances and the Employee Master File.
+- **Settings** — company settings, **Companies**, **Payroll Accounts**, offices, departments, announcements, job vacancies, employment types, groups, employees, users, certificates, and trainings.
 - **Time and Attendance** — attendance settings, devices, holidays, rates, tardiness, schedules, and timesheets.
 - **Leave Management** — leave settings and leave records.
-- **Payroll Management** — compensations, deductions, loans, payroll groups, payroll runs, employee compensation, employee loans, and payslips.
+- **Payroll Management** — compensations, deductions, loans, payroll groups, payroll runs, employee compensation, employee loans, payslips, and **Bank File Templates**.
 - **Statutory (PH)** — PhilHealth, SSS, Pag-IBIG, and minimum-wage reference tables.
 
 **Settings → Sector** shows the defaults for the installation sector: GSIS and the government
@@ -85,6 +101,19 @@ bonus catalogue for Government, or SSS/Pag-IBIG bases and 13th month for Private
 is fixed for the installation; change it with `php artisan openhr:install --force`.
 
 Some entries may be hidden because your group does not have permission. That is expected.
+
+## Search from anywhere
+
+Select **Search** in the header or press **⌘/ on macOS** or **Ctrl+/ on Windows and Linux**.
+
+Type at least two characters to search:
+
+- navigation entries, such as Payroll or Leave Settings
+- quick actions, such as Create company or Government remittances
+- records you can access, such as employees, companies, offices, departments, payrolls, and users
+
+Use the arrow keys to move through the results and Enter to open one. The AI assistant remains on
+**⌘/Ctrl + K**.
 
 ## Change your password
 

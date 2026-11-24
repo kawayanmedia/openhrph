@@ -11,10 +11,13 @@ An open-source Human Resource Information System and Philippine payroll platform
 
 - **People** — employee profiles, documents, certificates, training, schedules, compensation, loans, allowances, bonuses, and commissions.
 - **Time and attendance** — biometric device imports, timesheets, attendance corrections, overtime, undertime, leave, official business, and schedule adjustments.
-- **Payroll** — payroll groups, period previews, review, approval and locking, payslips, registers, and remittance reports.
+- **Payroll** — payroll groups, period previews, review, approval and locking, payslips, registers, and a payroll bank-credit file.
+- **Reports and remittances** — a report centre for statutory working papers, a filing/payment register, and an employee master file with printable 201 files.
+- **Company management** — company owners can add companies, switch between them, and keep each company's settings and payroll separate.
+- **Universal search** — a command palette on `⌘/Ctrl + /` for navigation, quick actions, and tenant-scoped records.
 - **Statutory compliance** — effective-dated tables for the installation's country. The Philippines ships with SSS, PhilHealth, Pag-IBIG, GSIS, BIR withholding tax and minimum-wage tables; other countries are configured through generic statutory components.
 - **Multi-company** — one installation can serve several companies with tenant-scoped data and per-company settings.
-- **Access control** — owner accounts, groups, granular permissions, and a separate employee self-service portal.
+- **Access control** — owner accounts, groups, granular permissions, and a refreshed, dark-mode-ready employee self-service portal.
 - **Two admin experiences** — a first-party Livewire admin at `/app` and an optional Filament panel.
 
 ## Built with

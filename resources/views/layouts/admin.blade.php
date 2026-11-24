@@ -16,7 +16,9 @@
     <div class="flex min-h-full"
          x-data="{ sidebarOpen: false, assistantOpen: false }"
          @keydown.window.meta.k.prevent="assistantOpen = true"
-         @keydown.window.ctrl.k.prevent="assistantOpen = true">
+         @keydown.window.ctrl.k.prevent="assistantOpen = true"
+         @keydown.window.meta.slash.prevent="$dispatch('open-global-search')"
+         @keydown.window.ctrl.slash.prevent="$dispatch('open-global-search')">
         <div x-show="sidebarOpen" x-transition.opacity
              class="fixed inset-0 z-30 bg-navy-950/60 backdrop-blur-sm lg:hidden"
              @click="sidebarOpen = false"></div>
@@ -48,6 +50,16 @@
                     </div>
 
                     <div class="flex items-center gap-2">
+                        <button type="button" @click="$dispatch('open-global-search')"
+                                class="ui-btn-secondary !px-2.5 !py-1.5 text-xs"
+                                title="Search (⌘/ or Ctrl+/)">
+                            <svg class="h-4 w-4 text-slate-500 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                            </svg>
+                            <span class="hidden sm:inline">Search</span>
+                            <kbd class="hidden rounded border border-slate-200 px-1 text-[10px] text-slate-400 dark:border-navy-700 md:inline">⌘/</kbd>
+                        </button>
+
                         @unless (request()->routeIs('admin.assistant'))
                             <button type="button" @click="assistantOpen = true"
                                     class="ui-btn-secondary !px-2.5 !py-1.5 text-xs"
@@ -143,6 +155,8 @@
             @endunless
         @endauth
     </div>
+
+    <livewire:admin.global-search />
 
     @livewireScripts
     @stack('scripts')

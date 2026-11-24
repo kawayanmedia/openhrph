@@ -6,6 +6,7 @@ use App\Support\Installation\Installation;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Auth;
 
 class Company extends Model
 {
@@ -19,6 +20,12 @@ class Company extends Model
      */
     protected static function booted(): void
     {
+        static::creating(function (Company $company): void {
+            if ($company->user_id === null) {
+                $company->user_id = Auth::id() ?? Auth::guard('nova')->id();
+            }
+        });
+
         static::saving(function (Company $company): void {
             if ($sector = Installation::sector()) {
                 $company->type = $sector;

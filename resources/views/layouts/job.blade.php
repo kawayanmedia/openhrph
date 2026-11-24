@@ -1,64 +1,36 @@
 <!doctype html>
-<html class="h-full bg-gray-100">
-
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Page Title' }}</title>
-    <!-- Scripts -->
+    <title>{{ $title ?? 'Careers' }} · {{ portal_company_name() }}</title>
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    <!-- Styles -->
     @livewireStyles
 </head>
-
-<body>
-    <!-- This example requires Tailwind CSS v2.0+ -->
-    <!--
-  This example requires updating your template:
-
-  ```
-  <html class="h-full bg-gray-100">
-  <body class="h-full">
-  ```
--->
-    <div class="min-h-full bg-slate-100">
+<body class="min-h-full bg-slate-50 text-slate-900 antialiased dark:bg-navy-950 dark:text-slate-100">
+    <div class="flex min-h-screen flex-col">
         @include('livewire.job.nav')
 
-        <!-- Page Heading -->
-        @if (isset($header))
-        <header class="bg-white shadow">
-            <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                {{ $header }}
-            </div>
-        </header>
-        <header class="bg-white shadow">
-            <div class="mx-auto max-w-7xl py-6 px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900">{{ $header }}</h1>
-            </div>
-        </header>
-        @endif
-
-        <main>
-            <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-                <!-- Replace with your content -->
-                <!-- <div class="px-4 py-6 sm:px-0">
-        <div class="h-96 rounded-lg border-4 border-dashed border-gray-200"></div>
-      </div> -->
+        <main class="flex-1">
+            <div class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                 {{ $slot }}
-                <!-- /End replace -->
             </div>
         </main>
 
-        <footer>
-            <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-                <div class="border-t border-gray-200 py-8 text-center text-sm text-gray-500 sm:text-left"><span class="block sm:inline">&copy; 2024 Provicial Government of Marinduque</span> <span class="block sm:inline">All rights reserved.</span></div>
+        <footer class="border-t border-slate-200 bg-white dark:border-navy-800 dark:bg-navy-950">
+            <div class="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-6 text-xs text-slate-500 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+                <span>&copy; {{ now()->year }} {{ portal_company_name() }}.</span>
+                <a href="{{ route('portal.login') }}" class="font-medium text-teal-700 hover:underline dark:text-teal-300">Employee sign in</a>
             </div>
         </footer>
-
     </div>
+
     @livewireScripts
     @stack('scripts')
 </body>
-
 </html>

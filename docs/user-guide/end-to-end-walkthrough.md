@@ -532,6 +532,57 @@ Approving locks the figures and posts the accounting entries, so reopening is re
 - Adding a compensation, loan, or deduction record affects only payrolls processed after the change takes effect.
 - Attendance edits made after approval do not change the approved figures; you must reopen and reprocess.
 
+## Step 17 — Generate the remittance register
+
+After approval, open **Reports → Government Remittances** (or select **Remittances** on the payroll).
+
+1. Choose the payroll.
+2. Select **Generate schedule**.
+3. Review the employee share, employer share, total, and default due date for each agency.
+4. Download the working papers you need with **Download CSV**, or **Download all** for the sector's set.
+5. When the agency acknowledges the filing, select **Mark filed** and enter the reference and date.
+6. When payment is made, select **Mark paid** and enter the payment date and reference.
+
+**Expected result:** the remittance register moves from Pending to Filed to Paid, while the download
+buttons still produce the employee-level working papers. Re-running **Generate schedule** keeps the
+filed and paid rows.
+
+## Step 18 — Prepare the bank file
+
+1. Confirm the employee has **Pay mode = Bank credit**, a company **Disbursement bank**, and an account number under the employee's **Bank & payment** section.
+2. Confirm a template exists under **Payroll Management → Bank File Templates** and a debit account under **Settings → Company → Payroll Accounts**.
+3. Open the approved payroll and select **Bank file**.
+4. Choose the template, debit account, and payment date.
+5. Review the employee count, total credit, and any missing or duplicate account warnings.
+6. Select **Download bank file**.
+
+**Expected result:** the CSV contains one row per payable bank-paid employee and a control total. The
+file is a bank-credit working file; confirm the exact layout and cut-off with your bank before the
+first live upload.
+
+## Step 19 — Print the employee master file and 201 file
+
+1. Open **Reports → Employee Master File**.
+2. Filter to the employees you need and select **Export CSV** or **Print**.
+3. Select **Open** beside an employee to view their 201 file.
+4. Select **Print / Save PDF** in the 201 file.
+
+**Expected result:** the master file gives you one row per employee with statutory IDs and masked
+bank details, and the 201 file gives you a printable dossier with the employee's personal,
+employment, statutory, payroll, leave, and document information.
+
+## Step 20 — Use the refreshed employee portal
+
+Sign in at `/portal/login` as the employee.
+
+- The portal now follows the same navy/teal design as the admin workspace and supports dark mode.
+- The dashboard shows leave balances, quick actions, announcements, and links to schedules and attendance.
+- The **My Requests** menu contains leaves, attendance, timesheet, schedules, schedule adjustments, overtimes, undertimes, and official business.
+- Job vacancies remain available from the public careers page linked in the portal.
+
+**Expected result:** every portal page is usable on mobile and desktop, in light and dark mode, with
+the same request actions as before.
+
 ## Payroll status reference
 
 The payroll list shows these status values in lower case.
@@ -560,6 +611,10 @@ The payroll list shows these status values in lower case.
 - [ ] Payroll processed and totals reviewed.
 - [ ] Payroll approved and locked.
 - [ ] Payslip opened and printed or downloaded.
+- [ ] Remittance schedule generated and filed/paid references recorded.
+- [ ] Payroll bank file generated for bank-paid employees.
+- [ ] Employee master file exported and 201 files available.
+- [ ] Employee portal reviewed in light and dark mode.
 - [ ] Any correction made after approval handled through the reopen cycle in Step 16.
 
 ## If something is not right

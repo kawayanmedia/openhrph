@@ -201,6 +201,46 @@ php artisan payroll:bir-2316 {group} --year=2025 --path=bir-2316.csv
 
 The register reconciles to the journal entry posted when the payroll was approved.
 
+### 7. Generate the payroll bank file
+
+Before the first bank file, set up the bank layouts and company debit accounts:
+
+1. Open **Payroll Management → Bank File Templates** and review or create a template. A template maps
+   the bank's columns to payroll values such as employee number, account name, account number, and
+   net pay. The **Generic Bank Credit** template is a safe starting point; confirm your bank's exact
+   layout with the bank before sending a live file.
+2. Open **Settings → Company → Payroll Accounts** and add the company debit account.
+
+To generate a file:
+
+1. Open the payroll and select **Bank file** (available after processing, approval, or closing).
+2. Choose the template, company debit account, and payment date.
+3. Review the employee count, total credit, missing account numbers, and duplicate accounts.
+4. Select **Download bank file**.
+
+Employees are included only when they are marked **Bank credit**, have a positive net pay, and have
+an account number. Correct missing records from the employee's **Bank & payment** section, then
+reload the bank-file screen.
+
+### 8. Track the remittance register
+
+Open **Reports → Government Remittances**, or select **Remittances** on the payroll page.
+
+1. Choose the payroll.
+2. Select **Generate schedule**. OpenHR PH creates one row per agency the company actually remits:
+   SSS, PhilHealth, Pag-IBIG, and BIR for Private; GSIS, PhilHealth, Pag-IBIG, and BIR for Government.
+3. Review the employee share, employer share, total, and default due date.
+4. Use **Mark filed** to record the agency reference number and filing date.
+5. Use **Mark paid** to record payment date and reference.
+6. Use **Void** for a row that should not be remitted.
+
+The register keeps filed and paid rows when you regenerate the schedule. Due dates are editable
+working defaults, not legal advice; confirm the current deadlines with each agency or your payroll
+adviser.
+
+The same screen downloads the employee-level working papers: Summary, Components, SSS, PhilHealth,
+Pag-IBIG, GSIS, BIR, COA register, and Loans. Use **Download all** for the sector's remittance set.
+
 ## Payroll statuses
 
 | Status | Meaning |

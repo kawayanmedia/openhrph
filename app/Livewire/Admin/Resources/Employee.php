@@ -20,6 +20,7 @@ use App\Livewire\Admin\Filters\EmploymentStatus;
 use App\Livewire\Admin\Filters\OfficeFilter;
 use App\Livewire\Admin\Resource;
 use App\Livewire\Admin\Support\FormData;
+use App\Models\CompanyBank;
 use App\Models\Department;
 use App\Models\Employee as EmployeeModel;
 use App\Models\EmploymentType;
@@ -194,6 +195,8 @@ class Employee extends Resource
         ], [
             Heading::make('Payroll'),
         ], $this->earningData(), [
+            Heading::make('Bank & payment'),
+        ], $this->paymentData(), [
             Heading::make('Leave'),
         ], $this->leaveData(), [
             Heading::make('Portal Login'),
@@ -331,6 +334,41 @@ class Employee extends Resource
             Boolean::make('Overtime', 'overtime_pay')->default(true)->hideFromIndex(),
             Boolean::make('De Minimis', 'deminimis')->default(true)->hideFromIndex(),
             Boolean::make('Night Differential', 'night_differential')->default(true)->hideFromIndex(),
+        ];
+    }
+
+    protected function paymentData(): array
+    {
+        return [
+            Select::make('Pay mode', 'pay_mode')
+                ->options([
+                    'bank' => 'Bank credit',
+                    'cash' => 'Cash',
+                    'cheque' => 'Cheque',
+                ])
+                ->default('bank')
+                ->displayUsingLabels()
+                ->rules('required')
+                ->hideFromIndex(),
+
+            BelongsTo::make('Disbursement bank', 'bank')
+                ->relation('bank')
+                ->titleKey('name')
+                ->filterable()
+                ->showCreateRelationButton()
+                ->withoutTrashed()
+                ->options(CompanyBank::orderBy('name')->pluck('name', 'id')->toArray())
+                ->help('Company account used for the payroll bank file.')
+                ->hideFromIndex(),
+
+            Text::make('Bank account name', 'bank_account_name')
+                ->hideFromIndex(),
+
+            Text::make('Bank account number', 'bank_account_number')
+                ->hideFromIndex(),
+
+            Text::make('Bank branch', 'bank_branch')
+                ->hideFromIndex(),
         ];
     }
 

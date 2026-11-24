@@ -20,6 +20,8 @@ Your account may have access to one or both. If you are unsure, ask your adminis
 
 ## How to use this guide
 
+- **Need to add another company?** Company owners can create one from **Settings → Company → Companies**. See [Getting started](getting-started.md#create-another-company).
+- **Looking for a screen or record quickly?** Press **⌘/ or Ctrl+/** to open universal search. See [Getting started](getting-started.md#search-from-anywhere).
 - **Want to try it without installing?** Sign up at [openhrph.laravel.cloud/register](https://openhrph.laravel.cloud/register), verify your email address, and explore an isolated demo workspace with sample data.
 - **Setting up a company for the first payroll?** Follow the [company-to-payslip walkthrough](end-to-end-walkthrough.md). It goes from the company profile through employee, portal access, payroll, and a printed payslip, and ends with the correction and reopening cycle.
 - **New to OpenHR PH?** Start with [Getting started](getting-started.md).
@@ -27,7 +29,7 @@ Your account may have access to one or both. If you are unsure, ask your adminis
 - **Adding lots of records at once?** Read [Data import](data-import.md).
 - **Reviewing requests or attendance?** Read [Attendance and requests](attendance-and-requests.md).
 - **Running payroll?** Read [Payroll](payroll.md).
-- **Printing or exporting?** Read [Reports and payslips](reports-and-payslips.md).
+- **Printing or exporting?** Read [Reports and payslips](reports-and-payslips.md) for the report centre, remittance register, employee master file, and 201 file.
 - **Managing users or company settings?** Read [Settings and access](settings-and-access.md).
 - **Something is not working?** Read [Troubleshooting](troubleshooting.md).
 
@@ -41,6 +43,10 @@ Your account may have access to one or both. If you are unsure, ask your adminis
 | **Payroll group** | The rules and schedule used to compute pay, such as semi-monthly or monthly. |
 | **Payroll run** | One processing period for a payroll group. |
 | **Payslip** | The employee-level result of a payroll run. |
+| **Remittance register** | The filing and payment record for each statutory agency for a payroll. |
+| **Bank file** | A CSV credit file that tells the bank how much to pay each employee. |
+| **Employee master file** | The filterable masterlist of every employee, with statutory IDs and bank details. |
+| **201 file** | A printable employee dossier with personal, employment, payroll, leave, and document information. |
 | **SSS** | Social Security System. |
 | **PhilHealth** | Philippine Health Insurance Corporation. |
 | **Pag-IBIG** | Home Development Mutual Fund. |

@@ -124,6 +124,7 @@ class Navigation
      * Menu keys that map to the coarse group permissions on user groups.
      */
     protected const PERMISSION_MAP = [
+        'companies' => 'Company Settings',
         'general_settings' => 'Company Settings',
         'offices' => 'Offices',
         'employees' => 'Employees',
@@ -160,13 +161,17 @@ class Navigation
             return true;
         }
 
+        if ($key === 'companies' && $user->ownsAnyCompany()) {
+            return true;
+        }
+
         $permission = static::PERMISSION_MAP[$key] ?? null;
 
         if ($permission === null) {
             return true;
         }
 
-        return ! empty($user->group?->permissions[$permission]);
+        return ! empty($user->groupForTenant()?->permissions[$permission]);
     }
 
     /**

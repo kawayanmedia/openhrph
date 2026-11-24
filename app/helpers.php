@@ -57,6 +57,37 @@ if (! function_exists('get_setting')) {
     }
 }
 
+if (! function_exists('portal_company_name')) {
+    /**
+     * The company name for employee-facing pages. Falls back to the app name
+     * when no tenant is resolved, for example on the sign-in screen.
+     */
+    function portal_company_name(): string
+    {
+        try {
+            return (string) (get_setting('company_name') ?: config('app.name'));
+        } catch (Throwable) {
+            return (string) config('app.name');
+        }
+    }
+}
+
+if (! function_exists('portal_company_logo')) {
+    /**
+     * The company logo path for employee-facing pages, or null.
+     */
+    function portal_company_logo(): ?string
+    {
+        try {
+            $logo = get_setting('logo');
+
+            return is_string($logo) && $logo !== '' ? $logo : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+}
+
 if (! function_exists('set_company')) {
     /**
      * @deprecated Tenant models fill company_id automatically.

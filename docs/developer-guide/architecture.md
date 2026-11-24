@@ -106,6 +106,73 @@ Field classes live in `app/Livewire/Admin/Fields`. They describe the attribute, 
 - Metrics extend the metric base class and provide dashboard cards.
 - Lenses extend the lens base class and provide alternate index queries.
 
+## Company management
+
+Companies are platform-wide records (`companies`), while their business data is tenant-scoped by
+`company_id`. Company management is deliberately outside the tenant scope:
+
+- `App\Policies\CompanyPolicy` allows platform administrators to manage every company and company
+  owners to manage the companies they own. Any owner may create another company.
+- `App\Models\User` exposes `isPlatformAdmin()`, `ownsCompany()`, `ownsAnyCompany()`, and
+  `tenantIds()`. Platform administrators come from the `users.owner` flag or
+  `TENANCY_PLATFORM_ADMINS`; per-company ownership lives on `company_user.is_owner`.
+- `App\Services\Company\CompanyProvisioner` seeds a new company's settings, Administrator group,
+  payroll group and dates, office, department, employment types, reference rates, and the default
+  bank-file template. It runs inside `TenantContext::run()`.
+- The `viewAdmin` gate in `AppServiceProvider` now also admits company owners, so a user who owns a
+  company can reach the admin workspace even before a group is assigned.
+- The Company resource scopes its index to the user's memberships; the `companies` navigation
+  permission maps to **Company Settings**.
+
+## Remittances and report centre
+
+- `App\Services\Payroll\RemittanceReport` is the single source for the summary, component, SSS,
+  PhilHealth, Pag-IBIG, GSIS, BIR, COA, and loans working papers. The `payroll:remittance` command
+  and the admin report centre both call it.
+- `App\Services\Payroll\PayrollRegisterReport` backs `payroll:register`.
+- `App\Models\PayrollRemittance` stores filing/payment state per payroll and agency.
+  `App\Services\Payroll\RemittanceSchedule` derives pending rows from the agency summary and keeps
+  filed/paid rows when the schedule is regenerated.
+- Routes: `/app/reports/remittances`, `/app/reports/remittances/{payroll}/download/{format}`, and
+  `/app/reports/remittances/{payroll}/download-all`. Due-date defaults live in
+  `config/payroll.php` under `remittances.due_days`.
+
+## Payroll bank files
+
+- `employees` carries `bank_id`, `bank_account_name`, `bank_account_number`, `bank_branch`, and
+  `pay_mode`.
+- `App\Models\BankFileTemplate` stores per-company column mappings, delimiters, header/footer
+  rows, amount units, and date formats. `App\Services\Payroll\BankFileGenerator` resolves the
+  supported `source` keys, applies token replacement, and reports missing or duplicate accounts.
+- Routes: `/app/payroll/{payroll}/bank-file` and `/app/payroll/{payroll}/bank-file/download`.
+  Company debit accounts are managed through the `company-bank` resource.
+
+## Employee master file and 201 file
+
+- `App\Services\Employees\EmployeeMasterFileQuery` owns the filters, sorting, and CSV columns for
+  the master file. The Livewire page and the CSV controller share it.
+- Routes: `/app/reports/employee-master-file`, `/app/reports/employee-master-file.csv`, and
+  `/app/employees/{employee}/201`. The 201 view is a printable Blade view and uses the same tenant
+  scope as the employee record.
+- Bank details and statutory identifiers are shown in the master file and 201 file; the 201 file
+  uses the `employee_identifiers` rows when present.
+
+## Universal search
+
+`App\Services\Search\GlobalSearchService` groups results into navigation, quick actions, and
+records. It respects `ResourceRegistry` sector/jurisdiction filters, resource `viewAny` policies,
+and tenant scoping (including `User::forTenant()` for the global users table). The
+`App\Livewire\Admin\GlobalSearch` component is mounted once in `layouts.admin` and opens on
+`⌘/Ctrl + /`; the AI assistant keeps `⌘/Ctrl + K`.
+
+## Portal UI
+
+The portal and public job board share the admin design tokens (`navy`/`teal`, `ui-*` classes) and
+support dark mode. `portal_company_name()` and `portal_company_logo()` are tenant-safe helpers for
+unauthenticated screens. Layouts live in `resources/views/layouts/portal*.blade.php` and
+`job.blade.php`; shared presentation stays in Blade partials/components so Livewire property and
+action names remain unchanged.
+
 ## Jurisdictions
 
 An installation serves one country. The country plugin owns statutory law, payroll earning rules, holidays, leave, identifiers, documents and reports. Resolve it through `JurisdictionManager`; a country is a module under `app/Jurisdictions`. See [Jurisdictions](jurisdictions.md).

@@ -12,6 +12,18 @@ Open **Settings** in the sidebar. The available sections depend on your permissi
 
 Use **Settings → Company → General Settings** for company-level details such as the trade name, contact details, and other workspace defaults.
 
+### Companies
+
+Use **Settings → Company → Companies** to list the companies you belong to and, if you are an
+owner, to create another company. A new company is linked to you as its owner and receives its own
+settings, Administrator group, payroll group and dates, office, department, employment types, and
+default bank-file template. Switch companies from the header after creating one.
+
+### Payroll accounts
+
+Use **Settings → Company → Payroll Accounts** to record the company bank accounts used as the debit
+account on a payroll bank file. Enter the bank name, a short code, and the account number.
+
 ### Attendance settings
 
 Use **Time and Attendance → Attendance Settings** for rules that affect attendance, such as work hours and attendance behaviour.
@@ -42,6 +54,8 @@ Keep reference data tidy before adding employees and running payroll.
 | Deductions | **Payroll Management → Deduction** | Recurring deductions |
 | Loans | **Payroll Management → Loan** | Loan types |
 | Payroll groups | **Payroll Management → Payroll Group** | Semi-monthly, monthly, and their rules |
+| Payroll bank accounts | **Settings → Company → Payroll Accounts** | Company debit accounts for bank files |
+| Bank file templates | **Payroll Management → Bank File Templates** | Column layouts for each bank's credit file |
 | Sector settings | **Settings → Sector** | Sector-specific defaults, GSIS or SSS base, night differential |
 | Statutory (PH) tables | **Statutory (PH)** | SSS, PhilHealth, Pag-IBIG, minimum wage |
 
@@ -67,7 +81,10 @@ The exact list depends on your configuration. A user in a group sees the menu en
 
 ### Owners
 
-A company owner can access the admin workspace and can reopen approved payrolls. Owners do not need a group to sign in, but a group can still be useful for keeping their menu tidy.
+A company owner can access the admin workspace, add companies under their account, and reopen
+approved payrolls. Owners do not need a group to sign in, but a group can still be useful for
+keeping their menu tidy. Platform administrators listed in `TENANCY_PLATFORM_ADMINS` can manage every
+company in the installation.
 
 ### The access rule in plain language
 

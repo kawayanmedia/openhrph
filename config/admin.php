@@ -105,6 +105,15 @@ return [
         ],
 
         [
+            'label' => 'Reports',
+            'icon' => 'document-text',
+            'items' => [
+                ['type' => 'link', 'url' => '/reports/remittances', 'label' => 'Government Remittances', 'can' => 'payroll_settings'],
+                ['type' => 'link', 'url' => '/reports/employee-master-file', 'label' => 'Employee Master File', 'can' => 'employees'],
+            ],
+        ],
+
+        [
             'label' => 'Settings',
             'icon' => 'adjustments',
             'groups' => [
@@ -112,6 +121,8 @@ return [
                     'label' => 'Company',
                     'items' => [
                         ['type' => 'link', 'url' => '/settings/general', 'label' => 'General Settings', 'can' => 'general_settings'],
+                        ['type' => 'resource', 'key' => 'company', 'label' => 'Companies', 'can' => 'companies'],
+                        ['type' => 'resource', 'key' => 'company-bank', 'label' => 'Payroll Accounts', 'can' => 'general_settings'],
                         ['type' => 'link', 'url' => '/imports', 'label' => 'Data Import'],
                         ['type' => 'link', 'url' => '/settings/sector', 'label' => 'Sector Settings', 'can' => 'general_settings'],
                         ['type' => 'resource', 'key' => 'office', 'label' => 'Office'],
@@ -188,6 +199,7 @@ return [
             ],
             'items' => [
                 ['type' => 'link', 'url' => '/settings/payroll', 'label' => 'Payroll Settings', 'can' => 'payroll_settings'],
+                ['type' => 'resource', 'key' => 'bank-file-template', 'label' => 'Bank File Templates', 'can' => 'payroll_settings'],
                 ['type' => 'resource', 'key' => 'pay-roll-group', 'label' => 'Payroll Group'],
                 ['type' => 'resource', 'key' => 'pay-roll', 'label' => 'Payroll'],
                 ['type' => 'resource', 'key' => 'employee-compensation', 'label' => 'Employee Compensation'],

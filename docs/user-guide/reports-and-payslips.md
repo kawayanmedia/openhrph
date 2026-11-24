@@ -2,6 +2,46 @@
 
 This page helps you export lists, review payroll totals, and give employees their payslips.
 
+## Report centre
+
+**Reports** in the sidebar gives you three working areas:
+
+| Report | What it is for |
+| --- | --- |
+| **Government Remittances** | Statutory working papers plus a filing and payment register for a payroll. |
+| **Employee Master File** | A filterable, printable, CSV-exportable list of every employee with statutory IDs and bank details. |
+| **201 File** | A printable employee dossier opened from the master file or an employee record. |
+
+## Employee master file
+
+1. Open **Reports → Employee Master File**.
+2. Filter by search, office, department, employment type, payroll group, employment status, or active/resigned.
+3. Sort by employee number, name, date hired, or monthly basic.
+4. Select **Export CSV** to download the filtered rows, or **Print** for a paper copy.
+5. Select **Open** on a row to view the employee's 201 file.
+
+The list includes each employee's statutory identifiers, bank account (masked to the last four
+digits), portal e-mail, and employment details. Use it as the HR masterlist for audits, payroll
+reconciliation, and bank-file preparation.
+
+## 201 file
+
+The 201 file is a single printable dossier for one employee. It contains:
+
+- company header with the company's statutory identifiers
+- personal and contact information
+- government identifiers (TIN, SSS, GSIS BP, PhilHealth, Pag-IBIG/HDMF)
+- employment details, including office, department, immediate head, and payroll group
+- compensation and bank details
+- leave balances
+- compensations, deductions, and loans
+- certificates and trainings
+- signature lines for the employee and the HR officer
+
+Open it from **Employee Master File → Open** or from an employee record's **Documents** section.
+Select **Print / Save PDF** and use the browser's print dialog. Only users in the employee's company
+can open it.
+
 ## Export a list as CSV
 
 Many admin lists include an **Export As CSV** action.
@@ -57,9 +97,24 @@ If a PDF does not open:
 - Confirm the employee belongs to the current company.
 - Ask your administrator to check file storage and permissions.
 
-## Remittance and BIR working papers
+## Government remittances in the admin workspace
 
-`payroll:remittance` can produce employee-level working papers in addition to the four-row summary:
+The admin report centre is the day-to-day way to produce remittances and record what was filed.
+
+1. Open **Reports → Government Remittances** (or select **Remittances** on a payroll).
+2. Choose the payroll and working paper.
+3. Review the agency summary cards and the preview.
+4. Select **Download CSV** for one format or **Download all** for the sector's set.
+5. Select **Generate schedule** to create the filing/payment rows.
+6. Use **Mark filed** and **Mark paid** to record references and dates. Filed and paid rows survive a
+   schedule refresh; use **Void** for rows that should not be remitted.
+
+The register is a working record, not an agency e-filing submission. The due dates shown are
+editable defaults; confirm them with each agency.
+
+### Command-line working papers
+
+`payroll:remittance` can produce the same employee-level working papers in addition to the four-row summary:
 
 ```bash
 php artisan payroll:remittance {payroll} --format=summary

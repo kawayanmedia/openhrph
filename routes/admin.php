@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\BankFileDownloadController;
+use App\Http\Controllers\Admin\EmployeeFileController;
+use App\Http\Controllers\Admin\EmployeeMasterFileController;
 use App\Http\Controllers\Admin\ImportTemplateController;
 use App\Http\Controllers\Admin\PasswordResetController;
+use App\Http\Controllers\Admin\RemittanceDownloadController;
 use App\Livewire\Admin\AdminDetail;
 use App\Livewire\Admin\AdminForm;
 use App\Livewire\Admin\AdminIndex;
@@ -10,8 +14,11 @@ use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Dashboards\Main;
 use App\Livewire\Admin\GettingStarted;
 use App\Livewire\Admin\Imports\DataImport;
+use App\Livewire\Admin\Payroll\PayrollBankFile;
 use App\Livewire\Admin\Payroll\PayrollPayslip;
 use App\Livewire\Admin\Payroll\PayrollRun;
+use App\Livewire\Admin\Reports\EmployeeMasterFile as EmployeeMasterFileReport;
+use App\Livewire\Admin\Reports\Remittances as RemittancesReport;
 use App\Livewire\Admin\Settings\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +58,21 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
 
         Route::get('assistant', AssistantChat::class)->name('assistant');
 
+        Route::get('reports/remittances/{payroll}/download/{format}', [RemittanceDownloadController::class, 'download'])
+            ->name('reports.remittances.download');
+        Route::get('reports/remittances/{payroll}/download-all', [RemittanceDownloadController::class, 'downloadAll'])
+            ->name('reports.remittances.download-all');
+        Route::get('reports/remittances/{payroll?}', RemittancesReport::class)
+            ->name('reports.remittances');
+
+        Route::get('reports/employee-master-file.csv', [EmployeeMasterFileController::class, 'csv'])
+            ->name('reports.employee-master-file.csv');
+        Route::get('reports/employee-master-file', EmployeeMasterFileReport::class)
+            ->name('reports.employee-master-file');
+
+        Route::get('employees/{employee}/201', [EmployeeFileController::class, 'show'])
+            ->name('employees.file');
+
         Route::post('logout', function (Request $request) {
             Auth::guard('nova')->logout();
             Auth::guard('web')->logout();
@@ -63,6 +85,8 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
 
         Route::get('payroll/{payroll}', PayrollRun::class)->name('payroll.run');
         Route::get('payroll/{payroll}/payslips/{employee}', PayrollPayslip::class)->name('payroll.payslip');
+        Route::get('payroll/{payroll}/bank-file/download', [BankFileDownloadController::class, 'download'])->name('payroll.bank-file.download');
+        Route::get('payroll/{payroll}/bank-file', PayrollBankFile::class)->name('payroll.bank-file');
 
         Route::get('settings/{page}', Settings::class)->name('settings')->where('page', 'general|attendance|payroll|statutory|sector|leave');
 

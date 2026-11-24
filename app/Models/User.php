@@ -154,6 +154,69 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Whether the user may administer every company in the installation.
+     */
+    public function isPlatformAdmin(): bool
+    {
+        if ((bool) $this->owner) {
+            return true;
+        }
+
+        $email = strtolower(trim((string) $this->email));
+
+        if ($email === '') {
+            return false;
+        }
+
+        $emails = array_map(
+            fn (mixed $candidate): string => strtolower(trim((string) $candidate)),
+            (array) config('tenancy.platform_admin_emails', []),
+        );
+
+        return in_array($email, $emails, true);
+    }
+
+    /**
+     * Whether the user owns the given company.
+     */
+    public function ownsCompany(int $companyId): bool
+    {
+        if ($this->isPlatformAdmin()) {
+            return true;
+        }
+
+        $membership = $this->companyMemberships()->firstWhere('id', $companyId);
+
+        return (bool) ($membership?->pivot?->is_owner);
+    }
+
+    /**
+     * Whether the user owns at least one company and may create another.
+     */
+    public function ownsAnyCompany(): bool
+    {
+        if ($this->isPlatformAdmin()) {
+            return true;
+        }
+
+        return $this->companyMemberships()
+            ->contains(fn (Company $company): bool => (bool) ($company->pivot?->is_owner));
+    }
+
+    /**
+     * The ids of every company the user belongs to.
+     *
+     * @return array<int, int>
+     */
+    public function tenantIds(): array
+    {
+        return $this->companyMemberships()
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    /**
      * The company currently in use for this request.
      */
     public function activeCompany(): ?Company

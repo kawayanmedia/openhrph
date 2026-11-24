@@ -178,6 +178,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Remittance Register
+    |--------------------------------------------------------------------------
+    |
+    | Default filing/payment deadlines, expressed as an offset in days from the
+    | payroll date. These are editable working defaults, not legal advice.
+    |
+    */
+
+    'remittances' => [
+        'agencies' => [
+            'sss' => 'SSS',
+            'gsis' => 'GSIS',
+            'philhealth' => 'PhilHealth',
+            'pagibig' => 'Pag-IBIG',
+            'bir' => 'BIR',
+        ],
+        'due_days' => [
+            'sss' => 15,
+            'gsis' => 10,
+            'philhealth' => 15,
+            'pagibig' => 15,
+            'bir' => 10,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Payroll Accounting
     |--------------------------------------------------------------------------
     |
