@@ -399,7 +399,7 @@ class PayrollGroupsSheet extends SheetDefinition
 
     private function paymentSchedule(string $value): ?string
     {
-        return match (strtolower(trim($value))) {
+        return match ($value |> trim(...) |> strtolower(...)) {
             'first_pay', 'first pay' => PayrollGroup::PAY_SCHEDULE_FIRSTPAY,
             'last_pay', 'last pay' => PayrollGroup::PAY_SCHEDULE_LASTPAY,
             'every_pay', 'every pay' => PayrollGroup::PAY_SCHEDULE_EVERYPAY,
@@ -409,7 +409,7 @@ class PayrollGroupsSheet extends SheetDefinition
 
     private function nonWorkingDate(string $value): ?string
     {
-        return match (strtolower(trim($value))) {
+        return match ($value |> trim(...) |> strtolower(...)) {
             'pay_date_before', 'pay date before non working day', 'before' => PayrollGroup::NON_WORKING_DATE_BEFORE,
             'pay_date_after', 'pay date after non working day', 'after' => PayrollGroup::NON_WORKING_DATE_AFTER,
             'pay_date', 'remain as schedule pay date', 'as scheduled' => PayrollGroup::NON_WORKING_DATE_DATE,

@@ -30,7 +30,7 @@ final class Computer
      */
     public static function compute(Config $cfg, Employee $employee): Payslip
     {
-        return match (strtolower(trim($cfg->runType))) {
+        return match ($cfg->runType |> trim(...) |> strtolower(...)) {
             Config::RUN_THIRTEENTH_MONTH => self::computeThirteenthMonth($cfg, $employee),
             Config::RUN_FINAL_PAY => self::computeFinalPay($cfg, $employee),
             Config::RUN_ANNUAL_ADJUSTMENT => self::computeAnnualAdjustment($cfg, $employee),
@@ -65,7 +65,7 @@ final class Computer
         $daysPerYear = $cfg->daysPerYear > 0 ? $cfg->daysPerYear : 261;
         $hoursPerDay = $cfg->hoursPerDay > 0 ? $cfg->hoursPerDay : 8;
 
-        $monthlyPaid = strtolower(trim($employee->paymentType)) === Employee::PAYMENT_MONTHLY;
+        $monthlyPaid = ($employee->paymentType |> trim(...) |> strtolower(...)) === Employee::PAYMENT_MONTHLY;
 
         $daily = $employee->dailyRate;
 
@@ -379,7 +379,7 @@ final class Computer
             return $slip;
         }
 
-        $generic = strtolower(trim((string) $cfg->statutoryDriver)) !== 'ph';
+        $generic = ((string) $cfg->statutoryDriver |> trim(...) |> strtolower(...)) !== 'ph';
         $genericEmployeeTotal = 0;
         $genericEmployerTotal = 0;
         $genericTaxableReduction = 0;
@@ -680,8 +680,7 @@ final class Computer
      */
     public static function computeFinalPay(Config $cfg, Employee $employee): Payslip
     {
-        $regularCfg = clone $cfg;
-        $regularCfg->runType = Config::RUN_REGULAR;
+        $regularCfg = clone ($cfg, ['runType' => Config::RUN_REGULAR]);
 
         $slip = self::computeRegular($regularCfg, $employee);
 
@@ -710,7 +709,7 @@ final class Computer
             }
         }
 
-        if (strtolower(trim($cfg->meta['leave_conversion'] ?? '')) === 'false') {
+        if ((($cfg->meta['leave_conversion'] ?? '') |> trim(...) |> strtolower(...)) === 'false') {
             $leaveDays = 0;
         }
 
@@ -866,7 +865,7 @@ final class Computer
 
     private static function isGeneric(Config $cfg): bool
     {
-        $driver = strtolower(trim($cfg->statutoryDriver));
+        $driver = $cfg->statutoryDriver |> trim(...) |> strtolower(...);
 
         return $driver !== '' && $driver !== 'ph';
     }
@@ -900,7 +899,7 @@ final class Computer
             return $cfg->annualTaxBrackets;
         }
 
-        if (strtolower(trim($cfg->statutoryDriver)) !== 'ph') {
+        if (($cfg->statutoryDriver |> trim(...) |> strtolower(...)) !== 'ph') {
             return [];
         }
 
@@ -918,7 +917,7 @@ final class Computer
             return [$amount, self::separationIsTaxable($cfg->meta['separation_reason'] ?? '')];
         }
 
-        $reason = strtolower(trim($cfg->meta['separation_reason'] ?? ''));
+        $reason = ($cfg->meta['separation_reason'] ?? '') |> trim(...) |> strtolower(...);
 
         if (in_array($reason, ['retirement', 'ra_7641'], true)) {
             return self::retirementPay($cfg, $employee, $slip);
@@ -1006,7 +1005,7 @@ final class Computer
      */
     private static function separationMonthlyPay(Config $cfg, Employee $employee, Payslip $slip): int
     {
-        if (strtolower(trim($employee->paymentType)) === Employee::PAYMENT_DAILY && $employee->dailyRate > 0) {
+        if (($employee->paymentType |> trim(...) |> strtolower(...)) === Employee::PAYMENT_DAILY && $employee->dailyRate > 0) {
             $days = $cfg->daysPerYear > 0 ? $cfg->daysPerYear : 261;
 
             return Money::mul($employee->dailyRate, $days / 12);
@@ -1017,7 +1016,7 @@ final class Computer
 
     public static function separationIsTaxable(string $reason): bool
     {
-        return ! in_array(strtolower(trim($reason)), [
+        return ! in_array($reason |> trim(...) |> strtolower(...), [
             'retrenchment',
             'redundancy',
             'closure',
@@ -1360,7 +1359,7 @@ final class Computer
      */
     private static function deMinimisUsageKey(Config $cfg, Employee $employee, DeMinimisBenefit $benefit): string
     {
-        $code = strtolower(trim($benefit->code)) ?: 'de_minimis';
+        $code = ($benefit->code |> trim(...) |> strtolower(...)) ?: 'de_minimis';
         $date = $cfg->payrollDate !== ''
             ? DateTimeImmutable::createFromFormat('!Y-m-d', $cfg->payrollDate)
             : false;
@@ -1415,7 +1414,7 @@ final class Computer
 
     private static function slug(string $value): string
     {
-        return str_replace(['-', ' '], '_', strtolower(trim($value)));
+        return str_replace(['-', ' '], '_', $value |> trim(...) |> strtolower(...));
     }
 
     /**
@@ -1423,7 +1422,7 @@ final class Computer
      */
     private static function contributionBase(string $base, Employee $employee, Payslip $slip, int $periods): int
     {
-        return match (strtolower(trim($base))) {
+        return match ($base |> trim(...) |> strtolower(...)) {
             'gross' => Money::mul($slip->gross, (float) $periods),
             'period_gross' => $slip->gross,
             default => $employee->monthlyBasic,
@@ -1519,7 +1518,7 @@ final class Computer
         Earning $deduction,
         int $minWageExemption,
     ): int {
-        if (strtolower(trim($deduction->calculation)) !== 'percentage' || $deduction->rate <= 0) {
+        if (($deduction->calculation |> trim(...) |> strtolower(...)) !== 'percentage' || $deduction->rate <= 0) {
             return max(0, $deduction->amount);
         }
 
@@ -1544,7 +1543,7 @@ final class Computer
         int $minWageExemption = 0,
         bool $taxableResolved = false,
     ): int {
-        return (int) match (strtolower(trim($base))) {
+        return (int) match ($base |> trim(...) |> strtolower(...)) {
             'monthly_gross' => Money::mul($slip->gross, (float) max(1, $periods)),
             'period_gross', 'gross' => $slip->gross,
             'period_basic' => $slip->periodBasic,
@@ -1567,7 +1566,7 @@ final class Computer
             return 0;
         }
 
-        if (strtolower(trim($employee->paymentType)) === Employee::PAYMENT_MONTHLY) {
+        if (($employee->paymentType |> trim(...) |> strtolower(...)) === Employee::PAYMENT_MONTHLY) {
             $monthlyMinimum = Money::mul($daily, $daysPerYear / 12);
 
             return self::split($monthlyMinimum, $periods);

@@ -19,7 +19,7 @@ enum TaxPeriod: string
 
     public static function fromString(?string $value): ?self
     {
-        $normalized = str_replace('_', '-', strtolower(trim((string) $value)));
+        $normalized = str_replace('_', '-', (string) $value |> trim(...) |> strtolower(...));
 
         return match ($normalized) {
             'daily' => self::DAILY,

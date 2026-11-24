@@ -21,7 +21,7 @@ final class JurisdictionRegistry
 
     public function get(string $code): ?Jurisdiction
     {
-        return $this->jurisdictions[strtoupper(trim($code))] ?? null;
+        return $this->jurisdictions[$code |> trim(...) |> strtoupper(...)] ?? null;
     }
 
     public function has(string $code): bool

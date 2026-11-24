@@ -176,7 +176,7 @@ class AttendanceLogIngestor
         }
 
         if (is_string($type)) {
-            $normalized = strtolower(trim($type));
+            $normalized = $type |> trim(...) |> strtolower(...);
 
             if (in_array($normalized, ['in', 'login', 'time_in', '0'], true)) {
                 return 0;

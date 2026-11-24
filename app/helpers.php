@@ -366,7 +366,7 @@ if (! function_exists('compensation_options')) {
 
     function compensation_options($type)
     {
-        $group = match (strtolower(trim((string) $type))) {
+        $group = match ((string) $type |> trim(...) |> strtolower(...)) {
             'allowance' => Compensation::GROUP_ALLOWANCE,
             'bonus' => Compensation::GROUP_BONUS,
             'commission' => Compensation::GROUP_COMMISSION,

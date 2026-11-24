@@ -27,7 +27,7 @@ The default stack exposes the instance through a static external IP. Set `domain
 
 | Layer | Resources |
 | --- | --- |
-| Packer | Ubuntu 24.04 image, PHP 8.4 FPM, Nginx, MySQL 8, Caddy, Composer, Node 22, Go 1.24, Google Cloud CLI, application code, Vite assets, Go payroll binary, systemd queue/scheduler/bootstrap/backup units |
+| Packer | Ubuntu 24.04 image, PHP 8.5 FPM, Nginx, MySQL 8, Caddy, Composer, Node 22, Go 1.24, Google Cloud CLI, application code, Vite assets, Go payroll binary, systemd queue/scheduler/bootstrap/backup units |
 | Terraform | VPC, subnet, firewall, static external IP, service account, Cloud Storage backup bucket, Secret Manager secret, Compute Engine instance, persistent MySQL data disk, optional Cloud DNS records |
 
 ## Prerequisites
@@ -93,14 +93,14 @@ Terraform selects the newest image with `component=hris` and the `app_ref` match
 | `disk_size` | `40` | Build disk size in GB |
 | `app_repo` | `https://github.com/kawayanmedia/openhrph.git` | Repository to clone |
 | `app_ref` | `main` | Branch, tag, or commit to bake |
-| `php_version` | `8.4` | PHP version; the build adds the `ondrej/php` PPA when needed |
+| `php_version` | `8.5` | PHP version; the build adds the `ondrej/php` PPA when needed |
 | `image_prefix` | `hris` | Image name and family prefix |
 
 Examples:
 
 ```bash
 packer build -var "gcp_project_id=$GCP_PROJECT_ID" -var 'app_ref=v1.0.0' .
-packer build -var "gcp_project_id=$GCP_PROJECT_ID" -var 'php_version=8.3' .
+packer build -var "gcp_project_id=$GCP_PROJECT_ID" -var 'php_version=8.5' .
 ```
 
 ## 2. Configure Terraform
@@ -202,7 +202,7 @@ Inside the instance:
 
 ```bash
 sudo tail -f /var/log/hris-bootstrap.log
-sudo systemctl status nginx php8.4-fpm mysql caddy hris-queue
+sudo systemctl status nginx php8.5-fpm mysql caddy hris-queue
 curl -i http://127.0.0.1:8080/up
 curl -i http://127.0.0.1/up
 sudo -u www-data php /var/www/hris/artisan about
@@ -395,7 +395,7 @@ gcloud compute disks list --filter='name~mysql-data'
 ```bash
 sudo tail -n 200 /var/log/hris-bootstrap.log
 sudo tail -n 200 /var/www/hris/storage/logs/laravel.log
-sudo journalctl -u php8.4-fpm -n 100 --no-pager
+sudo journalctl -u php8.5-fpm -n 100 --no-pager
 sudo journalctl -u nginx -n 100 --no-pager
 sudo journalctl -u mysql -n 100 --no-pager
 ```

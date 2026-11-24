@@ -93,6 +93,6 @@ class PayrollAttendance
             ->where('key', 'auto_absent_no_timesheet')
             ->value('value');
 
-        return ! in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'on'], true);
+        return ! in_array((string) $value |> trim(...) |> strtolower(...), ['1', 'true', 'yes', 'on'], true);
     }
 }

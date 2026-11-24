@@ -18,7 +18,7 @@ enum PayFrequency: string
      */
     public static function fromString(?string $value): self
     {
-        return in_array(strtolower(trim((string) $value)), ['monthly', 'month'], true)
+        return in_array((string) $value |> trim(...) |> strtolower(...), ['monthly', 'month'], true)
             ? self::MONTHLY
             : self::SEMI_MONTHLY;
     }

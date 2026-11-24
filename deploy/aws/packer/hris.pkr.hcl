@@ -35,8 +35,8 @@ variable "app_ref" {
 
 variable "php_version" {
   type        = string
-  description = "PHP version to install. Ubuntu 24.04 ships 8.3."
-  default     = "8.3"
+  description = "PHP version to install. Ubuntu 24.04 ships 8.3; 8.5 needs the ondrej/php PPA."
+  default     = "8.5"
 }
 
 variable "ami_name_prefix" {

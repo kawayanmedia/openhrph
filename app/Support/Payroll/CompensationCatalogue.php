@@ -220,7 +220,7 @@ final class CompensationCatalogue
 
             $query = DB::table('compensations')
                 ->whereNull('company_id')
-                ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim($row['code']))]);
+                ->whereRaw('UPPER(TRIM(code)) = ?', [$row['code'] |> trim(...) |> strtoupper(...)]);
 
             if ($hasCountry) {
                 $query->where(function ($query) use ($country): void {
@@ -254,7 +254,7 @@ final class CompensationCatalogue
 
             $overrideQuery = DB::table('compensations')
                 ->whereNotNull('company_id')
-                ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim($row['code']))]);
+                ->whereRaw('UPPER(TRIM(code)) = ?', [$row['code'] |> trim(...) |> strtoupper(...)]);
 
             if ($hasCountry) {
                 $overrideQuery->where(function ($query) use ($country): void {

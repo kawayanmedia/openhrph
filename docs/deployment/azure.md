@@ -27,7 +27,7 @@ The default stack exposes the VM through a static public IP. Set `domain_name` t
 
 | Layer | Resources |
 | --- | --- |
-| Packer | Ubuntu 24.04 managed image, PHP 8.4 FPM, Nginx, MySQL 8, Caddy, Composer, Node 22, Go 1.24, Azure CLI, application code, Vite assets, Go payroll binary, systemd queue/scheduler/bootstrap/backup units |
+| Packer | Ubuntu 24.04 managed image, PHP 8.5 FPM, Nginx, MySQL 8, Caddy, Composer, Node 22, Go 1.24, Azure CLI, application code, Vite assets, Go payroll binary, systemd queue/scheduler/bootstrap/backup units |
 | Terraform | Resource group, VNet, subnet, NSG, static public IP, VM, user-assigned managed identity, Key Vault, Storage account/container for backups, MySQL data disk, optional Azure DNS records |
 
 ## Prerequisites
@@ -109,7 +109,7 @@ Terraform selects the newest image matching `^hris-<sanitized-app-ref>-`.
 | `vm_size` | `Standard_B2s` | Temporary build VM size |
 | `app_repo` | `https://github.com/kawayanmedia/openhrph.git` | Repository to clone |
 | `app_ref` | `main` | Branch, tag, or commit to bake |
-| `php_version` | `8.4` | PHP version; the build adds the `ondrej/php` PPA when needed |
+| `php_version` | `8.5` | PHP version; the build adds the `ondrej/php` PPA when needed |
 | `image_prefix` | `hris` | Managed image name prefix |
 
 Examples:
@@ -235,7 +235,7 @@ Inside the VM:
 
 ```bash
 sudo tail -f /var/log/hris-bootstrap.log
-sudo systemctl status nginx php8.4-fpm mysql caddy hris-queue
+sudo systemctl status nginx php8.5-fpm mysql caddy hris-queue
 curl -i http://127.0.0.1:8080/up
 curl -i http://127.0.0.1/up
 sudo -u www-data php /var/www/hris/artisan about
@@ -454,7 +454,7 @@ The data disk attachment is created just after the VM. The mount unit waits up t
 ```bash
 sudo tail -n 200 /var/log/hris-bootstrap.log
 sudo tail -n 200 /var/www/hris/storage/logs/laravel.log
-sudo journalctl -u php8.4-fpm -n 100 --no-pager
+sudo journalctl -u php8.5-fpm -n 100 --no-pager
 sudo journalctl -u nginx -n 100 --no-pager
 sudo journalctl -u mysql -n 100 --no-pager
 ```

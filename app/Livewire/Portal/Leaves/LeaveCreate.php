@@ -105,7 +105,7 @@ class LeaveCreate extends Component
         }
 
         $leave = Leave::query()->find($this->leaveTypeId);
-        $code = strtoupper(trim((string) $leave?->code));
+        $code = (string) $leave?->code |> trim(...) |> strtoupper(...);
 
         if ($leave === null || in_array($code, self::UNPAID_CODES, true)) {
             $this->daysWithPay = 0;

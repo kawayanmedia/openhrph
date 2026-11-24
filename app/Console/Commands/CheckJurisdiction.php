@@ -14,7 +14,7 @@ class CheckJurisdiction extends Command
 
     public function handle(JurisdictionManager $jurisdictions): int
     {
-        $code = strtoupper(trim((string) $this->argument('code')));
+        $code = (string) $this->argument('code') |> trim(...) |> strtoupper(...);
         $jurisdiction = $jurisdictions->for($code);
         $errors = [];
 

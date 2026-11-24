@@ -20,7 +20,7 @@ final class PhilippinesStatutoryImporter implements StatutoryImporter
 
     public function supports(string $countryCode): bool
     {
-        return strtoupper(trim($countryCode)) === 'PH';
+        return ($countryCode |> trim(...) |> strtoupper(...)) === 'PH';
     }
 
     public function import(string $countryCode, array $options = []): array

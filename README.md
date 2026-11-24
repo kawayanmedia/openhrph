@@ -24,7 +24,7 @@ An open-source Human Resource Information System and Philippine payroll platform
 
 | Layer | Technology |
 | --- | --- |
-| Backend | PHP 8.3+, Laravel 13 |
+| Backend | PHP 8.5+, Laravel 13 |
 | Admin UI | Livewire 3, Blade, Tailwind CSS 4, Vite 8 |
 | Optional admin panel | Filament 3 |
 | Payroll engine | Go 1.24 (MySQL-backed, with a PHP fallback) |
@@ -37,7 +37,7 @@ An open-source Human Resource Information System and Philippine payroll platform
 
 ### Requirements
 
-- PHP 8.3 or newer with the usual Laravel extensions (`bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, `xml`, `zip`)
+- PHP 8.5 or newer with the usual Laravel extensions (`bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `tokenizer`, `xml`, `zip`)
 - Composer 2
 - Node.js 22 and npm
 - Go 1.24 (only for the payroll engine)

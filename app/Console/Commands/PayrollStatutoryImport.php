@@ -35,7 +35,7 @@ class PayrollStatutoryImport extends Command
 
     public function handle(): int
     {
-        $this->country = strtoupper(trim((string) ($this->option('country') ?: 'PH')));
+        $this->country = (string) ($this->option('country') ?: 'PH') |> trim(...) |> strtoupper(...);
 
         if (! preg_match('/^[A-Z]{2}$/', $this->country)) {
             $this->error('The country must be a two-letter ISO 3166-1 code, for example PH.');

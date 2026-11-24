@@ -66,7 +66,7 @@ class ApproveLeaveJob implements ShouldQueue
         }
 
         $leave = $this->leaveRequest->leave()->withoutGlobalScopes()->first();
-        $code = strtoupper(trim((string) $leave?->code));
+        $code = (string) $leave?->code |> trim(...) |> strtoupper(...);
 
         $ledger = app(LeaveLedgerService::class);
         $policy = $ledger->policyFor((int) $this->leaveRequest->company_id, (int) $this->leaveRequest->leave_type_id);

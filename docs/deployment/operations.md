@@ -8,7 +8,7 @@ This guide covers the day-two work for the AWS AMI stack: health, logs, deployme
 | --- | --- |
 | Application health | `curl -fsS https://your-host/up` |
 | Nginx | `sudo systemctl status nginx` |
-| PHP-FPM | `sudo systemctl status php8.3-fpm` |
+| PHP-FPM | `sudo systemctl status php8.5-fpm` |
 | Queue worker | `sudo systemctl status hris-queue` |
 | Scheduler | `systemctl list-timers hris-scheduler.timer` |
 | Backup timer | `systemctl list-timers hris-backup.timer` |
@@ -33,7 +33,7 @@ sudo tail -f /var/log/nginx/hris-access.log
 sudo tail -f /var/log/nginx/hris-error.log
 
 # PHP-FPM
-sudo journalctl -u php8.3-fpm -f
+sudo journalctl -u php8.5-fpm -f
 sudo tail -f /var/log/php-fpm/hris-error.log
 
 # Queue and scheduler

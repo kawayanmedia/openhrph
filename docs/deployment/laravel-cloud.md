@@ -107,7 +107,7 @@ Vapor's Lambda model does not keep a long-running local filesystem or a single s
 
 ## Managed hosting checklist
 
-- [ ] PHP 8.3+ and required extensions
+- [ ] PHP 8.5+ and required extensions
 - [ ] MySQL 8
 - [ ] HTTPS and secure cookies
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`

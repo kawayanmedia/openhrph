@@ -8,6 +8,9 @@ namespace App\Support;
  * Amounts are integer centavos. Rounding is half away from zero on the raw
  * float product, which is what Go's math.Round does. PHP's round() applies a
  * fuzz correction and must not be used here or the two engines drift.
+ *
+ * Every operation is tagged #[\NoDiscard]: dropping a resulting amount is a
+ * payroll defect, not a harmless unused expression.
  */
 final class Money
 {
@@ -16,6 +19,7 @@ final class Money
     /**
      * Round half away from zero, matching Go's math.Round.
      */
+    #[\NoDiscard]
     public static function round(float $value): int
     {
         return $value < 0
@@ -23,6 +27,7 @@ final class Money
             : (int) floor($value + 0.5);
     }
 
+    #[\NoDiscard]
     public static function fromPesos(float $pesos): int
     {
         return self::round($pesos * 100);
@@ -32,6 +37,7 @@ final class Money
      * Parse a decimal string such as "1234.56" into centavos.
      * Empty or invalid input yields zero.
      */
+    #[\NoDiscard]
     public static function fromPesosString(?string $value): int
     {
         $value = trim((string) $value);
@@ -49,6 +55,7 @@ final class Money
         return self::fromPesos((float) $value);
     }
 
+    #[\NoDiscard]
     public static function pesos(int $centavos): float
     {
         return $centavos / 100;
@@ -57,6 +64,7 @@ final class Money
     /**
      * Render with two decimals, e.g. "1234.56".
      */
+    #[\NoDiscard]
     public static function format(int $centavos): string
     {
         $sign = $centavos < 0 ? '-' : '';
@@ -65,11 +73,13 @@ final class Money
         return sprintf('%s%d.%02d', $sign, intdiv($value, 100), $value % 100);
     }
 
+    #[\NoDiscard]
     public static function add(int $centavos, int $other): int
     {
         return $centavos + $other;
     }
 
+    #[\NoDiscard]
     public static function sub(int $centavos, int $other): int
     {
         return $centavos - $other;
@@ -78,6 +88,7 @@ final class Money
     /**
      * Scale by a factor using half-away-from-zero rounding.
      */
+    #[\NoDiscard]
     public static function mul(int $centavos, float $factor): int
     {
         return self::round($centavos * $factor);
@@ -90,6 +101,7 @@ final class Money
      *
      * @return list<int>
      */
+    #[\NoDiscard]
     public static function splitTruncating(int $centavos, int $parts): array
     {
         if ($parts <= 0) {
@@ -112,6 +124,7 @@ final class Money
         return $out;
     }
 
+    #[\NoDiscard]
     public static function half(int $centavos): int
     {
         return self::round($centavos / 2);
@@ -121,6 +134,7 @@ final class Money
      * Limit the amount to the inclusive range [low, high]. A non-positive
      * high means unbounded above.
      */
+    #[\NoDiscard]
     public static function clampTo(int $centavos, int $low, int $high): int
     {
         if ($high > 0 && $centavos > $high) {
@@ -134,11 +148,13 @@ final class Money
         return $centavos;
     }
 
+    #[\NoDiscard]
     public static function min(int $a, int $b): int
     {
         return $a < $b ? $a : $b;
     }
 
+    #[\NoDiscard]
     public static function max(int $a, int $b): int
     {
         return $a > $b ? $a : $b;

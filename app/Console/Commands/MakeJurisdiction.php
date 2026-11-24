@@ -17,7 +17,7 @@ class MakeJurisdiction extends Command
 
     public function handle(Filesystem $files): int
     {
-        $code = strtoupper(trim((string) $this->argument('code')));
+        $code = (string) $this->argument('code') |> trim(...) |> strtoupper(...);
 
         if (! preg_match('/^[A-Z]{2}$/', $code)) {
             $this->error('The code must be a two-letter ISO 3166-1 code, for example MY.');

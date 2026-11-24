@@ -693,7 +693,7 @@ final class LegacyWriter
     {
         [$code, $period] = array_pad(explode('|', $key, 2), 2, '');
 
-        return [strtolower(trim($code)), $period];
+        return [$code |> trim(...) |> strtolower(...), $period];
     }
 
     private static function recordAudit(Run $run, Summary $summary, WriteOptions $options): void

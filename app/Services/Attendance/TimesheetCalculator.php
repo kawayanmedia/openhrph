@@ -253,8 +253,8 @@ final class TimesheetCalculator
     ): ?array {
         $code = (string) ($timesheet->day_rate_code ?: $timesheet->day_type ?: Timesheet::REGULAR_DAY);
         $rate = Rate::query()->where('code', $code)->first();
-        $first = $paid[0] ?? null;
-        $last = $paid === [] ? null : $paid[count($paid) - 1];
+        $first = array_first($paid);
+        $last = array_last($paid);
         $logs = [$first[0] ?? null, $last[1] ?? null];
 
         $lines = [

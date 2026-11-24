@@ -17,7 +17,7 @@ enum Sector: string
 
     public static function tryFromValue(?string $value): ?self
     {
-        return match (strtolower(trim((string) $value))) {
+        return match ((string) $value |> trim(...) |> strtolower(...)) {
             'government', 'gov', 'public', 'public sector', 'government-owned' => self::Government,
             'private', 'priv', 'non-profit', 'nonprofit', 'non profit', 'ngo' => self::Private,
             default => null,

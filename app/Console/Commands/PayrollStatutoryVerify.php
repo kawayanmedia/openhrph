@@ -25,7 +25,7 @@ class PayrollStatutoryVerify extends Command
     public function handle(): int
     {
         $date = Carbon::parse($this->argument('date'))->toDateString();
-        $country = strtoupper(trim((string) ($this->option('country') ?: 'PH')));
+        $country = (string) ($this->option('country') ?: 'PH') |> trim(...) |> strtoupper(...);
         $driver = Installation::statutoryDriver($country);
 
         if ($driver !== 'ph') {

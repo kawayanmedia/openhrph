@@ -22,7 +22,7 @@ The default stack exposes the instance directly over HTTP and gives it an Elasti
 
 | Layer | Resources |
 | --- | --- |
-| Packer | Ubuntu 24.04 AMI, PHP 8.3 FPM, Nginx, Composer, Node 22, Go 1.24, AWS CLI v2, SSM Agent, application code, Vite assets, Go payroll binary, systemd queue/scheduler/backup units |
+| Packer | Ubuntu 24.04 AMI, PHP 8.5 FPM, Nginx, Composer, Node 22, Go 1.24, AWS CLI v2, SSM Agent, application code, Vite assets, Go payroll binary, systemd queue/scheduler/backup units |
 | Terraform | VPC, public web subnet, private database subnets, security groups, EC2 + Elastic IP, RDS MySQL, S3 bucket, IAM role/profile, SSM SecureString environment, optional ALB/Route 53/ACM |
 
 ## Prerequisites
@@ -67,14 +67,14 @@ Terraform selects the newest AMI matching `Component=hris` and `AppRef`.
 | `instance_type` | `t3.medium` | Temporary build instance |
 | `app_repo` | `https://github.com/kawayanmedia/openhrph.git` | Repository to clone |
 | `app_ref` | `main` | Branch, tag, or commit to bake |
-| `php_version` | `8.3` | PHP version; Ubuntu 24.04 ships 8.3 |
+| `php_version` | `8.5` | PHP version; the build adds the `ondrej/php` PPA when the Ubuntu archive lacks it |
 | `ami_name_prefix` | `hris` | AMI name prefix |
 
 Examples:
 
 ```bash
 packer build -var 'app_ref=v1.0.0' -var 'aws_region=ap-southeast-1' .
-packer build -var 'php_version=8.4' .
+packer build -var 'php_version=8.5' .
 ```
 
 > If `php_version` is not available in the Ubuntu archive, the provisioning script adds the `ondrej/php` PPA.
@@ -168,7 +168,7 @@ Inside the instance:
 
 ```bash
 sudo tail -f /var/log/hris-bootstrap.log
-sudo systemctl status nginx php8.3-fpm hris-queue
+sudo systemctl status nginx php8.5-fpm hris-queue
 curl -i http://127.0.0.1/up
 sudo -u www-data php /var/www/hris/artisan about
 sudo -u www-data php /var/www/hris/artisan payroll:engine --check
@@ -313,7 +313,7 @@ The AMI must have `Component=hris` and `AppRef` equal to `var.app_ref`.
 ```bash
 sudo tail -n 200 /var/log/hris-bootstrap.log
 sudo tail -n 200 /var/www/hris/storage/logs/laravel.log
-sudo journalctl -u php8.3-fpm -n 100 --no-pager
+sudo journalctl -u php8.5-fpm -n 100 --no-pager
 sudo journalctl -u nginx -n 100 --no-pager
 ```
 

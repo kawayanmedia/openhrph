@@ -94,7 +94,7 @@ final class WorkbookReader
     private function headerRow(Worksheet $sheet, string $highestColumn): array
     {
         $range = 'A1:'.$highestColumn.'1';
-        $row = $sheet->rangeToArray($range, null, false, false, false)[0] ?? [];
+        $row = array_first($sheet->rangeToArray($range, null, false, false, false)) ?? [];
 
         return array_values($row);
     }

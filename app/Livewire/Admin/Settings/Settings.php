@@ -462,7 +462,7 @@ class Settings extends Component
      */
     protected function saveInstallationSettings(): bool
     {
-        $country = strtoupper(trim((string) ($this->form['installation_country_code'] ?? Installation::countryCode())));
+        $country = (string) ($this->form['installation_country_code'] ?? Installation::countryCode()) |> trim(...) |> strtoupper(...);
 
         if (! array_key_exists($country, $this->jurisdictionOptions())) {
             $this->addError('form.installation_country_code', 'Choose a registered jurisdiction.');
@@ -481,7 +481,7 @@ class Settings extends Component
 
         Installation::setMany([
             Installation::KEY_COUNTRY => $country,
-            Installation::KEY_CURRENCY => strtoupper(trim((string) ($this->form['installation_currency_code'] ?? Installation::currencyCode()))),
+            Installation::KEY_CURRENCY => (string) ($this->form['installation_currency_code'] ?? Installation::currencyCode()) |> trim(...) |> strtoupper(...),
             Installation::KEY_LOCALE => trim((string) ($this->form['installation_locale'] ?? Installation::locale())),
             Installation::KEY_TIMEZONE => trim((string) ($this->form['installation_timezone'] ?? Installation::timezone())),
         ]);

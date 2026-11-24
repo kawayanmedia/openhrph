@@ -74,7 +74,7 @@ final class LegacyInput
             $meta = array_map(static fn ($value): string => (string) $value, $row->meta);
         }
 
-        $type = strtolower(trim((string) $row->type));
+        $type = (string) $row->type |> trim(...) |> strtolower(...);
 
         $run = new Run(
             payrollID: (int) $row->id,
@@ -361,7 +361,7 @@ final class LegacyInput
 
     public static function isTruthy(?string $value): bool
     {
-        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'on'], true);
+        return in_array((string) $value |> trim(...) |> strtolower(...), ['1', 'true', 'yes', 'on'], true);
     }
 
     /**
@@ -409,7 +409,7 @@ final class LegacyInput
         $index = [];
 
         foreach ($rows as $row) {
-            $paymentType = strtolower(trim((string) ($row->payment_type ?? '')));
+            $paymentType = (string) ($row->payment_type ?? '') |> trim(...) |> strtolower(...);
 
             $employee = new Employee(
                 id: (int) $row->id,
@@ -1040,7 +1040,7 @@ final class LegacyInput
                 continue;
             }
 
-            $key = strtolower(trim((string) $row->code)).'|'.(string) $row->period;
+            $key = ((string) $row->code |> trim(...) |> strtolower(...)).'|'.(string) $row->period;
             $employee->ytd->deMinimis[$key] = (int) ($row->exempt_centavos ?? 0);
         }
 
@@ -1088,12 +1088,12 @@ final class LegacyInput
 
     public static function slug(string $value): string
     {
-        return str_replace(['-', ' '], '_', strtolower(trim($value)));
+        return str_replace(['-', ' '], '_', $value |> trim(...) |> strtolower(...));
     }
 
     public static function taxableTaxOption(string $taxOption): bool
     {
-        $option = strtolower(trim($taxOption));
+        $option = $taxOption |> trim(...) |> strtolower(...);
 
         if (str_contains($option, 'non') || str_contains($option, 'exempt')) {
             return false;
@@ -1471,15 +1471,15 @@ final class LegacyInput
 
     public static function resolveMinimumWage(Config $config, Employee $employee): int
     {
-        $region = strtoupper(trim($employee->region));
-        $industry = strtoupper(trim($employee->industry));
+        $region = $employee->region |> trim(...) |> strtoupper(...);
+        $industry = $employee->industry |> trim(...) |> strtoupper(...);
 
         if ($region === '') {
-            $region = strtoupper(trim($config->defaultRegion));
+            $region = $config->defaultRegion |> trim(...) |> strtoupper(...);
         }
 
         if ($industry === '') {
-            $industry = strtoupper(trim($config->defaultIndustry));
+            $industry = $config->defaultIndustry |> trim(...) |> strtoupper(...);
         }
 
         $best = 0;
@@ -1487,8 +1487,8 @@ final class LegacyInput
         $bestFrom = '';
 
         foreach ($config->minimumWages as $wage) {
-            $wageRegion = strtoupper(trim($wage->region));
-            $wageIndustry = strtoupper(trim($wage->industry));
+            $wageRegion = $wage->region |> trim(...) |> strtoupper(...);
+            $wageIndustry = $wage->industry |> trim(...) |> strtoupper(...);
 
             $score = match (true) {
                 $wageRegion === $region && $wageIndustry === $industry => 4,

@@ -15,7 +15,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.5",
         "aws/aws-sdk-php": "^3.402",
         "bugsnag/bugsnag-laravel": "^2.31",
         "flowframe/laravel-trend": "^0.5.0",

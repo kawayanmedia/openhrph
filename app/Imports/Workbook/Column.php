@@ -183,7 +183,7 @@ final class Column
             return [$raw, null];
         }
 
-        $value = strtolower(trim((string) $raw));
+        $value = (string) $raw |> trim(...) |> strtolower(...);
 
         return match ($value) {
             'yes', 'y', 'true', '1' => [true, null],

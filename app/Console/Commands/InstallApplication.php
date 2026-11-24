@@ -149,7 +149,7 @@ class InstallApplication extends Command
         $option = $this->option('country');
 
         if (is_string($option) && trim($option) !== '') {
-            $code = strtoupper(trim($option));
+            $code = $option |> trim(...) |> strtoupper(...);
 
             if (! array_key_exists($code, $countries) && ! app(JurisdictionRegistry::class)->has($code)) {
                 throw new \RuntimeException("Unknown country [{$code}]. Add a jurisdiction module or a config/payroll.php profile first.");

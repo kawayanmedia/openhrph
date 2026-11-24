@@ -21,7 +21,7 @@ enum ContributionSchedule: string
      */
     public static function fromString(?string $value): self
     {
-        $normalized = str_replace(['-', ' '], '_', strtolower(trim((string) $value)));
+        $normalized = str_replace(['-', ' '], '_', (string) $value |> trim(...) |> strtolower(...));
 
         return match ($normalized) {
             'first_pay', 'firstpay', '1' => self::FIRST_PAY,

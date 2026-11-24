@@ -46,7 +46,7 @@ variable "app_ref" {
 variable "php_version" {
   type        = string
   description = "PHP version to install."
-  default     = "8.4"
+  default     = "8.5"
 }
 
 variable "image_prefix" {

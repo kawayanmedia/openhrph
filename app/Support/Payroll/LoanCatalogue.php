@@ -22,7 +22,7 @@ final class LoanCatalogue
             return 0;
         }
 
-        $countryCode = strtoupper(trim((string) ($countryCode ?? Installation::countryCode())));
+        $countryCode = (string) ($countryCode ?? Installation::countryCode()) |> trim(...) |> strtoupper(...);
         $profile = Installation::countryProfile($countryCode);
         $sector = $sector === null ? null : Sector::fromValue($sector instanceof Sector ? $sector->value : $sector);
         $created = 0;

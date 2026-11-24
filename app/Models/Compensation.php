@@ -245,7 +245,7 @@ class Compensation extends Model
     {
         $existing = self::withoutGlobalScope(CompensationCatalogueScope::class)
             ->where('company_id', $companyId)
-            ->whereRaw('UPPER(TRIM(code)) = ?', [strtoupper(trim((string) $system->code))])
+            ->whereRaw('UPPER(TRIM(code)) = ?', [(string) $system->code |> trim(...) |> strtoupper(...)])
             ->first();
 
         if ($existing !== null) {
@@ -351,7 +351,7 @@ class Compensation extends Model
      */
     public static function columnForTaxClass(?string $taxClass): ?string
     {
-        $code = strtoupper(trim((string) $taxClass));
+        $code = (string) $taxClass |> trim(...) |> strtoupper(...);
 
         return $code === '' ? null : (self::TAX_CLASS_COLUMNS[$code] ?? null);
     }

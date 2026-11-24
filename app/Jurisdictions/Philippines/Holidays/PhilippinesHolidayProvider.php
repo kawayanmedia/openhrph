@@ -87,7 +87,7 @@ final class PhilippinesHolidayProvider implements HolidayProvider
 
     private static function normalizeType(string $type): string
     {
-        $key = strtolower(trim($type));
+        $key = $type |> trim(...) |> strtolower(...);
 
         return self::TYPE_MAP[$key] ?? $key;
     }

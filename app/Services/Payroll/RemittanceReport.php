@@ -433,7 +433,7 @@ final class RemittanceReport
     private function loanRows(Collection $details, ?string $agency = null): array
     {
         $rows = [['Employee no', 'Name', 'Loan agency', 'Loan code', 'Loan name', 'Deducted this period']];
-        $agency = strtoupper(trim((string) $agency));
+        $agency = (string) $agency |> trim(...) |> strtoupper(...);
 
         foreach ($details as $detail) {
             $employeeNo = (string) $detail->employee?->employee_number;

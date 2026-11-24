@@ -173,7 +173,7 @@ final class Installation
             $code = (string) config('jurisdictions.default', config('payroll.default_country', 'PH'));
         }
 
-        return strtoupper(trim($code));
+        return $code |> trim(...) |> strtoupper(...);
     }
 
     /**
@@ -183,7 +183,7 @@ final class Installation
      */
     public static function countryProfile(?string $code = null): array
     {
-        $code = strtoupper(trim((string) ($code ?? self::countryCode())));
+        $code = (string) ($code ?? self::countryCode()) |> trim(...) |> strtoupper(...);
 
         $profile = config('payroll.countries.'.$code);
 
@@ -224,7 +224,7 @@ final class Installation
      */
     public static function policyVersion(?string $code = null): string
     {
-        $code = strtoupper(trim((string) ($code ?? self::countryCode())));
+        $code = (string) ($code ?? self::countryCode()) |> trim(...) |> strtoupper(...);
 
         return $code.':'.self::statutoryDriver($code).':v1';
     }

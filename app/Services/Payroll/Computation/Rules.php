@@ -187,7 +187,7 @@ final class Rules
 
     private static function storedKey(?string $code): string
     {
-        return str_replace(['-', ' '], '_', strtolower(trim((string) $code)));
+        return str_replace(['-', ' '], '_', (string) $code |> trim(...) |> strtolower(...));
     }
 
     public static function dailyRate(int $monthly, int $daysPerYear): int

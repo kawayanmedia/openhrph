@@ -162,14 +162,14 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        $email = strtolower(trim((string) $this->email));
+        $email = (string) $this->email |> trim(...) |> strtolower(...);
 
         if ($email === '') {
             return false;
         }
 
         $emails = array_map(
-            fn (mixed $candidate): string => strtolower(trim((string) $candidate)),
+            fn (mixed $candidate): string => (string) $candidate |> trim(...) |> strtolower(...),
             (array) config('tenancy.platform_admin_emails', []),
         );
 

@@ -14,7 +14,7 @@ final class GenericJurisdiction extends AbstractJurisdiction
 {
     public static function fromConfig(string $code): self
     {
-        $code = strtoupper(trim($code));
+        $code = $code |> trim(...) |> strtoupper(...);
         $profile = config('payroll.countries.'.$code);
 
         if (! is_array($profile)) {

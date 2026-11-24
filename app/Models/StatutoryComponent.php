@@ -112,7 +112,7 @@ class StatutoryComponent extends Model
 
     public function scopeForSector(Builder $query, ?string $sector): Builder
     {
-        $sector = strtolower(trim((string) $sector));
+        $sector = (string) $sector |> trim(...) |> strtolower(...);
 
         return $query->where(function (Builder $query) use ($sector): void {
             $query->where('sector', 'any')->orWhere('sector', '');

@@ -40,7 +40,7 @@ final class LeaveLedgerService
             return null;
         }
 
-        $code = strtoupper(trim((string) $type->code));
+        $code = (string) $type->code |> trim(...) |> strtoupper(...);
         $credit = (bool) $type->deductable || in_array($code, self::CREDIT_CODES, true);
 
         $minService = match ($code) {

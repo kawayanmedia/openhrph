@@ -32,7 +32,7 @@ final class JurisdictionManager
 
     public function for(?string $code = null): Jurisdiction
     {
-        $code = strtoupper(trim((string) ($code ?? Installation::countryCode())));
+        $code = (string) ($code ?? Installation::countryCode()) |> trim(...) |> strtoupper(...);
 
         if ($code === '') {
             $code = strtoupper((string) config('jurisdictions.default', 'PH'));

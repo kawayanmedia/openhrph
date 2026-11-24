@@ -401,7 +401,7 @@ class EmployeesSheet extends SheetDefinition
 
     private function paymentType(string $value): ?string
     {
-        return match (strtolower(trim($value))) {
+        return match ($value |> trim(...) |> strtolower(...)) {
             'monthly', 'monthly paid' => EmployeeModel::PAYMENT_TYPE_MONTHLY,
             'daily', 'daily paid' => EmployeeModel::PAYMENT_TYPE_DAILY,
             default => null,

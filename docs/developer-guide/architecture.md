@@ -4,14 +4,14 @@ OpenHR PH is a Laravel 13 application with a first-party Livewire admin, a separ
 
 ## Runtime requirements
 
-- PHP 8.3 or newer
+- PHP 8.5 or newer
 - MySQL 8 in production
 - Node 22 for building assets
 - Go 1.24 for the payroll engine
 - A queue worker and the Laravel scheduler in production
 - Optional Redis for cache/queues and Laravel Reverb for WebSockets
 
-Laravel 13 requires PHP 8.3+.
+Laravel 13 requires PHP 8.3+; this application requires PHP 8.5+.
 
 The optional [desktop build](../deployment/desktop.md) runs the same application inside Electron with a bundled PHP
 runtime. There NativePHP forces SQLite, so the desktop profile (`App\Providers\DesktopServiceProvider`) selects the PHP
@@ -261,7 +261,15 @@ See [Payroll engine](payroll-engine.md) for build and operation details.
 
 ## Laravel 13
 
-The application runs Laravel 13 and requires PHP 8.3+. Keep the framework constraint in `composer.json` and the PHP version in the deployment images in step when you upgrade either one.
+The application runs Laravel 13 and requires PHP 8.5+. Keep the framework constraint in `composer.json` and the PHP version in the deployment images in step when you upgrade either one.
+
+## PHP 8.5
+
+The codebase uses PHP 8.5 syntax, so CI and the NativePHP desktop build both run 8.5.
+
+- Use the pipe operator (`|>`) for single-argument normalisation chains: `(string) $code |> trim(...) |> strtoupper(...)`. Parenthesise the chain when it is concatenated or compared, because `.` binds tighter than `|>` and comparisons bind looser.
+- `App\Support\Money` operations are `#[\NoDiscard]`. Consume the result or cast the call to `(void)` when ignoring it is deliberate.
+- Prefer `clone($object, ['property' => $value])` over cloning and then assigning, and `array_first()` / `array_last()` over manual index arithmetic.
 
 ## Further reading
 
