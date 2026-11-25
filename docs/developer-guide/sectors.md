@@ -173,6 +173,12 @@ and rollback simple. `openhr:sector:audit` reports foreign-sector rows,
 `openhr:sector:prune --apply` deactivates foreign catalogue rows, and
 `openhr:sector:repair --apply` re-pins company types.
 
+The CS Form 212 tables (`pds_*`), the leave ledger (`leave_card`, `manual_log`,
+`compensatory_timeoffs`) and `leave_applications.approved_by` follow the same
+rule. These are the tables the legacy stores and the `kawayanmedia/pds` and
+`kawayanmedia/leave-forms` services read and write, so they are created for
+every installation and stay empty on a Private one.
+
 ### Catalogues
 
 `App\Sectors\Catalogues\SectorCatalogue` is the single entry point used by the
