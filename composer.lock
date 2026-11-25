@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "394152d6f3f33e4d817675a3cc8f5d54",
+    "content-hash": "1aff4b6dd97a183ec3716b16d0e73337",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -2099,22 +2099,25 @@
         },
         {
             "name": "kawayanmedia/government",
-            "version": "v1.0.0",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kawayanmedia/government.git",
-                "reference": "d3b7e157ee3828a862f3f38c337a54bf4ffa636e"
+                "reference": "2478b321f017d304e68d3dff67c682a0e9383b84"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kawayanmedia/government/zipball/d3b7e157ee3828a862f3f38c337a54bf4ffa636e",
-                "reference": "d3b7e157ee3828a862f3f38c337a54bf4ffa636e",
+                "url": "https://api.github.com/repos/kawayanmedia/government/zipball/2478b321f017d304e68d3dff67c682a0e9383b84",
+                "reference": "2478b321f017d304e68d3dff67c682a0e9383b84",
                 "shasum": ""
             },
             "require": {
                 "laravel/framework": "^11.0|^12.0|^13.0",
-                "php": "^8.3"
+                "php": "^8.3",
+                "setasign/fpdf": "^1.8",
+                "setasign/fpdi": "^2.6"
             },
+            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
@@ -2152,8 +2155,8 @@
                 "issues": "https://github.com/kawayanmedia/government/issues",
                 "source": "https://github.com/kawayanmedia/government"
             },
-            "time": "2026-11-09T04:38:53+00:00",
-            "published-time": "2026-11-10T06:46:43+00:00"
+            "time": "2026-11-10T10:40:05+00:00",
+            "published-time": "2026-11-10T10:40:20+00:00"
         },
         {
             "name": "kawayanmedia/leave-forms",
@@ -16374,7 +16377,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "kawayanmedia/government": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

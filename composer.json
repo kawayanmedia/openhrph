@@ -21,7 +21,7 @@
         "flowframe/laravel-trend": "^0.5.0",
         "kawayanmedia/attendance": "^1.0",
         "kawayanmedia/dtr-pdf": "^0.1",
-        "kawayanmedia/government": "^1.0",
+        "kawayanmedia/government": "dev-main#2478b321f017d304e68d3dff67c682a0e9383b84",
         "kawayanmedia/leave-forms": "^0.1",
         "kawayanmedia/pds": "^0.1",
         "kawayanmedia/persistence": "^0.1",
