@@ -20,7 +20,7 @@ This page helps you keep employee records complete and ready for attendance and 
 
 ## Create an employee
 
-![Create form in light mode](../images/admin-form-light.png)
+![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../images/admin-employee-payroll-light.png)
 
 1. Select **Create Employee**.
 2. Fill in the required fields. Fields marked with **\*** are required.
