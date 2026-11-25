@@ -35,8 +35,12 @@ Route::get('/test-error-503', function () {
 // });
 
 require 'face.php';
-Route::get('timesheet/print', [TimesheetController::class, 'show'])
-    ->middleware(['auth:web,nova,portal'])
+
+// Printable DTR, drawn by kawayanmedia/dtr-pdf. It lives inside the admin
+// panel so the usual admin authentication and gate apply.
+Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate')])
+    ->prefix(trim(config('admin.path'), '/'))
+    ->get('documents/dtr', [TimesheetController::class, 'show'])
     ->name('timesheet.print');
 
 // TODO for reports

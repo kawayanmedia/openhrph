@@ -2,10 +2,10 @@
 
 namespace App\Jurisdictions\Philippines\Government\Database\Seeders;
 
-use App\Jurisdictions\Philippines\Government\Models\SalaryGrade;
 use App\Models\Company;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;
+use KawayanMedia\Government\Models\SalaryGrade;
 
 class GovernmentReferenceSeeder extends Seeder
 {

@@ -2,12 +2,12 @@
 
 namespace App\Jurisdictions\Philippines\Government\Admin\Resources;
 
-use App\Jurisdictions\Philippines\Government\Models\SalaryGrade as SalaryGradeModel;
 use App\Livewire\Admin\Fields\ID;
 use App\Livewire\Admin\Fields\Number;
 use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Resource;
 use Illuminate\Http\Request;
+use KawayanMedia\Government\Models\SalaryGrade as SalaryGradeModel;
 
 /**
  * The DBM salary schedule: one row per salary grade, year and schedule type.

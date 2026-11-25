@@ -2,7 +2,7 @@
 
 use App\Jurisdictions\Philippines\Government\Admin\Resources\PlantillaItem;
 use App\Jurisdictions\Philippines\Government\Admin\Resources\SalaryGrade;
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem as PlantillaItemModel;
+use KawayanMedia\Government\Models\PlantillaItem as PlantillaItemModel;
 use App\Livewire\Admin\AdminForm;
 use App\Livewire\Admin\Support\Navigation;
 use App\Livewire\Admin\Support\ResourceRegistry;

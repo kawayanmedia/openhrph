@@ -2,11 +2,11 @@
 
 namespace App\Jurisdictions\Philippines\Government\Database\Seeders;
 
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
 use App\Models\Company;
 use App\Models\Office;
 use Database\Seeders\Concerns\SeedsDemoTenant;
 use Illuminate\Database\Seeder;
+use KawayanMedia\Government\Models\PlantillaItem;
 
 class PlantillaItemSeeder extends Seeder
 {

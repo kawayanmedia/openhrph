@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\Employee;
-use App\Models\JobVacancy;
+use KawayanMedia\Government\Models\JobVacancy;
 
 it('resolves every government relation on the employee model', function () {
     $employee = new Employee;

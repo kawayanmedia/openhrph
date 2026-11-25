@@ -2,7 +2,6 @@
 
 namespace App\Jurisdictions\Philippines\Government\Admin\Resources;
 
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem as PlantillaItemModel;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\Boolean;
 use App\Livewire\Admin\Fields\ID;
@@ -11,6 +10,7 @@ use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Resource;
 use App\Models\Office;
 use Illuminate\Http\Request;
+use KawayanMedia\Government\Models\PlantillaItem as PlantillaItemModel;
 
 /**
  * DBM plantilla item: the funded position an employee is appointed to.

@@ -3,8 +3,7 @@
 namespace App\Livewire\Portal\Leaves;
 
 use App\Livewire\Traits\SelectableTab;
-use App\Models\JobVacancy;
-use App\Models\LeaveRequest;
+use KawayanMedia\Government\Models\JobVacancy;
 use Livewire\Component;
 
 class JobIndex extends Component

@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Post;
 use App\Models\ScheduleAdjustmentRequest;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -28,7 +29,7 @@ class ScheduleAdjustmentRequestPolicy
     /**
      * Determine whether the user can update the post.
      *
-     * @param  \App\Models\Post  $post
+     * @param  Post  $post
      * @return mixed
      */
     public function update(User $user, ScheduleAdjustmentRequest $request)

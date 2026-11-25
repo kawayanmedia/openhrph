@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Jurisdictions\Philippines\Government\Models\SalaryGrade;
 use Database\Factories\Concerns\ResolvesTenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use KawayanMedia\Government\Models\SalaryGrade;
 
 /**
  * @extends Factory<SalaryGrade>

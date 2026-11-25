@@ -2,7 +2,6 @@
 
 namespace App\Jurisdictions\Philippines\Government\Admin\Resources;
 
-use App\Jurisdictions\Philippines\Government\Models\ServiceRecord as ServiceRecordModel;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\ID;
 use App\Livewire\Admin\Fields\Text;
@@ -10,6 +9,7 @@ use App\Livewire\Admin\Fields\Textarea;
 use App\Livewire\Admin\Resource;
 use App\Models\Employee as EmployeeModel;
 use Illuminate\Http\Request;
+use KawayanMedia\Government\Models\ServiceRecord as ServiceRecordModel;
 
 /**
  * CSC service record: appointments and designations held by an employee.

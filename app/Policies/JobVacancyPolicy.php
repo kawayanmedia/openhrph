@@ -2,9 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\JobVacancy;
+use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use KawayanMedia\Government\Models\JobVacancy;
 
 class JobVacancyPolicy
 {
@@ -28,7 +29,7 @@ class JobVacancyPolicy
     /**
      * Determine whether the user can update the post.
      *
-     * @param  \App\Models\Post  $post
+     * @param  Post  $post
      * @return mixed
      */
     public function update(User $user, JobVacancy $request)

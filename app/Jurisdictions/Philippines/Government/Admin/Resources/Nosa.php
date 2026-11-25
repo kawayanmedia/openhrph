@@ -2,8 +2,6 @@
 
 namespace App\Jurisdictions\Philippines\Government\Admin\Resources;
 
-use App\Jurisdictions\Philippines\Government\Models\Nosa as NosaModel;
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem as PlantillaItemModel;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\Date;
 use App\Livewire\Admin\Fields\ID;
@@ -13,6 +11,8 @@ use App\Livewire\Admin\Resource;
 use App\Models\Employee as EmployeeModel;
 use App\Models\Office;
 use Illuminate\Http\Request;
+use KawayanMedia\Government\Models\Nosa as NosaModel;
+use KawayanMedia\Government\Models\PlantillaItem as PlantillaItemModel;
 
 /**
  * Notice of Salary Adjustment: the salary grade/step an employee moves to.

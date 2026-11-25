@@ -6,17 +6,17 @@ use App\Jurisdictions\Philippines\Government\Models\Children;
 use App\Jurisdictions\Philippines\Government\Models\Education;
 use App\Jurisdictions\Philippines\Government\Models\Eligibility;
 use App\Jurisdictions\Philippines\Government\Models\FamilyBackground;
-use App\Jurisdictions\Philippines\Government\Models\Nosa;
 use App\Jurisdictions\Philippines\Government\Models\OtherInfo;
 use App\Jurisdictions\Philippines\Government\Models\PersonalInformation;
 use App\Jurisdictions\Philippines\Government\Models\Question;
 use App\Jurisdictions\Philippines\Government\Models\Reference;
-use App\Jurisdictions\Philippines\Government\Models\ServiceRecord;
 use App\Jurisdictions\Philippines\Government\Models\Training;
 use App\Jurisdictions\Philippines\Government\Models\VoluntaryWork;
 use App\Jurisdictions\Philippines\Government\Models\WorkExperience;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use KawayanMedia\Government\Models\Nosa;
+use KawayanMedia\Government\Models\ServiceRecord;
 
 /**
  * CS Form 212 (Personal Data Sheet) and service-record relations.

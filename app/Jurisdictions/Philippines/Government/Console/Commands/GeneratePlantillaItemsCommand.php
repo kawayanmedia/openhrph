@@ -4,8 +4,8 @@ namespace App\Jurisdictions\Philippines\Government\Console\Commands;
 
 use App\Console\Commands\SectorCommand;
 use App\Console\Concerns\RunsForTenants;
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
 use App\Models\Employee;
+use KawayanMedia\Government\Models\PlantillaItem;
 
 class GeneratePlantillaItemsCommand extends SectorCommand
 {
