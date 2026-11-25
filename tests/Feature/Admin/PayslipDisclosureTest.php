@@ -3,7 +3,14 @@
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
 use App\Models\User;
+
+function payslipScheme(string $agency = 'sss'): \App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme
+{
+    return SchemeResolver::make($agency, [], GsisSchedule::default());
+}
 
 function payslipDetailFixture(array $overrides = []): PayrollDetail
 {
@@ -76,6 +83,7 @@ it('renders a payslip that masks government ids and names the preparer and appro
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => $payroll,
         'employee' => $employee,
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture(),
     ])
         ->assertSee('Ana Reyes')
@@ -114,6 +122,7 @@ it('shows employer share and taxable income on the payslip', function () {
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => $payroll,
         'employee' => $employee,
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture(['id' => 10, 'net_pay' => 1302500]),
     ])
         ->assertSee('Employer share: ₱1,475.00')
@@ -151,6 +160,7 @@ it('itemises each compensation on the payslip instead of hiding it in an incenti
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => $payroll,
         'employee' => $employee,
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture([
             'incentive' => 3000,
             'representation_allowance' => 2000,
@@ -192,6 +202,7 @@ it('surfaces compensation the itemised lines do not account for', function () {
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => $payroll,
         'employee' => $employee,
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture([
             'incentive' => 3500,
             'compensations' => [
@@ -232,8 +243,9 @@ it('shows the GSIS BP number instead of SSS on a government payslip', function (
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => $payroll,
         'employee' => $employee,
+        'scheme' => payslipScheme('gsis'),
         'detail' => payslipDetailFixture(['gsis_employee' => 1350]),
-        'isGovernment' => true,
+        'identifier' => '0100-0000-0001',
     ])
         ->assertSee('GSIS BP:')
         ->assertSee('0001')
@@ -295,6 +307,7 @@ it('shows the earnings tax treatment when debug mode is on', function () {
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => payslipTaxReportPayroll(),
         'employee' => payslipTaxReportEmployee(),
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture(['id' => 11]),
         'taxReport' => payslipTaxReportFixture(),
     ])
@@ -313,6 +326,7 @@ it('hides the earnings tax treatment outside debug mode', function () {
     $this->view('livewire.admin.payroll.payslip', [
         'payroll' => payslipTaxReportPayroll(),
         'employee' => payslipTaxReportEmployee(),
+        'scheme' => payslipScheme(),
         'detail' => payslipDetailFixture(['id' => 12]),
         'taxReport' => payslipTaxReportFixture(),
     ])

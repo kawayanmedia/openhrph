@@ -12,11 +12,11 @@ import (
 // one whole year.
 func TestSeparationPayAuthorizedCause(t *testing.T) {
 	cases := []struct {
-		name       string
-		hired      string
-		separated  string
-		reason     string
-		want       money.Centavos
+		name      string
+		hired     string
+		separated string
+		reason    string
+		want      money.Centavos
 	}{
 		{"four years two months", "2016-01-01", "2020-03-01", "redundancy", money.FromPesos(120000)},
 		{"four years seven months rounds up", "2016-01-01", "2020-08-01", "retrenchment", money.FromPesos(150000)},
@@ -93,6 +93,8 @@ func TestFinalPayLeaveConversionTaxSplit(t *testing.T) {
 	cfg := semiMonthlyConfig()
 	cfg.RunType = model.RunFinalPay
 	cfg.PayWithoutTimesheet = false
+	exemptDays := 12
+	cfg.LeaveConversionTaxableDays = &exemptDays
 	cfg.Meta = map[string]string{
 		"separation_reason": "just_cause",
 		"leave_days":        "15",

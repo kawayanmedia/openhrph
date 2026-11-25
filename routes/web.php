@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\ServiceRecordController;
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\TimesheetController;
 use App\Http\Middleware\EnsureDesktopMode;
 use App\Livewire\Desktop\Setup as DesktopSetup;
 use App\Livewire\Portal\TestPayroll;
@@ -18,12 +18,6 @@ Route::get('/', function () {
 Route::get('setup', DesktopSetup::class)
     ->middleware(EnsureDesktopMode::class)
     ->name('desktop.setup');
-
-Route::get('/pds/{employee}/pdf', function ($employee) {
-    dd($employee);
-
-    return view('welcome');
-})->name('pds.pdf');
 
 Route::get('/test-error-bugs', function () {
     abort_unless(app()->isLocal(), 404);
@@ -41,12 +35,12 @@ Route::get('/test-error-503', function () {
 // });
 
 require 'face.php';
-require 'gov.php';
+Route::get('timesheet/print', [TimesheetController::class, 'show'])
+    ->middleware(['auth:web,nova,portal'])
+    ->name('timesheet.print');
 
 // TODO for reports
 // https://github.com/laracraft-tech/laravel-date-scopes
-
-Route::get('sr/{id}/print', [ServiceRecordController::class, 'serviceRecord'])->middleware(['auth:web,nova,portal'])->name('sr.show');
 
 // This is where to process and test payroll
 Route::get('payroll-process', TestPayroll::class)->middleware(['auth:web,nova'])->name('portal.test');

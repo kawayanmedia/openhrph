@@ -150,6 +150,11 @@ return [
                 ],
                 'thirteenth_month' => false,
                 'service_incentive_leave' => false,
+                'leave_conversion' => [
+                    // Monetized VL/SL is not taxable for government personnel.
+                    'taxable_days' => null,
+                    'source' => 'RR 29-2025; government VL/SL non-taxable',
+                ],
                 'step_increment_years' => 3,
                 'loyalty_award_years' => 10,
                 'retirement' => 'gsis',
@@ -284,6 +289,11 @@ return [
                 ],
                 'thirteenth_month' => true,
                 'service_incentive_leave' => true,
+                'leave_conversion' => [
+                    // RR 29-2025: monetized unused VL is non-taxable up to 12 days.
+                    'taxable_days' => 12,
+                    'source' => 'RR 29-2025',
+                ],
                 'step_increment_years' => 0,
                 'loyalty_award_years' => 0,
                 'retirement' => 'ra_7641',

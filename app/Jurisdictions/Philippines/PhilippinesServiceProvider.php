@@ -2,12 +2,12 @@
 
 namespace App\Jurisdictions\Philippines;
 
-use App\Jurisdictions\Philippines\Console\Commands\GeneratePlantillaItemsCommand;
-use App\Jurisdictions\Philippines\Console\Commands\GenerateSalaryGradeCommand;
+use App\Jurisdictions\Philippines\Government\Console\Commands\GeneratePlantillaItemsCommand;
+use App\Jurisdictions\Philippines\Government\Console\Commands\GenerateSalaryGradeCommand;
 use App\Jurisdictions\Philippines\Console\Commands\PayrollBir2316;
-use App\Jurisdictions\Philippines\Console\Commands\PayrollLoyaltyAwards;
-use App\Jurisdictions\Philippines\Console\Commands\PayrollStepIncrements;
-use App\Jurisdictions\Philippines\Console\Commands\PayrollTerminalLeave;
+use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollLoyaltyAwards;
+use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollStepIncrements;
+use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollTerminalLeave;
 use App\Jurisdictions\Philippines\Console\Commands\PayrollWageOrderImport;
 use App\Support\Installation\Installation;
 use Illuminate\Support\Facades\Route;

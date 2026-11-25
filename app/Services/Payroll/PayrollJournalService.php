@@ -66,7 +66,10 @@ class PayrollJournalService
             $totals['net'] += $this->raw($detail, 'net_pay');
         }
 
-        $accounts = Installation::jurisdiction()->reports()->accountingAccounts();
+        $accounts = array_merge(
+            Installation::jurisdiction()->reports()->accountingAccounts(),
+            Installation::sectorPolicy()->featurePack()->journalAccounts(),
+        );
 
         return DB::transaction(function () use ($payroll, $totals, $accounts) {
             $this->clear($payroll);

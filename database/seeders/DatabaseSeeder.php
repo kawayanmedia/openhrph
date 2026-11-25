@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\Sector;
+use App\Jurisdictions\Philippines\Government\Database\Seeders\GovernmentReferenceSeeder;
+use App\Jurisdictions\Philippines\Government\Database\Seeders\PlantillaItemSeeder;
 use App\Support\Installation\Installation;
 use Illuminate\Database\Seeder;
 

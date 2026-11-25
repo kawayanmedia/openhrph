@@ -350,8 +350,13 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 	// A government agency remits GSIS instead of SSS (RA 8291).
 	cfg.IsGovernment = isGovernmentCompany(ctx, db, run.CompanyID)
 	cfg.Sector = "Private"
+	cfg.SocialInsurance = "sss"
+	privateLeaveConversionDays := 12
+	cfg.LeaveConversionTaxableDays = &privateLeaveConversionDays
 	if cfg.IsGovernment {
 		cfg.Sector = "Government"
+		cfg.SocialInsurance = "gsis"
+		cfg.LeaveConversionTaxableDays = nil
 	}
 
 	if cfg.StatutoryDriver == "ph" {
@@ -367,9 +372,9 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 			return cfg, err
 		}
 
-		// Only a government agency needs the GSIS schedule; a private payroll
+		// Only a GSIS-covered employer needs the GSIS schedule; an SSS payroll
 		// must not fail on an unimported table it never uses.
-		if cfg.IsGovernment {
+		if cfg.SocialInsurance == "gsis" {
 			if cfg.GSIS, err = loadGSIS(ctx, db, run, cfg.GSIS); err != nil {
 				return cfg, err
 			}

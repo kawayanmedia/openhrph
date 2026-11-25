@@ -1,4 +1,7 @@
 <div class="space-y-6">
+    @php
+        $identifier = $identifier ?? (string) ($employee->{$scheme->identifierField()} ?? '');
+    @endphp
     <div class="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <a href="{{ route('admin.payroll.run', ['payroll' => $payroll->getKey()]) }}"
            class="text-sm text-slate-500 hover:text-navy-900 dark:text-slate-400 dark:hover:text-white">&larr; Back to payroll run</a>
@@ -100,8 +103,9 @@
                         $deductions = $deductionLines->isNotEmpty()
                             ? $deductionLines->map(fn ($line) => [$line->name ?: $line->code, $line->employee_centavos / 100])->values()->all()
                             : [
-                                ['SSS', $detail->sss_employee + $detail->sss_provident_employee],
-                                ['GSIS', $detail->gsis_employee],
+                                $scheme->code() === 'gsis'
+                                    ? ['GSIS', $detail->gsis_employee]
+                                    : ['SSS', $detail->sss_employee + $detail->sss_provident_employee],
                                 ['PhilHealth', $detail->philhealth_employee],
                                 ['Pag-IBIG', $detail->hdmf_employee],
                                 ['Withholding tax', $detail->withholding_tax],
@@ -136,11 +140,7 @@
 
         <section class="mt-6 grid grid-cols-1 gap-3 text-xs text-slate-500 sm:grid-cols-2 dark:text-slate-400">
             <p>TIN: {{ mask_id($employee->tin_number) }}</p>
-            @if ($isGovernment ?? false)
-                <p>GSIS BP: {{ mask_id($employee->gsis_number) }}</p>
-            @else
-                <p>SSS: {{ mask_id($employee->sss_number) }}</p>
-            @endif
+            <p>{{ $scheme->identifierLabel() }}: {{ mask_id($identifier) }}</p>
             <p>PhilHealth: {{ mask_id($employee->philhealth_number) }}</p>
             <p>Pag-IBIG: {{ mask_id($employee->hdmf_number) }}</p>
             <p>Employer: {{ config('app.name') }}</p>

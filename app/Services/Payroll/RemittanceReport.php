@@ -4,6 +4,7 @@ namespace App\Services\Payroll;
 
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
+use App\Sectors\Contracts\RemittanceForm;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Computation\DeductionLine;
 use App\Support\Installation\Installation;
@@ -23,6 +24,9 @@ final class RemittanceReport
 {
     /** @var array<string, string> loan code to agency */
     private array $loanAgencies = [];
+
+    /** @var array<int, array<string, RemittanceForm>> */
+    private array $sectorForms = [];
 
     /**
      * Remittance formats supported by the active country.
@@ -79,8 +83,8 @@ final class RemittanceReport
      */
     public function rows(Payroll $payroll, string $format, array $options = []): array
     {
-        return $this->withinPayroll($payroll, function (Collection $details) use ($format, $options): array {
-            return $this->rowsFor($format, $details, $options);
+        return $this->withinPayroll($payroll, function (Collection $details) use ($payroll, $format, $options): array {
+            return $this->rowsFor($format, $details, $options, (int) $payroll->company_id);
         });
     }
 
@@ -91,12 +95,12 @@ final class RemittanceReport
      */
     public function csv(Payroll $payroll, string $format, array $options = []): string
     {
-        return $this->withinPayroll($payroll, function (Collection $details) use ($format, $options): string {
-            $rows = $this->rowsFor($format, $details, $options);
+        return $this->withinPayroll($payroll, function (Collection $details) use ($payroll, $format, $options): string {
+            $rows = $this->rowsFor($format, $details, $options, (int) $payroll->company_id);
             $controlTotals = $options['control_totals'] ?? true;
 
             if ($controlTotals && $format !== 'summary') {
-                $rows[] = $this->totalRow($rows, $this->totalColumns($format));
+                $rows[] = $this->totalRow($rows, $this->totalColumns($format, (int) $payroll->company_id));
             }
 
             return $this->toCsv($rows);
@@ -184,15 +188,17 @@ final class RemittanceReport
      * @param  array{agency?: string|null, control_totals?: bool}  $options
      * @return array<int, array<int, string>>
      */
-    private function rowsFor(string $format, Collection $details, array $options): array
+    private function rowsFor(string $format, Collection $details, array $options, int $companyId): array
     {
+        if ($form = $this->sectorForm($format, $companyId)) {
+            return $form->rows($details);
+        }
+
         return match ($format) {
             'sss' => $this->sssRows($details),
             'philhealth' => $this->philhealthRows($details),
             'pagibig' => $this->pagibigRows($details),
-            'gsis' => $this->gsisRows($details),
             'bir' => $this->birRows($details),
-            'coa' => $this->coaRows($details),
             'loans' => $this->loanRows($details, $options['agency'] ?? null),
             'components' => $this->componentRows($details),
             default => $this->summaryRows($details),
@@ -344,86 +350,6 @@ final class RemittanceReport
     }
 
     /**
-     * GSIS premium working paper. A government agency remits GSIS instead of
-     * SSS, so the employee's GSIS BP number is the agency identifier here.
-     *
-     * @param  Collection<int, PayrollDetail>  $details
-     * @return array<int, array<int, string>>
-     */
-    private function gsisRows(Collection $details): array
-    {
-        $rows = [['Employee no', 'Name', 'GSIS BP number', 'Employee share', 'Employer share', 'Total', 'Monthly compensation']];
-
-        foreach ($details as $detail) {
-            $employee = (int) $detail->getRawOriginal('gsis_employee');
-            $employer = (int) $detail->getRawOriginal('gsis_employer');
-
-            $rows[] = [
-                (string) $detail->employee?->employee_number,
-                $this->name($detail),
-                (string) $detail->employee?->gsis_number,
-                $this->peso($employee),
-                $this->peso($employer),
-                $this->peso($employee + $employer),
-                $this->peso((int) $detail->getRawOriginal('basic_monthly_salary')),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
-     * Government payroll register for COA-style review. The layout is a
-     * reconciliation working paper, not the agency-prescribed form.
-     *
-     * @param  Collection<int, PayrollDetail>  $details
-     * @return array<int, array<int, string>>
-     */
-    private function coaRows(Collection $details): array
-    {
-        $rows = [[
-            'Employee no', 'Name', 'Basic', 'Gross',
-            'GSIS employee', 'GSIS employer',
-            'SSS employee', 'SSS employer',
-            'PhilHealth employee', 'PhilHealth employer',
-            'Pag-IBIG employee', 'Pag-IBIG employer',
-            'Withholding tax', 'Loans', 'Other deductions', 'Net pay',
-        ]];
-
-        foreach ($details as $detail) {
-            $gsisEmployee = (int) $detail->getRawOriginal('gsis_employee');
-            $sssEmployee = (int) $detail->getRawOriginal('sss_employee_total');
-            $philhealthEmployee = (int) $detail->getRawOriginal('philhealth_employee');
-            $hdmfEmployee = (int) $detail->getRawOriginal('hdmf_employee');
-            $tax = (int) $detail->getRawOriginal('withholding_tax');
-            $loans = (int) $detail->getRawOriginal('loans');
-            $totalDeductions = (int) $detail->getRawOriginal('total_deductions');
-            $other = max(0, $totalDeductions - $gsisEmployee - $sssEmployee - $philhealthEmployee - $hdmfEmployee - $tax - $loans);
-
-            $rows[] = [
-                (string) $detail->employee?->employee_number,
-                $this->name($detail),
-                $this->peso((int) $detail->getRawOriginal('basic_salary')),
-                $this->peso((int) $detail->getRawOriginal('gross_income')),
-                $this->peso($gsisEmployee),
-                $this->peso((int) $detail->getRawOriginal('gsis_employer')),
-                $this->peso($sssEmployee),
-                $this->peso((int) $detail->getRawOriginal('sss_employer_total')),
-                $this->peso($philhealthEmployee),
-                $this->peso((int) $detail->getRawOriginal('philhealth_employer')),
-                $this->peso($hdmfEmployee),
-                $this->peso((int) $detail->getRawOriginal('hdmf_employer')),
-                $this->peso($tax),
-                $this->peso($loans),
-                $this->peso($other),
-                $this->peso((int) $detail->getRawOriginal('net_pay')),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
      * Loan amortizations from the deduction ledger, optionally narrowed to one
      * agency (for example `--agency=GSIS`). Loans are never statutory rows.
      *
@@ -485,16 +411,39 @@ final class RemittanceReport
     }
 
     /**
+     * The remittance form the active sector contributes for this format.
+     */
+    private function sectorForm(string $format, int $companyId): ?RemittanceForm
+    {
+        if (! isset($this->sectorForms[$companyId])) {
+            $forms = [];
+
+            foreach (app(SectorManager::class)->forCompany($companyId)->featurePack()->remittanceForms() as $key => $class) {
+                if (is_string($class) && class_exists($class)) {
+                    $forms[$key] = new $class;
+                }
+            }
+
+            $this->sectorForms[$companyId] = $forms;
+        }
+
+        return $this->sectorForms[$companyId][$format] ?? null;
+    }
+
+    /**
      * The money columns the TOTAL row sums for a format. Base amounts such as
      * the monthly salary credit are descriptive, not additive.
      *
      * @return list<int>
      */
-    private function totalColumns(string $format): array
+    private function totalColumns(string $format, int $companyId): array
     {
+        if ($form = $this->sectorForm($format, $companyId)) {
+            return $form->totalColumns();
+        }
+
         return match ($format) {
             'sss', 'philhealth', 'pagibig' => [4, 5, 6],
-            'gsis' => [3, 4, 5],
             'bir' => [4],
             'loans' => [5],
             'components' => [2, 3, 4],

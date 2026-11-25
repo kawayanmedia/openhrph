@@ -9,6 +9,8 @@ use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
 use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigSchedule;
 use App\Jurisdictions\Philippines\Statutory\PayFrequency;
 use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme;
 use App\Jurisdictions\Philippines\Statutory\Sss\SssBracket;
 use App\Jurisdictions\Support\PayrollPolicyData;
 
@@ -75,9 +77,13 @@ final class Config
         public string $statutoryDriver = 'ph',
         public array $components = [],
         public Sector $sector = Sector::Private,
+        public string $socialInsuranceAgency = 'sss',
+        public ?int $leaveConversionTaxableDays = 12,
         public string $payrollDate = '',
         public PayrollPolicy $policy = new PayrollPolicyData,
     ) {}
+
+    private ?SocialInsuranceScheme $socialInsurance = null;
 
     public function periodsPerYear(): int
     {
@@ -89,6 +95,15 @@ final class Config
         return PayFrequency::fromString($this->frequency)->periodsPerMonth();
     }
 
+    public function socialInsurance(): SocialInsuranceScheme
+    {
+        return $this->socialInsurance ??= SchemeResolver::make(
+            $this->socialInsuranceAgency,
+            $this->sssBrackets,
+            $this->gsis,
+        );
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -98,12 +113,17 @@ final class Config
             is_string($data['sector'] ?? null) ? $data['sector'] : null,
         ) ?? ((bool) ($data['is_government'] ?? false) ? Sector::Government : Sector::Private);
 
+        $agency = (string) ($data['social_insurance'] ?? $sector->socialInsuranceAgency());
+        $leaveConversionDays = array_key_exists('leave_conversion_taxable_days', $data)
+            ? ($data['leave_conversion_taxable_days'] === null ? null : (int) $data['leave_conversion_taxable_days'])
+            : ($agency === 'gsis' ? null : 12);
+
         return new self(
             frequency: (string) ($data['frequency'] ?? self::FREQUENCY_SEMI_MONTHLY),
             cutoff: (string) ($data['cutoff'] ?? ''),
             runType: (string) ($data['run_type'] ?? self::RUN_REGULAR),
             meta: array_map(static fn ($value): string => (string) $value, (array) ($data['meta'] ?? [])),
-            isGovernment: $sector->isGovernment(),
+            isGovernment: $sector->socialInsuranceAgency() === 'gsis',
             daysPerYear: (int) ($data['days_per_year'] ?? 0),
             hoursPerDay: (int) ($data['hours_per_day'] ?? 0),
             sssSchedule: (string) ($data['sss_schedule'] ?? ''),
@@ -144,6 +164,8 @@ final class Config
             statutoryDriver: (string) ($data['statutory_driver'] ?? 'ph'),
             components: array_values((array) ($data['components'] ?? [])),
             sector: $sector,
+            socialInsuranceAgency: $agency !== '' ? $agency : $sector->socialInsuranceAgency(),
+            leaveConversionTaxableDays: $leaveConversionDays,
             payrollDate: (string) ($data['payroll_date'] ?? ''),
             policy: PayrollPolicyData::fromArray((array) ($data['policy'] ?? [])),
         );
@@ -160,7 +182,9 @@ final class Config
             'run_type' => $this->runType,
             'meta' => $this->meta,
             'sector' => $this->sector->value,
-            'is_government' => $this->isGovernment || $this->sector->isGovernment(),
+            'social_insurance' => $this->socialInsuranceAgency,
+            'leave_conversion_taxable_days' => $this->leaveConversionTaxableDays,
+            'is_government' => $this->isGovernment || $this->sector->socialInsuranceAgency() === 'gsis',
             'days_per_year' => $this->daysPerYear,
             'hours_per_day' => $this->hoursPerDay,
             'sss_schedule' => $this->sssSchedule,

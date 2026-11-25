@@ -3,13 +3,12 @@
 namespace App\Jurisdictions\Philippines\Calculators;
 
 use App\Enums\Sector;
-use App\Jurisdictions\Philippines\Statutory\Gsis\GsisContributionService;
 use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
 use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigContributionService;
 use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigSchedule;
 use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthContributionService;
 use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthSchedule;
-use App\Jurisdictions\Philippines\Statutory\Sss\SssContributionService;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
 use App\Jurisdictions\Philippines\Statutory\Sss\SssSchedule;
 use App\Support\Money;
 
@@ -35,15 +34,14 @@ final class StatutoryContributionCalculator
             return new StatutoryContributionResult($sector);
         }
 
-        if ($sector->isGovernment()) {
-            $social = (new GsisContributionService(GsisSchedule::default()))->compute($monthlyBasic);
-            $socialEmployee = Money::mul($social->employee, $monthlyToPeriod);
-            $socialEmployer = Money::mul($social->employer, $monthlyToPeriod);
-        } else {
-            $social = (new SssContributionService(SssSchedule::preset2025()))->compute($monthlyBasic);
-            $socialEmployee = Money::mul($social->employeeShare(), $monthlyToPeriod);
-            $socialEmployer = Money::mul($social->employerShare(), $monthlyToPeriod);
-        }
+        $scheme = SchemeResolver::make(
+            $sector->socialInsuranceAgency(),
+            SssSchedule::preset2025(),
+            GsisSchedule::default(),
+        );
+        $social = $scheme->compute($monthlyBasic);
+        $socialEmployee = Money::mul($social->employee + $social->providentEmployee, $monthlyToPeriod);
+        $socialEmployer = Money::mul($social->employer + $social->providentEmployer + $social->employerEc, $monthlyToPeriod);
 
         $philHealth = (new PhilHealthContributionService(PhilHealthSchedule::default()))->compute($monthlyBasic);
         $pagIbig = (new PagIbigContributionService(PagIbigSchedule::default()))->compute($monthlyBasic);

@@ -87,7 +87,7 @@ class CalculatorController extends Controller
                 'taxable_compensation_income' => self::amount($result->taxableCompensation),
                 'deductions' => [
                     'social_insurance' => [
-                        'agency' => $result->sector->isGovernment() ? 'GSIS' : 'SSS',
+                        'agency' => $result->agency(),
                         'employee' => self::amount($result->socialInsuranceEmployee),
                         'employer' => self::amount($result->socialInsuranceEmployer),
                     ],

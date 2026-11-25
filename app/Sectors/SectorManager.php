@@ -5,7 +5,9 @@ namespace App\Sectors;
 use App\Enums\Sector;
 use App\Jurisdictions\Support\JurisdictionManager;
 use App\Models\Company;
+use App\Sectors\Contracts\SectorFeaturePack;
 use App\Sectors\Contracts\SectorPolicy;
+use App\Sectors\Support\NullFeaturePack;
 use App\Sectors\Support\SectorProfile;
 use App\Support\Installation\Installation;
 use Illuminate\Support\Facades\DB;
@@ -130,10 +132,23 @@ final class SectorManager
             $this->jurisdictions->current()->sectorProfile($sector),
         );
 
+        $pack = $this->featurePack($sector);
+
         return match ($sector) {
-            Sector::Government => new GovernmentSector($profile),
-            Sector::Private => new PrivateSector($profile),
+            Sector::Government => new GovernmentSector($profile, $pack),
+            Sector::Private => new PrivateSector($profile, $pack),
         };
+    }
+
+    private function featurePack(Sector $sector): SectorFeaturePack
+    {
+        $class = $this->jurisdictions->current()->sectorFeaturePack($sector);
+
+        if (is_string($class) && class_exists($class) && is_subclass_of($class, SectorFeaturePack::class)) {
+            return new $class;
+        }
+
+        return new NullFeaturePack;
     }
 
     private function resolveSector(): Sector

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
 use App\Models\Concerns\BelongsToTenant;
 use App\Scopes\FilterScope;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ class JobVacancy extends Model
         });
     }
 
-    public function plantillaItem()
+    public function plantillaItem(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(PlantillaItem::class);
     }

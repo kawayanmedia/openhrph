@@ -7,6 +7,8 @@
     "run_type": "regular",
     "meta": {},
     "is_government": false,
+    "social_insurance": "sss",
+    "leave_conversion_taxable_days": 12,
     "days_per_year": 261,
     "hours_per_day": 8,
     "sss_schedule": "every_pay",

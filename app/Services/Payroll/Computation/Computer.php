@@ -7,11 +7,9 @@ use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
 use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
 use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
 use App\Jurisdictions\Philippines\Statutory\Generic\GenericContributionService;
-use App\Jurisdictions\Philippines\Statutory\Gsis\GsisContributionService;
 use App\Jurisdictions\Philippines\Statutory\PagIbig\PagIbigContributionService;
 use App\Jurisdictions\Philippines\Statutory\PayFrequency;
 use App\Jurisdictions\Philippines\Statutory\PhilHealth\PhilHealthContributionService;
-use App\Jurisdictions\Philippines\Statutory\Sss\SssContributionService;
 use App\Jurisdictions\Support\PayrollPolicyData;
 use App\Support\Money;
 use DateTimeImmutable;
@@ -387,43 +385,44 @@ final class Computer
         if (! $generic) {
             // Each agency has its own contribution base so a company can follow
             // the agency circular without code changes.
-            $sssBase = self::contributionBase($cfg->sssBase, $employee, $slip, $periods);
             $philHealthBase = self::contributionBase($cfg->philHealthBase, $employee, $slip, $periods);
             $pagIbigBase = self::contributionBase($cfg->pagIbigBase, $employee, $slip, $periods);
-            $gsisBase = self::contributionBase($cfg->gsisBase, $employee, $slip, $periods);
 
-            // A government agency remits GSIS instead of SSS: the two are
-            // mutually exclusive. GSIS reuses the group's statutory schedule.
+            // Government agencies remit GSIS and private establishments remit
+            // SSS; the scheme is mutually exclusive and owns its own schedule.
+            $scheme = $cfg->socialInsurance();
+            $socialBase = self::contributionBase(
+                $scheme->code() === 'gsis' ? $cfg->gsisBase : $cfg->sssBase,
+                $employee,
+                $slip,
+                $periods,
+            );
             $divisor = self::divisor($cfg, $cfg->sssSchedule);
 
-            if ($cfg->isGovernment) {
-                if ($divisor > 0) {
-                    $gsis = (new GsisContributionService($cfg->gsis))->compute($gsisBase);
+            if ($divisor > 0) {
+                try {
+                    $split = $scheme->compute($socialBase);
 
-                    $slip->gsisEmployee = self::firstPart($gsis->employee, $divisor);
-                    $slip->gsisEmployer = self::firstPart($gsis->employer, $divisor);
-                    // The total is the sum of the parts so the payroll columns
-                    // always reconcile to the remittance amount.
-                    $slip->gsisTotal = $slip->gsisEmployee + $slip->gsisEmployer;
-                }
-            } else {
-                if ($divisor > 0) {
-                    try {
-                        $sss = (new SssContributionService($cfg->sssBrackets))->compute($sssBase);
-
-                        $slip->sssEmployee = self::firstPart($sss->employee, $divisor);
-                        $slip->sssProvident = self::firstPart($sss->wispEmployee, $divisor);
-                        $slip->sssEmployer = self::firstPart($sss->employer, $divisor);
-                        $slip->sssProvidentER = self::firstPart($sss->wispEmployer, $divisor);
-                        $slip->sssEC = self::firstPart($sss->ec, $divisor);
+                    if ($scheme->code() === 'gsis') {
+                        $slip->gsisEmployee = self::firstPart($split->employee, $divisor);
+                        $slip->gsisEmployer = self::firstPart($split->employer, $divisor);
+                        // The total is the sum of the parts so the payroll
+                        // columns always reconcile to the remittance amount.
+                        $slip->gsisTotal = $slip->gsisEmployee + $slip->gsisEmployer;
+                    } else {
+                        $slip->sssEmployee = self::firstPart($split->employee, $divisor);
+                        $slip->sssProvident = self::firstPart($split->providentEmployee, $divisor);
+                        $slip->sssEmployer = self::firstPart($split->employer, $divisor);
+                        $slip->sssProvidentER = self::firstPart($split->providentEmployer, $divisor);
+                        $slip->sssEC = self::firstPart($split->employerEc, $divisor);
                         $slip->sssTotal = $slip->sssEmployee
                             + $slip->sssProvident
                             + $slip->sssEmployer
                             + $slip->sssProvidentER
                             + $slip->sssEC;
-                    } catch (RuntimeException $exception) {
-                        $slip->warnings[] = $exception->getMessage();
                     }
+                } catch (RuntimeException $exception) {
+                    $slip->warnings[] = $exception->getMessage();
                 }
             }
 
@@ -721,7 +720,9 @@ final class Computer
 
             // RR 29-2025: monetized unused VL of private employees is
             // non-taxable up to 12 days; government VL/SL is non-taxable.
-            $exemptDays = $cfg->isGovernment ? $leaveDays : min($leaveDays, 12);
+            $exemptDays = $cfg->leaveConversionTaxableDays === null
+                ? $leaveDays
+                : min($leaveDays, $cfg->leaveConversionTaxableDays);
             $leaveExempt = Money::mul($daily, $exemptDays);
             $leaveTaxable = $leave - $leaveExempt;
         } else {

@@ -60,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Factories live flat in database/factories, so nested model namespaces
-        // (App\Jurisdictions\Philippines\Models\Government\*, App\Services\...) resolve by class basename.
+        // (App\Jurisdictions\Philippines\Government\Models\*, App\Services\...) resolve by class basename.
         FactoryNameResolver::guessFactoryNamesUsing(
             fn (string $modelName): string => 'Database\\Factories\\'.class_basename($modelName).'Factory'
         );

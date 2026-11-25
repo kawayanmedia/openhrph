@@ -194,8 +194,16 @@ type Config struct {
 	IsGovernment bool
 
 	// Sector is "Government" or "Private". IsGovernment is kept for parity
-	// with older fixture files and stays the single computation switch.
+	// with older fixture files.
 	Sector string
+
+	// SocialInsurance selects the mandatory scheme: "sss" (private) or "gsis"
+	// (government). It replaces IsGovernment as the computation switch.
+	SocialInsurance string
+
+	// LeaveConversionTaxableDays caps the tax-exempt portion of monetized
+	// leave. A nil value means the whole conversion is exempt.
+	LeaveConversionTaxableDays *int
 
 	DaysPerYear int
 	HoursPerDay int

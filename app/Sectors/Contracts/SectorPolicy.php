@@ -95,4 +95,19 @@ interface SectorPolicy
     public function features(): FeatureSet;
 
     public function showsMenu(string $key): bool;
+
+    /**
+     * Screens, commands and reports this sector contributes.
+     */
+    public function featurePack(): SectorFeaturePack;
+
+    /**
+     * The social-insurance agency code from the profile (`sss` or `gsis`).
+     */
+    public function socialInsuranceAgency(): string;
+
+    /**
+     * Days of monetized leave that stay tax-exempt, or null for no limit.
+     */
+    public function leaveConversionTaxableDays(): ?int;
 }

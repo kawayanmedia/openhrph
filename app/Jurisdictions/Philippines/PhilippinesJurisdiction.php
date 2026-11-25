@@ -26,6 +26,8 @@ use App\Jurisdictions\Philippines\Reports\PhilippinesReportProvider;
 use App\Jurisdictions\Philippines\Settings\PhilippinesSettingsProvider;
 use App\Jurisdictions\Philippines\Statutory\PhilippinesStatutoryDriver;
 use App\Jurisdictions\Philippines\Tax\PhilippinesTaxPolicy;
+use App\Jurisdictions\Philippines\Government\GovernmentFeaturePack;
+use App\Jurisdictions\Philippines\Private\PrivateFeaturePack;
 use App\Jurisdictions\Support\AbstractJurisdiction;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Schema;
@@ -119,6 +121,11 @@ final class PhilippinesJurisdiction extends AbstractJurisdiction
             'statutory' => new PhilippinesStatutoryImporter,
             'holidays' => new PhilippinesHolidayImporter,
         ];
+    }
+
+    public function sectorFeaturePack(Sector $sector): ?string
+    {
+        return $sector === Sector::Government ? GovernmentFeaturePack::class : PrivateFeaturePack::class;
     }
 
     public function adminResources(): array

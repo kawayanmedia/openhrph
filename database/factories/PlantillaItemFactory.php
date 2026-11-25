@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Jurisdictions\Philippines\Models\Government\PlantillaItem;
+use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
 use App\Models\Office;
 use Database\Factories\Concerns\ResolvesTenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
