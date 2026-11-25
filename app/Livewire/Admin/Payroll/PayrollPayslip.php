@@ -6,7 +6,9 @@ use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Services\Payroll\EarningTaxReport;
-use App\Services\Payroll\Engine\Legacy\LegacyInput;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
+use App\Sectors\SectorManager;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -47,11 +49,15 @@ class PayrollPayslip extends Component
             ->where('employee_id', $employee->getKey())
             ->firstOrFail();
 
+        $policy = app(SectorManager::class)->forCompany((int) $payroll->company_id);
+        $scheme = SchemeResolver::make($policy->socialInsuranceAgency(), [], GsisSchedule::default());
+
         return view('livewire.admin.payroll.payslip', [
             'payroll' => $payroll,
             'employee' => $employee,
             'detail' => $detail,
-            'isGovernment' => LegacyInput::isGovernmentCompany((int) $payroll->company_id),
+            'scheme' => $scheme,
+            'identifier' => (string) ($employee->{$scheme->identifierField()} ?? ''),
             'taxReport' => config('app.debug') ? EarningTaxReport::forPayrollDetail($detail) : null,
         ])->title('Payslip — '.trim($employee->first_name.' '.$employee->last_name));
     }

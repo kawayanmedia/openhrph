@@ -13,6 +13,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
+use KawayanMedia\Government\Contracts\CompanyResolver;
 
 class TenancyServiceProvider extends ServiceProvider
 {
@@ -23,6 +24,15 @@ class TenancyServiceProvider extends ServiceProvider
     {
         $this->app->scoped(TenantContext::class);
         $this->app->singleton(RestoreQueueTenant::class);
+
+        // Keep the Government package models inside the application tenant.
+        $this->app->scoped(CompanyResolver::class, fn (): CompanyResolver => new class implements CompanyResolver
+        {
+            public function id(): ?int
+            {
+                return app(TenantContext::class)->id();
+            }
+        });
     }
 
     /**

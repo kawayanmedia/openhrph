@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Jurisdictions\Philippines\Models\Government\PlantillaItem;
 use App\Models\Office;
 use Database\Factories\Concerns\ResolvesTenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
+use KawayanMedia\Government\Models\PlantillaItem;
 
 /**
  * @extends Factory<PlantillaItem>

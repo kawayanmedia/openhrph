@@ -22,7 +22,7 @@ final class StatutoryContributionResult
 
     public function agency(): string
     {
-        return $this->sector->isGovernment() ? 'GSIS' : 'SSS';
+        return $this->sector->socialInsuranceLabel();
     }
 
     public function totalEmployee(): int

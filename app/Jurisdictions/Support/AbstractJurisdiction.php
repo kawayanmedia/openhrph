@@ -130,6 +130,11 @@ abstract class AbstractJurisdiction implements Jurisdiction
         return [];
     }
 
+    public function sectorFeaturePack(Sector $sector): ?string
+    {
+        return null;
+    }
+
     public function adminResources(): array
     {
         return [];

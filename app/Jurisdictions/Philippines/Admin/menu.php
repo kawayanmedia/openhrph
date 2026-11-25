@@ -21,15 +21,5 @@ return [
                 ],
             ],
         ],
-    ],
-    [
-        'label' => 'Government',
-        'icon' => 'building-library',
-        'sector' => 'Government',
-        'jurisdiction' => 'PH',
-        'items' => [
-            ['type' => 'resource', 'key' => 'plantilla-item', 'label' => 'Plantilla Items'],
-            ['type' => 'resource', 'key' => 'salary-grade', 'label' => 'Salary Grades'],
-        ],
-    ],
+    ]
 ];

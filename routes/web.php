@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\ServiceRecordController;
 use App\Http\Controllers\SetupController;
+use App\Http\Controllers\TimesheetController;
 use App\Http\Middleware\EnsureDesktopMode;
 use App\Livewire\Desktop\Setup as DesktopSetup;
 use App\Livewire\Portal\TestPayroll;
@@ -18,12 +18,6 @@ Route::get('/', function () {
 Route::get('setup', DesktopSetup::class)
     ->middleware(EnsureDesktopMode::class)
     ->name('desktop.setup');
-
-Route::get('/pds/{employee}/pdf', function ($employee) {
-    dd($employee);
-
-    return view('welcome');
-})->name('pds.pdf');
 
 Route::get('/test-error-bugs', function () {
     abort_unless(app()->isLocal(), 404);
@@ -41,12 +35,16 @@ Route::get('/test-error-503', function () {
 // });
 
 require 'face.php';
-require 'gov.php';
+
+// Printable DTR, drawn by kawayanmedia/dtr-pdf. It lives inside the admin
+// panel so the usual admin authentication and gate apply.
+Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate')])
+    ->prefix(trim(config('admin.path'), '/'))
+    ->get('documents/dtr', [TimesheetController::class, 'show'])
+    ->name('timesheet.print');
 
 // TODO for reports
 // https://github.com/laracraft-tech/laravel-date-scopes
-
-Route::get('sr/{id}/print', [ServiceRecordController::class, 'serviceRecord'])->middleware(['auth:web,nova,portal'])->name('sr.show');
 
 // This is where to process and test payroll
 Route::get('payroll-process', TestPayroll::class)->middleware(['auth:web,nova'])->name('portal.test');

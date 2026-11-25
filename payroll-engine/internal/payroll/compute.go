@@ -363,7 +363,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 
 		// A government agency remits GSIS instead of SSS: the two are mutually
 		// exclusive. GSIS reuses the group's statutory cut-off schedule.
-		if cfg.IsGovernment {
+		if cfg.SocialInsurance == "gsis" {
 			if divisor := statutory.Divisor(cfg.SSSSchedule, cfg.Frequency, cfg.Cutoff); divisor > 0 {
 				gsis := statutory.ComputeGSIS(gsisBase, cfg.GSIS)
 				slip.GSISEmployee = firstPart(gsis.Employee, divisor)

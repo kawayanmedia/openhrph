@@ -17,6 +17,7 @@ class Navigation
     {
         return collect(config('admin.menu', []))
             ->merge(Installation::jurisdiction()->adminMenu())
+            ->merge(Installation::sectorPolicy()->featurePack()->adminMenu())
             ->map(fn (array $section) => static::normalizeSection($section))
             ->filter()
             ->values();

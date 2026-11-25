@@ -178,7 +178,10 @@ final class LegacyInput
             payrollDate: $run->payrollDate,
         );
 
-        $config->sector = app(SectorManager::class)->forCompany($run->companyID)->sector();
+        $sectorPolicy = app(SectorManager::class)->forCompany($run->companyID);
+        $config->sector = $sectorPolicy->sector();
+        $config->socialInsuranceAgency = $sectorPolicy->socialInsuranceAgency();
+        $config->leaveConversionTaxableDays = $sectorPolicy->leaveConversionTaxableDays();
         $config->isGovernment = $config->sector->isGovernment();
         $config->countryCode = Installation::countryCode();
         $config->statutoryDriver = Installation::statutoryDriver($config->countryCode);
@@ -277,9 +280,9 @@ final class LegacyInput
             $config->philHealth = self::loadPhilHealth($run, $config->philHealth);
             $config->pagIbig = self::loadPagIbig($run, $config->pagIbig);
 
-            // Only a government agency needs the GSIS schedule; a private payroll
-            // must not fail on an unimported table it never uses.
-            if ($config->isGovernment) {
+            // Only a GSIS-covered employer needs the GSIS schedule; an SSS
+            // payroll must not fail on an unimported table it never uses.
+            if ($config->socialInsuranceAgency === 'gsis') {
                 $config->gsis = self::loadGsis($run, $config->gsis);
             }
 
@@ -1314,17 +1317,6 @@ final class LegacyInput
             lowThreshold: (int) ($row->low_threshold_centavos ?? 0),
             maxFundSalary: (int) ($row->max_fund_salary_centavos ?? 0),
         );
-    }
-
-    /**
-     * Government agencies are GSIS-covered and must not be assessed SSS.
-     *
-     * Resolution goes through SectorManager so the company type, the
-     * installation sector and the legacy environment flag cannot disagree.
-     */
-    public static function isGovernmentCompany(int $companyID): bool
-    {
-        return app(SectorManager::class)->isGovernment($companyID);
     }
 
     public static function loadGsis(Run $run, GsisSchedule $fallback): GsisSchedule

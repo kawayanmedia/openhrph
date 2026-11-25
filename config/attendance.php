@@ -43,4 +43,16 @@ return [
 
     'grace_minutes' => (int) env('ATTENDANCE_GRACE_MINUTES', 0),
 
+    /*
+    |--------------------------------------------------------------------------
+    | DTR PDF template
+    |--------------------------------------------------------------------------
+    |
+    | Absolute path to the FPDI template the printed DTR is drawn on. When
+    | empty the template bundled with kawayanmedia/dtr-pdf is used.
+    |
+    */
+
+    'dtr_template' => env('DTR_TEMPLATE'),
+
 ];

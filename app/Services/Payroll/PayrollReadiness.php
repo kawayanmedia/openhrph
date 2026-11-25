@@ -15,6 +15,10 @@ use App\Models\PayrollGroup;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Timesheet;
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme;
+use App\Sectors\Contracts\SectorReadiness;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Statutory\ComponentResolver;
 use App\Support\Installation\Installation;
@@ -35,7 +39,6 @@ class PayrollReadiness
 
     protected bool $focusGroupResolved = false;
 
-    protected ?bool $governmentCompany = null;
 
     /**
      * The full readiness report.
@@ -62,7 +65,7 @@ class PayrollReadiness
 
         $sections = [
             $this->organizationSection(),
-            $this->payrollSection($group, $period),
+            $this->payrollSection($group, $period, $employees),
             $this->peopleSection($group, $employees),
             $this->attendanceSection($group, $employees, $period),
             $this->runSection(),
@@ -183,7 +186,7 @@ class PayrollReadiness
     /**
      * @return array{key: string, label: string, description: string, items: array<int, array<string, mixed>>}
      */
-    protected function payrollSection(?PayrollGroup $group, ?PayrollDate $period): array
+    protected function payrollSection(?PayrollGroup $group, ?PayrollDate $period, Collection $employees): array
     {
         $detailsComplete = $this->groupDetailsComplete($group);
         $scheduleCount = $group === null ? 0 : PayrollDate::query()
@@ -251,7 +254,7 @@ class PayrollReadiness
                             meta: 'Defaults to every pay',
                             action: $this->link('Open payroll settings', 'admin.settings', ['page' => 'payroll']),
                         ),
-                        ...($this->companyIsGovernment() ? [$this->gsisCoverageItem()] : []),
+                        ...$this->sectorReadinessItems($employees),
                         $this->item(
                             key: 'minimum-wage',
                             title: 'Load the regional wage orders',
@@ -327,9 +330,7 @@ class PayrollReadiness
                 $this->item(
                     key: 'government-ids',
                     title: 'Record government IDs',
-                    description: $this->companyIsGovernment()
-                        ? 'GSIS BP, PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.'
-                        : 'SSS, PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.',
+                    description: $this->socialInsurance()->label().', PhilHealth, Pag-IBIG and TIN numbers are needed on payslips and statutory reports.',
                     complete: $employees->isNotEmpty() && $governmentIds->count() === $employees->count(),
                     required: false,
                     meta: $employees->isEmpty()
@@ -589,9 +590,7 @@ class PayrollReadiness
 
     protected function hasGovernmentIds(Employee $employee): bool
     {
-        $statutoryId = $this->companyIsGovernment()
-            ? filled($employee->gsis_number)
-            : filled($employee->sss_number);
+        $statutoryId = filled($employee->{$this->socialInsurance()->identifierField()});
 
         return $statutoryId
             && filled($employee->philhealth_number)
@@ -671,6 +670,19 @@ class PayrollReadiness
      * A generic country needs at least one active component before payroll can
      * compute statutory deductions.
      */
+    /**
+     * Component catalogue sector key: "government" or "private".
+     */
+    protected function sectorKey(): string
+    {
+        $companyId = app(TenantContext::class)->id();
+        $sector = $companyId === null
+            ? app(SectorManager::class)->currentSector()
+            : app(SectorManager::class)->forCompany($companyId)->sector();
+
+        return strtolower($sector->value);
+    }
+
     protected function genericComponentsConfigured(): bool
     {
         $companyId = app(TenantContext::class)->id();
@@ -682,7 +694,7 @@ class PayrollReadiness
         return ComponentResolver::hasComponents(
             $companyId,
             Installation::countryCode(),
-            $this->companyIsGovernment() ? 'government' : 'private',
+            $this->sectorKey(),
             now(),
         );
     }
@@ -698,7 +710,7 @@ class PayrollReadiness
         $count = ComponentResolver::components(
             $companyId,
             Installation::countryCode(),
-            $this->companyIsGovernment() ? 'government' : 'private',
+            $this->sectorKey(),
             now(),
         )->count();
 
@@ -706,41 +718,39 @@ class PayrollReadiness
     }
 
     /**
-     * A government company is GSIS-covered, so it needs a GSIS schedule that
-     * covers the payroll year instead of the SSS brackets.
+     * The social-insurance scheme that applies to the company being prepared.
      */
-    protected function companyIsGovernment(): bool
+    protected function socialInsurance(): SocialInsuranceScheme
     {
-        if ($this->governmentCompany !== null) {
-            return $this->governmentCompany;
-        }
-
         $companyId = app(TenantContext::class)->id();
+        $agency = $companyId === null
+            ? 'sss'
+            : app(SectorManager::class)->forCompany($companyId)->socialInsuranceAgency();
 
-        if ($companyId === null || ! Schema::hasTable('companies')) {
-            return $this->governmentCompany = false;
-        }
-
-        return $this->governmentCompany = app(SectorManager::class)->isGovernment($companyId);
+        return SchemeResolver::make($agency, [], GsisSchedule::default());
     }
 
     /**
-     * @return array<string, mixed>
+     * Readiness items contributed by the active sector feature pack.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    protected function gsisCoverageItem(): array
+    protected function sectorReadinessItems(Collection $employees): array
     {
-        $covered = Schema::hasTable('statutory_gsis')
-            && DB::table('statutory_gsis')->whereNull('company_id')->exists();
+        $items = [];
 
-        return $this->item(
-            key: 'gsis-schedule',
-            title: 'Load the GSIS premium schedule',
-            description: 'This company is a government agency, so payroll remits GSIS instead of SSS at 9% employee and 12% employer.',
-            complete: $covered,
-            required: true,
-            meta: $covered ? 'GSIS schedule loaded' : 'No GSIS schedule imported',
-            action: $covered ? null : $this->link('Open payroll settings', 'admin.settings', ['page' => 'payroll']),
-        );
+        foreach (Installation::sectorPolicy()->featurePack()->readiness() as $class) {
+            $contributor = app($class);
+
+            if ($contributor instanceof SectorReadiness) {
+                $items = array_merge($items, $contributor->items([
+                    'company_id' => app(TenantContext::class)->id(),
+                    'employees' => $employees,
+                ]));
+            }
+        }
+
+        return $items;
     }
 
     protected function companyProfileCount(): int

@@ -64,4 +64,20 @@ enum Sector: string
     {
         return $this === self::Private;
     }
+
+    /**
+     * The mandatory social-insurance agency for this sector.
+     */
+    public function socialInsuranceAgency(): string
+    {
+        return match ($this) {
+            self::Government => 'gsis',
+            self::Private => 'sss',
+        };
+    }
+
+    public function socialInsuranceLabel(): string
+    {
+        return strtoupper($this->socialInsuranceAgency());
+    }
 }

@@ -305,7 +305,7 @@ class Settings extends Component
         if (Installation::jurisdiction()->statutoryDriver()->code() !== 'ph') {
             $fields[] = Heading::make('Country rules')
                 ->help('This jurisdiction supplies its own contribution, tax and leave rules.');
-        } elseif ($sector->isGovernment()) {
+        } elseif ($sector->socialInsuranceAgency() === 'gsis') {
             $fields[] = Text::make('GSIS contribution base', 'gsis_base')
                 ->default((string) ($defaults['gsis_base'] ?? 'basic'))
                 ->help('basic, gross, or taxable. The rate itself lives in the effective-dated GSIS table.');

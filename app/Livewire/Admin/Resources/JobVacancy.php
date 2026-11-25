@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 class JobVacancy extends Resource
 {
-    public static string $model = \App\Models\JobVacancy::class;
+    public static string $model = \KawayanMedia\Government\Models\JobVacancy::class;
 
     public static int $priority = 4;
 

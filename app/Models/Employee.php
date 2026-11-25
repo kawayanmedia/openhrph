@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Jurisdictions\Philippines\Models\Government\ServiceRecord;
+use App\Jurisdictions\Philippines\Government\Models\Concerns\HasPersonalDataSheet;
 use App\Models\Concerns\BelongsToTenant;
 use App\Scopes\FilterScope;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -18,6 +18,7 @@ class Employee extends Model implements HasMedia
     use BelongsToTenant;
     use FilterScope;
     use HasFactory;
+    use HasPersonalDataSheet;
     use InteractsWithMedia;
 
     const PAYMENT_TYPE_MONTHLY = 'monthly';
@@ -57,6 +58,9 @@ class Employee extends Model implements HasMedia
         'tin_number',
         'sss_number',
         'gsis_number',
+        'salary_grade',
+        'step',
+        'item_number',
         'philhealth_number',
         'hdmf_number',
         'is_minimum_wage',
@@ -113,71 +117,6 @@ class Employee extends Model implements HasMedia
     public function user()
     {
         return $this->hasOne(User::class);
-    }
-
-    public function nosa()
-    {
-        return $this->hasOne(Nosa::class);
-    }
-
-    public function personalInformation()
-    {
-        return $this->hasOne(PersonalInformation::class);
-    }
-
-    public function familyBackground()
-    {
-        return $this->hasOne(FamilyBackground::class);
-    }
-
-    public function children()
-    {
-        return $this->hasMany(Children::class);
-    }
-
-    public function educations()
-    {
-        return $this->hasMany(Education::class);
-    }
-
-    public function eligibilities()
-    {
-        return $this->hasMany(Eligibility::class);
-    }
-
-    public function workExperiences()
-    {
-        return $this->hasMany(WorkExperience::class);
-    }
-
-    public function voluntaryWorks()
-    {
-        return $this->hasMany(VoluntaryWork::class);
-    }
-
-    public function pdsTrainings()
-    {
-        return $this->hasMany(Training::class);
-    }
-
-    public function otherInfos()
-    {
-        return $this->hasMany(OtherInfo::class);
-    }
-
-    public function questions()
-    {
-        return $this->hasMany(Question::class);
-    }
-
-    public function references()
-    {
-        return $this->hasMany(Reference::class);
-    }
-
-    public function serviceRecords()
-    {
-        return $this->hasMany(ServiceRecord::class);
     }
 
     public function immediateHead()
@@ -441,31 +380,6 @@ class Employee extends Model implements HasMedia
     public function getImageAttribute()
     {
         return request()->root().'/avatar.png';
-    }
-
-    public function getPreviousNosaSalaryGradeAttribute()
-    {
-        return $this->nosa?->from_salary_grade.'/'.$this->nosa?->from_step;
-    }
-
-    public function getCurrentNosaSalaryGradeAttribute()
-    {
-        if ($this->nosa == null) {
-            return $this->salary_grade.'/'.$this->step;
-        }
-
-        return $this->nosa?->to_salary_grade.'/'.$this->nosa?->to_step;
-    }
-
-    public function getNosaEffectiveDateAttribute()
-    {
-        return $this->nosa?->effective_date->format('M d, Y');
-    }
-
-    public function getNosiDisabledAttribute()
-    {
-        return ($this->nosa?->from_salary_grade == $this->nosa?->to_salary_grade) &&
-            ($this->nosa?->from_step == $this->nosa?->to_step);
     }
 
     public function getFullnameAttribute()

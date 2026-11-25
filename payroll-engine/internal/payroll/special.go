@@ -141,8 +141,8 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 		// RR 29-2025: monetized unused VL of private employees is non-taxable
 		// up to 12 days; government VL/SL monetization is non-taxable.
 		exemptDays := leaveDays
-		if !cfg.IsGovernment && exemptDays > 12 {
-			exemptDays = 12
+		if cfg.LeaveConversionTaxableDays != nil && exemptDays > float64(*cfg.LeaveConversionTaxableDays) {
+			exemptDays = float64(*cfg.LeaveConversionTaxableDays)
 		}
 
 		leaveExempt = daily.Mul(exemptDays)

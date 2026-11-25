@@ -3,8 +3,10 @@
 namespace App\Sectors;
 
 use App\Enums\Sector;
+use App\Sectors\Contracts\SectorFeaturePack;
 use App\Sectors\Contracts\SectorPolicy;
 use App\Sectors\Support\FeatureSet;
+use App\Sectors\Support\NullFeaturePack;
 use App\Sectors\Support\SectorProfile;
 
 /**
@@ -15,7 +17,10 @@ use App\Sectors\Support\SectorProfile;
  */
 abstract class ConfigurableSector implements SectorPolicy
 {
-    public function __construct(private readonly SectorProfile $profile) {}
+    public function __construct(
+        private readonly SectorProfile $profile,
+        private readonly ?SectorFeaturePack $pack = null,
+    ) {}
 
     public function sector(): Sector
     {
@@ -161,6 +166,23 @@ abstract class ConfigurableSector implements SectorPolicy
     public function features(): FeatureSet
     {
         return new FeatureSet($this->profile->features());
+    }
+
+    public function featurePack(): SectorFeaturePack
+    {
+        return $this->pack ?? new NullFeaturePack;
+    }
+
+    public function socialInsuranceAgency(): string
+    {
+        return (string) $this->profile->get('statutory.social_insurance', 'sss');
+    }
+
+    public function leaveConversionTaxableDays(): ?int
+    {
+        $days = $this->profile->get('rules.leave_conversion.taxable_days');
+
+        return is_numeric($days) ? (int) $days : null;
     }
 
     public function nightDifferentialWindow(): array

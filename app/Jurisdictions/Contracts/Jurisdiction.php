@@ -58,6 +58,13 @@ interface Jurisdiction
     public function importers(): array;
 
     /**
+     * Sector feature pack class for this jurisdiction, when it has one.
+     *
+     * @return class-string<\App\Sectors\Contracts\SectorFeaturePack>|null
+     */
+    public function sectorFeaturePack(Sector $sector): ?string;
+
+    /**
      * @return array<int, class-string>
      */
     public function adminResources(): array;

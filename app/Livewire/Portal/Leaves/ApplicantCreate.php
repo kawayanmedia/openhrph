@@ -2,14 +2,13 @@
 
 namespace App\Livewire\Portal\Leaves;
 
-use App\Actions\CreateLeaveAction;
-use App\Models\Applicant;
-use App\Models\JobVacancy;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use KawayanMedia\Government\Models\Applicant;
+use KawayanMedia\Government\Models\JobVacancy;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Auth;
 
 class ApplicantCreate extends Component
 {
@@ -46,6 +45,7 @@ class ApplicantCreate extends Component
     public $gender = 'male';
 
     public $address;
+
     public $birth_date;
 
     public $educational_attainment;
@@ -53,9 +53,11 @@ class ApplicantCreate extends Component
     public $telephone;
 
     public $email;
+
     public $eligibility;
 
     public $training;
+
     public $experience;
 
     public $jobVacancy;

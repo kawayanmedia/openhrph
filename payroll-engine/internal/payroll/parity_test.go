@@ -138,6 +138,8 @@ type fxConfig struct {
 	RunType                    string            `json:"run_type"`
 	Meta                       map[string]string `json:"meta"`
 	IsGovernment               bool              `json:"is_government"`
+	SocialInsurance            string            `json:"social_insurance"`
+	LeaveConversionTaxableDays *int              `json:"leave_conversion_taxable_days"`
 	DaysPerYear                int               `json:"days_per_year"`
 	HoursPerDay                int               `json:"hours_per_day"`
 	SSSSchedule                string            `json:"sss_schedule"`
@@ -269,6 +271,8 @@ func toFxConfig(cfg model.Config) fxConfig {
 		RunType:                    cfg.RunType,
 		Meta:                       cfg.Meta,
 		IsGovernment:               cfg.IsGovernment,
+		SocialInsurance:            cfg.SocialInsurance,
+		LeaveConversionTaxableDays: cfg.LeaveConversionTaxableDays,
 		DaysPerYear:                cfg.DaysPerYear,
 		HoursPerDay:                cfg.HoursPerDay,
 		SSSSchedule:                string(cfg.SSSSchedule),
@@ -341,6 +345,9 @@ func fromFxConfig(cfg fxConfig) model.Config {
 		Cutoff:                     cfg.Cutoff,
 		RunType:                    cfg.RunType,
 		Meta:                       cfg.Meta,
+		IsGovernment:               cfg.IsGovernment,
+		SocialInsurance:            socialInsuranceFor(cfg),
+		LeaveConversionTaxableDays: leaveConversionDaysFor(cfg),
 		DaysPerYear:                cfg.DaysPerYear,
 		HoursPerDay:                cfg.HoursPerDay,
 		SSSSchedule:                statutory.Schedule(cfg.SSSSchedule),
@@ -572,6 +579,10 @@ func deMinimisMap(values map[string]money.Centavos) map[string]int64 {
 	return out
 }
 
+func leaveConversionDays(days int) *int {
+	return &days
+}
+
 func baseConfig() model.Config {
 	return model.Config{
 		Frequency:                  statutory.FrequencySemiMonthly,
@@ -598,8 +609,36 @@ func baseConfig() model.Config {
 		GSISBase:                   "basic",
 		PayWithoutTimesheet:        true,
 		PayUnworkedRegularHolidays: true,
+		SocialInsurance:            "sss",
+		LeaveConversionTaxableDays: leaveConversionDays(12),
 		PayrollDate:                time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC),
 	}
+}
+
+func socialInsuranceFor(cfg fxConfig) string {
+	if cfg.SocialInsurance != "" {
+		return cfg.SocialInsurance
+	}
+
+	if cfg.IsGovernment {
+		return "gsis"
+	}
+
+	return "sss"
+}
+
+func leaveConversionDaysFor(cfg fxConfig) *int {
+	if cfg.LeaveConversionTaxableDays != nil {
+		return cfg.LeaveConversionTaxableDays
+	}
+
+	if cfg.IsGovernment {
+		return nil
+	}
+
+	days := 12
+
+	return &days
 }
 
 func monthlyEmployee() model.Employee {
@@ -850,6 +889,8 @@ func parityScenarios() []struct {
 	// 21. Government agency: GSIS replaces SSS (RA 8291).
 	governmentCfg := baseConfig()
 	governmentCfg.IsGovernment = true
+	governmentCfg.SocialInsurance = "gsis"
+	governmentCfg.LeaveConversionTaxableDays = nil
 	government := monthlyEmployee()
 	government.Name = "GOVERNMENT EMPLOYEE"
 	for day := 1; day <= 15; day++ {

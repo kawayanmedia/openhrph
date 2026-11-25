@@ -2,11 +2,15 @@
 
 namespace App\Gateways;
 
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme;
+use App\Sectors\SectorManager;
+
 use App\Models\Employee;
 use App\Models\Payroll;
 use App\Models\PayrollDetail;
 use App\Models\PayrollYearDate;
-use App\Services\Payroll\Engine\Legacy\LegacyInput;
 use App\Support\Installation\Installation;
 use FPDF;
 use Illuminate\Http\Response;
@@ -82,7 +86,11 @@ class PayslipGateway
 
         $employee = $detail->employee;
         $payroll = $detail->payroll;
-        $government = LegacyInput::isGovernmentCompany((int) $detail->company_id);
+        $scheme = SchemeResolver::make(
+            app(SectorManager::class)->forCompany((int) $detail->company_id)->socialInsuranceAgency(),
+            [],
+            GsisSchedule::default(),
+        );
 
         $pdf = new FPDF('P', 'mm', 'A4');
         $pdf->SetMargins(15, 15, 15);
@@ -90,14 +98,14 @@ class PayslipGateway
         $pdf->AddPage();
 
         $this->header($pdf, $employee, $payroll);
-        $this->identityBlock($pdf, $employee, $government);
+        $this->identityBlock($pdf, $employee, $scheme);
 
         $this->sectionTitle($pdf, 'EARNINGS');
         $this->rows($pdf, $this->earningsRows($detail));
         $this->totalRow($pdf, 'Gross pay', (float) $detail->gross_income);
 
         $this->sectionTitle($pdf, 'DEDUCTIONS');
-        $this->rows($pdf, $this->deductionRows($detail, $government));
+        $this->rows($pdf, $this->deductionRows($detail, $scheme));
         $this->totalRow($pdf, 'Total deductions', (float) $detail->total_deductions);
 
         $this->netPay($pdf, (float) $detail->net_pay);
@@ -152,7 +160,7 @@ class PayslipGateway
         $pdf->Ln(4);
     }
 
-    protected function identityBlock(FPDF $pdf, $employee, bool $government): void
+    protected function identityBlock(FPDF $pdf, $employee, SocialInsuranceScheme $scheme): void
     {
         $left = [
             ['Employee', trim((string) ($employee?->first_name ?? '').' '.(string) ($employee?->last_name ?? ''))],
@@ -163,7 +171,7 @@ class PayslipGateway
 
         $right = [
             ['TIN', $this->mask($employee?->tin_number)],
-            [$government ? 'GSIS BP' : 'SSS', $this->mask($government ? $employee?->gsis_number : $employee?->sss_number)],
+            [$scheme->identifierLabel(), $this->mask($employee?->{$scheme->identifierField()})],
             ['PhilHealth', $this->mask($employee?->philhealth_number)],
             ['Pag-IBIG', $this->mask($employee?->hdmf_number)],
         ];
@@ -282,12 +290,12 @@ class PayslipGateway
     /**
      * @return list<array{0: string, 1: float}>
      */
-    protected function deductionRows(PayrollDetail $detail, bool $government): array
+    protected function deductionRows(PayrollDetail $detail, SocialInsuranceScheme $scheme): array
     {
         $lines = $detail->deductionLines;
 
         if ($lines->isEmpty()) {
-            return $this->legacyDeductionRows($detail, $government);
+            return $this->legacyDeductionRows($detail, $scheme);
         }
 
         $rows = [];
@@ -311,15 +319,13 @@ class PayslipGateway
      *
      * @return list<array{0: string, 1: float}>
      */
-    protected function legacyDeductionRows(PayrollDetail $detail, bool $government): array
+    protected function legacyDeductionRows(PayrollDetail $detail, SocialInsuranceScheme $scheme): array
     {
         $rows = [];
 
-        if ($government) {
-            $rows[] = ['GSIS', (float) $detail->gsis_employee];
-        } else {
-            $rows[] = ['SSS', (float) $detail->sss_employee + (float) $detail->sss_provident_employee];
-        }
+        $rows[] = $scheme->code() === 'gsis'
+            ? ['GSIS', (float) $detail->gsis_employee]
+            : ['SSS', (float) $detail->sss_employee + (float) $detail->sss_provident_employee];
 
         $rows[] = ['PhilHealth', (float) $detail->philhealth_employee];
         $rows[] = ['Pag-IBIG', (float) $detail->hdmf_employee];
