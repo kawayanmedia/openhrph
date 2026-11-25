@@ -28,6 +28,7 @@ app/Jurisdictions/
     ├── PhilippinesJurisdiction.php
     ├── PhilippinesServiceProvider.php
     ├── Statutory/             SSS, PhilHealth, Pag-IBIG, GSIS, BIR calculators
+    │   └── Schemes/           SSS/GSIS social-insurance strategy
     ├── Payroll/               non-statutory earning rules
     ├── Tax/                   BIR withholding and benefit rules
     ├── Holidays/              calendar provider + data/calendar.php
@@ -37,9 +38,16 @@ app/Jurisdictions/
     ├── Documents/             HR document checklists
     ├── Reports/               remittances, BIR forms, payslip PDF
     ├── Settings/              country settings fields
-    ├── Admin/                 PH-only resources and menu
-    ├── Models/Government/     PH civil-service models
-    ├── Console/Commands/      PH-only commands
+    ├── Admin/                 PH statutory agency resources and menu
+    ├── Government/            public-sector module
+    │   ├── Models/            PDS, NOSA, plantilla, salary grade, service record
+    │   ├── Admin/             government screens and menu
+    │   ├── Console/Commands/  government-only commands
+    │   ├── Support/           readiness, employee fields
+    │   ├── Reports/           GSIS premium and COA register
+    │   └── Database/Seeders/  salary-grade and plantilla reference data
+    ├── Private/               private-sector feature pack
+    ├── Console/Commands/      PH-only commands shared by both sectors
     ├── Config/                PH sector overlay and statements
     ├── Importers/             statutory and holiday importers
     └── routes.php             PH-only routes

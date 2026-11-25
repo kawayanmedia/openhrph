@@ -11,7 +11,7 @@ class LeaveCard extends Model
     use FilterScope;
     use SoftDeletes;
 
-    protected $fillable = ['name', 'code', 'account_number'];
+    protected $fillable = ['employee_id', 'name', 'code', 'account_number'];
 
     /**
      * The "booted" method of the model.

@@ -2,7 +2,9 @@
 
 namespace App\Jurisdictions\Philippines\Government\Support;
 
+use App\Models\Employee;
 use App\Sectors\Contracts\SectorReadiness;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 final class GovernmentReadiness implements SectorReadiness
 {
     /**
-     * @param  array{company_id: int|null, employees: \Illuminate\Support\Collection<int, \App\Models\Employee>}  $context
+     * @param  array{company_id: int|null, employees: Collection<int, Employee>}  $context
      * @return array<int, array<string, mixed>>
      */
     public function items(array $context): array

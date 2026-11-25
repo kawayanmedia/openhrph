@@ -7,6 +7,7 @@ use App\Jurisdictions\Support\JurisdictionRegistry;
 use App\Models\InstallationSetting;
 use App\Models\Payroll;
 use App\Sectors\Catalogues\SectorCatalogue;
+use App\Sectors\SectorManager;
 use App\Support\Installation\Installation;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -95,6 +96,7 @@ class InstallApplication extends Command
         });
 
         Installation::forget();
+        app(SectorManager::class)->reset();
 
         $companyCount = DB::table('companies')->count();
 

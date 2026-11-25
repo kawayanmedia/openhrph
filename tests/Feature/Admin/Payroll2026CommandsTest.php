@@ -207,6 +207,12 @@ it('reports payroll master-data quality issues when strict', function () {
 });
 
 it('writes a per-employee GSIS working paper with the BP number', function () {
+    $this->artisan('openhr:install', [
+        '--sector' => 'Government',
+        '--country' => 'PH',
+        '--skip-statutory' => true,
+    ])->assertExitCode(0);
+
     DB::table('employees')->where('id', 1)->update(['gsis_number' => '0100-0000-0001']);
     DB::table('payroll_details')->where('id', 1)->update([
         'basic_monthly_salary' => 3000000,
@@ -287,7 +293,13 @@ it('writes payslip PDFs into the evidence pack', function () {
     File::deleteDirectory($path);
 });
 
-it('writes the sector remittance set and the COA register working paper', function () {
+it('writes the government remittance set and the COA register working paper', function () {
+    $this->artisan('openhr:install', [
+        '--sector' => 'Government',
+        '--country' => 'PH',
+        '--skip-statutory' => true,
+    ])->assertExitCode(0);
+
     $directory = sys_get_temp_dir().'/sector-remittance-'.uniqid();
 
     $this->artisan('payroll:remittance', [
@@ -296,9 +308,9 @@ it('writes the sector remittance set and the COA register working paper', functi
         '--path' => $directory,
     ])->assertExitCode(0);
 
-    expect(file_exists($directory.'/remittance-sss.csv'))->toBeTrue()
+    expect(file_exists($directory.'/remittance-gsis.csv'))->toBeTrue()
         ->and(file_exists($directory.'/remittance-bir.csv'))->toBeTrue()
-        ->and(file_exists($directory.'/remittance-gsis.csv'))->toBeFalse();
+        ->and(file_exists($directory.'/remittance-sss.csv'))->toBeFalse();
 
     $coa = sys_get_temp_dir().'/coa-'.uniqid().'.csv';
 

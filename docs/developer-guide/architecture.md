@@ -93,7 +93,9 @@ flowchart LR
 - optional `indexFields`, `detailFields`, `formFields`, `cards`, `filters`, `actions`, `lenses`
 - optional authorization and redirect hooks
 
-`ResourceRegistry` discovers resource classes under `app/Livewire/Admin/Resources`, resolves them by URI key, and sorts them by priority.
+`ResourceRegistry` discovers resource classes under `app/Livewire/Admin/Resources` and
+`app/Jurisdictions/**/Admin/Resources`, resolves them by URI key, sorts them by priority, and
+hides a resource whose `$sector` or `$jurisdiction` tag does not match the installation.
 
 ### Fields
 
@@ -127,8 +129,9 @@ Companies are platform-wide records (`companies`), while their business data is 
 ## Remittances and report centre
 
 - `App\Services\Payroll\RemittanceReport` is the single source for the summary, component, SSS,
-  PhilHealth, Pag-IBIG, GSIS, BIR, COA, and loans working papers. The `payroll:remittance` command
-  and the admin report centre both call it.
+  PhilHealth, Pag-IBIG, BIR, and loans working papers. The active sector's feature pack adds its
+  own forms: the Philippines Government pack contributes the GSIS premium and COA register. The
+  `payroll:remittance` command and the admin report centre both call it.
 - `App\Services\Payroll\PayrollRegisterReport` backs `payroll:register`.
 - `App\Models\PayrollRemittance` stores filing/payment state per payroll and agency.
   `App\Services\Payroll\RemittanceSchedule` derives pending rows from the agency summary and keeps
@@ -156,6 +159,15 @@ Companies are platform-wide records (`companies`), while their business data is 
   scope as the employee record.
 - Bank details and statutory identifiers are shown in the master file and 201 file; the 201 file
   uses the `employee_identifiers` rows when present.
+
+## Government and private sectors
+
+`App\Sectors` is the switch: `SectorManager` resolves the installation sector and returns a
+`SectorPolicy`. Public-sector behaviour does not live in core. It lives in
+`App\Jurisdictions\Philippines\Government`, which supplies models, admin resources, commands,
+documents, reports and readiness items through `GovernmentFeaturePack`. The payroll engines pick
+`SssScheme` or `GsisScheme` from `statutory.social_insurance` instead of testing the sector. See
+[sectors](sectors.md).
 
 ## Universal search
 

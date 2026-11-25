@@ -16,7 +16,20 @@ class SalaryGrade extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['name', 'salary_grade_type', 'sg', 'year'];
+    protected $fillable = [
+        'name',
+        'salary_grade_type',
+        'sg',
+        'year',
+        'step1',
+        'step2',
+        'step3',
+        'step4',
+        'step5',
+        'step6',
+        'step7',
+        'step8',
+    ];
 
     /**
      * The "booted" method of the model.

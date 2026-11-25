@@ -26,7 +26,7 @@ it('resolves every government relation on the employee model', function () {
         $related = $employee->{$relation}()->getRelated();
 
         expect(class_exists($related::class))->toBeTrue(
-            "Employee::".$relation."() points at missing model ".$related::class,
+            'Employee::'.$relation.'() points at missing model '.$related::class,
         );
     }
 });
@@ -35,7 +35,7 @@ it('resolves the plantilla item relation on a job vacancy', function () {
     $related = (new JobVacancy)->plantillaItem()->getRelated();
 
     expect(class_exists($related::class))->toBeTrue(
-        "JobVacancy::plantillaItem() points at missing model ".$related::class,
+        'JobVacancy::plantillaItem() points at missing model '.$related::class,
     );
 });
 
@@ -68,7 +68,7 @@ it('does not reference government models from the old models namespace', functio
 
     foreach ($models as $model) {
         expect(class_exists('App\\Models\\'.$model))->toBeFalse(
-            "App\\Models\\".$model." still exists; it belongs in the Philippines Government module",
+            'App\\Models\\'.$model.' still exists; it belongs in the Philippines Government module',
         );
     }
 });

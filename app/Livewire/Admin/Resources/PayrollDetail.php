@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Admin\Resources;
 
+use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
 use App\Livewire\Admin\Actions\ExportCsv;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\Currency;
@@ -11,6 +13,7 @@ use App\Livewire\Admin\Filters\PayrollDetailFieldsFilter;
 use App\Livewire\Admin\Resource;
 use App\Models\Employee;
 use App\Models\PayrollGroup as PayrollGroupModel;
+use App\Support\Installation\Installation;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -49,6 +52,12 @@ class PayrollDetail extends Resource
 
     public function fields(Request $request): array
     {
+        $scheme = SchemeResolver::make(
+            Installation::sectorPolicy()->socialInsuranceAgency(),
+            [],
+            GsisSchedule::default(),
+        );
+
         return [
             Text::make('', function () {
                 return "<a class='flex-shrink-0 shadow rounded focus:outline-none ring-primary-200 dark:ring-gray-600 focus:ring bg-primary-500 hover:bg-primary-400 active:bg-primary-600 text-white dark:text-gray-800 inline-flex items-center font-bold px-4 h-9 text-sm' href='".route('payslip.show', $this->id)."' target='_new'>Pay Slip</a>";
@@ -149,12 +158,10 @@ class PayrollDetail extends Resource
 
             Heading::make('deductions'),
 
-            Currency::make('SSS', function () {
-                return $this->sss_employee + $this->sss_provident_employee;
-            })->currency(currency_symbol())->onlyOnDetail(),
-
-            Currency::make('GSIS', function () {
-                return $this->gsis_employee;
+            Currency::make($scheme->label(), function () use ($scheme) {
+                return $scheme->code() === 'gsis'
+                    ? $this->gsis_employee
+                    : $this->sss_employee + $this->sss_provident_employee;
             })->currency(currency_symbol())->onlyOnDetail(),
 
             Currency::make('Philhealth', function () {

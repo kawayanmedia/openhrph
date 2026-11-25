@@ -2,13 +2,10 @@
 
 namespace App\Jurisdictions\Philippines;
 
-use App\Jurisdictions\Philippines\Government\Console\Commands\GeneratePlantillaItemsCommand;
-use App\Jurisdictions\Philippines\Government\Console\Commands\GenerateSalaryGradeCommand;
+use App\Enums\Sector;
 use App\Jurisdictions\Philippines\Console\Commands\PayrollBir2316;
-use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollLoyaltyAwards;
-use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollStepIncrements;
-use App\Jurisdictions\Philippines\Government\Console\Commands\PayrollTerminalLeave;
 use App\Jurisdictions\Philippines\Console\Commands\PayrollWageOrderImport;
+use App\Sectors\SectorManager;
 use App\Support\Installation\Installation;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -27,14 +24,21 @@ class PhilippinesServiceProvider extends ServiceProvider
         }
 
         if ($this->app->runningInConsole()) {
+            // Register every sector's commands; each government command extends
+            // SectorCommand and refuses to run on a Private installation.
+            $packCommands = [];
+
+            foreach (Sector::cases() as $sector) {
+                $packCommands = array_merge(
+                    $packCommands,
+                    app(SectorManager::class)->for($sector)->featurePack()->commands(),
+                );
+            }
+
             $this->commands([
-                GeneratePlantillaItemsCommand::class,
-                GenerateSalaryGradeCommand::class,
                 PayrollBir2316::class,
-                PayrollLoyaltyAwards::class,
-                PayrollStepIncrements::class,
-                PayrollTerminalLeave::class,
                 PayrollWageOrderImport::class,
+                ...$packCommands,
             ]);
         }
 

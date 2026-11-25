@@ -65,7 +65,7 @@ class PayrollReadiness
 
         $sections = [
             $this->organizationSection(),
-            $this->payrollSection($group, $period),
+            $this->payrollSection($group, $period, $employees),
             $this->peopleSection($group, $employees),
             $this->attendanceSection($group, $employees, $period),
             $this->runSection(),
@@ -186,7 +186,7 @@ class PayrollReadiness
     /**
      * @return array{key: string, label: string, description: string, items: array<int, array<string, mixed>>}
      */
-    protected function payrollSection(?PayrollGroup $group, ?PayrollDate $period): array
+    protected function payrollSection(?PayrollGroup $group, ?PayrollDate $period, Collection $employees): array
     {
         $detailsComplete = $this->groupDetailsComplete($group);
         $scheduleCount = $group === null ? 0 : PayrollDate::query()
@@ -254,7 +254,7 @@ class PayrollReadiness
                             meta: 'Defaults to every pay',
                             action: $this->link('Open payroll settings', 'admin.settings', ['page' => 'payroll']),
                         ),
-                        ...$this->sectorReadinessItems(),
+                        ...$this->sectorReadinessItems($employees),
                         $this->item(
                             key: 'minimum-wage',
                             title: 'Load the regional wage orders',
@@ -735,7 +735,7 @@ class PayrollReadiness
      *
      * @return array<int, array<string, mixed>>
      */
-    protected function sectorReadinessItems(): array
+    protected function sectorReadinessItems(Collection $employees): array
     {
         $items = [];
 
@@ -745,7 +745,7 @@ class PayrollReadiness
             if ($contributor instanceof SectorReadiness) {
                 $items = array_merge($items, $contributor->items([
                     'company_id' => app(TenantContext::class)->id(),
-                    'employees' => $this->includedEmployees($this->focusGroup()),
+                    'employees' => $employees,
                 ]));
             }
         }

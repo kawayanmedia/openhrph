@@ -2,6 +2,7 @@
 
 namespace App\Sectors\Contracts;
 
+use App\Models\PayrollDetail;
 use Illuminate\Support\Collection;
 
 /**
@@ -14,7 +15,7 @@ interface RemittanceForm
     public function label(): string;
 
     /**
-     * @param  Collection<int, \App\Models\PayrollDetail>  $details
+     * @param  Collection<int, PayrollDetail>  $details
      * @return array<int, array<int, string>>
      */
     public function rows(Collection $details): array;

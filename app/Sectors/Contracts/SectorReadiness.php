@@ -2,6 +2,9 @@
 
 namespace App\Sectors\Contracts;
 
+use App\Models\Employee;
+use Illuminate\Support\Collection;
+
 /**
  * Extra readiness checklist items for a sector.
  *
@@ -11,7 +14,7 @@ namespace App\Sectors\Contracts;
 interface SectorReadiness
 {
     /**
-     * @param  array{company_id: int|null, employees: \Illuminate\Support\Collection<int, \App\Models\Employee>}  $context
+     * @param  array{company_id: int|null, employees: Collection<int, Employee>}  $context
      * @return array<int, array<string, mixed>>
      */
     public function items(array $context): array;

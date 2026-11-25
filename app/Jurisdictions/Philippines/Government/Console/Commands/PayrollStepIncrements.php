@@ -2,10 +2,10 @@
 
 namespace App\Jurisdictions\Philippines\Government\Console\Commands;
 
+use App\Console\Commands\SectorCommand;
 use App\Models\Employee;
 use App\Services\HrAudit;
 use App\Support\Installation\Installation;
-use App\Console\Commands\SectorCommand;
 use Illuminate\Support\Facades\DB;
 
 /**

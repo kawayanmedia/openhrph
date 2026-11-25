@@ -46,6 +46,7 @@ class PlantillaItem extends Resource
 
             BelongsTo::make('Office')
                 ->withoutTrashed()
+                ->rules('required')
                 ->options(Office::orderBy('name')->pluck('name', 'id')->toArray()),
 
             Number::make('Salary Grade', 'salary_grade')

@@ -2,9 +2,9 @@
 
 namespace App\Jurisdictions\Philippines\Government\Console\Commands;
 
+use App\Console\Commands\SectorCommand;
 use App\Console\Concerns\RunsForTenants;
 use App\Jurisdictions\Philippines\Government\Models\SalaryGrade;
-use App\Console\Commands\SectorCommand;
 
 class GenerateSalaryGradeCommand extends SectorCommand
 {

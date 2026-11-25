@@ -2,6 +2,8 @@
 
 namespace App\Sectors\Contracts;
 
+use App\Livewire\Admin\Fields\Field;
+
 /**
  * The screens, commands and reports a sector contributes.
  *
@@ -28,7 +30,7 @@ interface SectorFeaturePack
     /**
      * Form fields for employee records that only apply to this sector.
      *
-     * @return array<int, \App\Livewire\Admin\Fields\Field>
+     * @return array<int, Field>
      */
     public function employeeFields(): array;
 

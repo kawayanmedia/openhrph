@@ -69,17 +69,44 @@ retirement, BIR forms, CS Form 212, SALN, and COA payroll audit rules.
 ## Architecture
 
 ```text
-app/Enums/Sector.php                       Government | Private
-app/Sectors/SectorManager.php              current / for / forCompany
-app/Sectors/Contracts/SectorPolicy.php     the contract consumers depend on
-app/Sectors/ConfigurableSector.php         config-backed implementation
-app/Sectors/GovernmentSector.php           public-sector policy
-app/Sectors/PrivateSector.php              private-sector policy
-app/Sectors/Support/SectorProfile.php      typed config DTO
-app/Sectors/Support/FeatureSet.php         named capabilities
-app/Sectors/Catalogues/…                   employment, leave, document, sector seeders
-app/Jurisdictions/<Country>/Config/sector.php  country-specific sector differences
-config/sectors.php                         installation default only
+app/Enums/Sector.php                          Government | Private
+app/Sectors/SectorManager.php                 current / for / forCompany
+app/Sectors/Contracts/SectorPolicy.php        the contract consumers depend on
+app/Sectors/Contracts/SectorFeaturePack.php   screens, commands, reports a sector adds
+app/Sectors/Contracts/SectorReadiness.php     extra readiness checks
+app/Sectors/Contracts/RemittanceForm.php      one remittance working paper
+app/Sectors/Contracts/DocumentTemplate.php    one printable HR document
+app/Sectors/ConfigurableSector.php            config-backed implementation
+app/Sectors/GovernmentSector.php              public-sector policy
+app/Sectors/PrivateSector.php                 private-sector policy
+app/Sectors/Support/{SectorProfile,FeatureSet,NullFeaturePack}.php
+app/Sectors/Catalogues/…                      employment, leave, document, sector seeders
+app/Jurisdictions/<Country>/Config/sector.php country-specific sector differences
+config/sectors.php                            installation default only
+```
+
+Public-sector code lives in one place: `app/Jurisdictions/Philippines/Government/`.
+
+```text
+app/Jurisdictions/Philippines/Government/
+├── GovernmentFeaturePack.php      implements SectorFeaturePack
+├── Models/                        PDS, NOSA, plantilla, salary grade, service record
+├── Admin/Resources/               PlantillaItem, SalaryGrade, Nosa, ServiceRecord, LeaveCard
+├── Admin/menu.php                 the Government menu section
+├── Console/Commands/              plantilla, salary-grade, step, loyalty, terminal leave
+├── Database/Seeders/              salary-grade and plantilla reference data
+└── Support/ Reports/ Documents/   readiness, employee fields, GSIS/COA, templates
+```
+
+`app/Jurisdictions/Philippines/Statutory` is country law for **both** sectors
+(SSS, PhilHealth, Pag-IBIG, BIR) plus the GSIS calculator. The social-insurance
+choice is a strategy under `Statutory/Schemes`:
+
+```text
+Schemes/SocialInsuranceScheme.php   code, label, identifier field, compute()
+Schemes/SssScheme.php               private sector (RA 11199)
+Schemes/GsisScheme.php              public sector (RA 8291)
+Schemes/SchemeResolver.php          agency code -> scheme
 ```
 
 `SectorManager` resolves in this order:
@@ -96,33 +123,55 @@ use App\Sectors\SectorManager;
 
 $policy = app(SectorManager::class)->current();
 
-$policy->sector();             // Sector::Government
-$policy->supports('plantilla');// true
-$policy->leaveTypes();         // catalogue rows
-$policy->remittances();        // ['remittances' => [...], ...]
+$policy->sector();                          // Sector::Government
+$policy->socialInsuranceAgency();           // gsis
+$policy->leaveConversionTaxableDays();      // null = fully exempt
+$policy->featurePack()->adminResources();   // government screens
+$policy->featurePack()->remittanceForms();  // gsis and coa working papers
 ```
+
+Core code never tests the sector. It asks the policy, the feature pack, or the
+social-insurance scheme. The only compatibility shims left are the deprecated
+`is_government` JSON field and `Installation::isGovernment()`, both kept for
+older parity fixtures and templates.
 
 Sector-tagged resources and menu items are hidden from the other sector:
 
 ```php
-// app/Livewire/Admin/Resources/PlantillaItem.php
+// app/Jurisdictions/Philippines/Government/Admin/Resources/PlantillaItem.php
 public static ?string $sector = 'Government';
+public static ?string $jurisdiction = 'PH';
 ```
 
 ```php
-// config/admin.php
-['type' => 'resource', 'key' => 'plantilla-item', 'sector' => 'Government'],
+// app/Jurisdictions/Philippines/Government/Admin/menu.php
+['label' => 'Government', 'sector' => 'Government', 'jurisdiction' => 'PH', …]
 ```
+
+The government menu is merged by `Navigation` from the active feature pack, so a
+Private installation never sees the section even though the classes are loaded.
 
 ### Payroll and the Go engine
 
-`App\Services\Payroll\Computation\Config` carries both `sector` and the legacy
-`is_government` flag. `is_government` stays in the JSON contract so older parity
-fixtures keep working; the Go engine derives `Sector` from the company type.
+`App\Services\Payroll\Computation\Config` carries `sector`,
+`social_insurance` (`sss` or `gsis`) and `leave_conversion_taxable_days`.
+`is_government` remains in the JSON contract so older parity fixtures keep
+working; new code reads the scheme. The Go engine mirrors this with
+`Config.SocialInsurance` and `Config.LeaveConversionTaxableDays`.
 
 The PHP calculators live under `App\Jurisdictions\Philippines\Statutory`. That
 namespace is **Philippine statutory law**, not public-sector policy. Do not put
 Government-only HR rules there.
+
+### One schema
+
+Government tables (`plantilla_items`, `salary_grades`, `nosas`,
+`service_records`, `leave_cards`, `employees_plantilla`) stay in the shared
+schema. They are created for every installation and only seeded or surfaced when
+the sector is Government. This keeps `openhr:install --force`, historical payroll
+and rollback simple. `openhr:sector:audit` reports foreign-sector rows,
+`openhr:sector:prune --apply` deactivates foreign catalogue rows, and
+`openhr:sector:repair --apply` re-pins company types.
 
 ### Catalogues
 
@@ -153,25 +202,36 @@ Leave types are system-wide, like compensations. `leave_types.company_id` is nul
 
 | Command | Sector | Purpose |
 | --- | --- | --- |
+| `plantilla:generate` | Government | Create plantilla items from employee records |
+| `salary_grade:generate` | Government | Copy a salary schedule to the next year |
 | `payroll:step-increments` | Government | Report or apply the next salary step |
 | `payroll:loyalty-awards` | Government | Report or create the loyalty cash gift assignment |
 | `payroll:terminal-leave` | Government | Compute terminal leave for separated employees |
 | `payroll:documents` | both | Print the sector document/identifier checklist |
 | `payroll:remittance --format=sector` | both | Write the sector's remittance set |
 | `payroll:remittance --format=coa` | Government | COA-style payroll register working paper |
+| `openhr:sector:audit` | both | Report rows that do not match the installation sector |
+| `openhr:sector:prune` | both | Deactivate foreign-sector catalogue rows |
+| `openhr:sector:repair` | both | Re-pin every company to the installation sector |
 
-All write-capable commands are dry runs unless `--apply` is passed. They record
-to `hr_audit_events`.
+All write-capable commands are dry runs unless `--apply` is passed. Government
+commands extend `App\Console\Commands\SectorCommand` and refuse to run when the
+installation sector does not match.
 
 ## Adding a sector
 
-1. Add a case to `App\Enums\Sector`.
-2. Add a profile to the jurisdiction's `Config/sector.php` with the same keys as the others and return it from `Jurisdiction::sectorProfile()`.
+1. Add a case to `App\Enums\Sector` with `socialInsuranceAgency()`.
+2. Add a profile to the jurisdiction's `Config/sector.php` with the same keys as
+   the others and return it from `Jurisdiction::sectorProfile()`.
 3. Add a class extending `ConfigurableSector` and return it from
    `SectorManager::make()`.
-4. Extend `openhr:install` if the new sector needs a new installer choice.
+4. Add a `SectorFeaturePack` for the sector's screens, menu, commands,
+   readiness, remittance forms, employee fields and journal accounts; return its
+   class from `Jurisdiction::sectorFeaturePack()`.
 5. Add the sector to the resource/menu tags and to the tests in
-   `tests/Unit/SectorTest.php` and `tests/Feature/Admin/SectorCatalogueTest.php`.
+   `tests/Unit/SectorTest.php`, `tests/Feature/Admin/SectorCatalogueTest.php` and
+   `tests/Feature/Admin/SectorBoundaryTest.php`.
 
 The profile-completeness test fails when the new profile omits a key, which keeps
-the three profiles structurally aligned.
+the profiles structurally aligned. `SectorBoundaryTest` fails when sector
+branching leaks outside `app/Sectors` and the Government module.

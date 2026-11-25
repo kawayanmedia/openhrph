@@ -20,6 +20,7 @@ class Nosa extends Model
     protected $fillable = [
         'office_id',
         'employee_id',
+        'plantilla_item_id',
         'item_number',
         'from_salary_grade',
         'from_step',

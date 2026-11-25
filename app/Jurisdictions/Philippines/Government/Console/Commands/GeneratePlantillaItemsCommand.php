@@ -2,10 +2,10 @@
 
 namespace App\Jurisdictions\Philippines\Government\Console\Commands;
 
-use App\Console\Concerns\RunsForTenants;
-use App\Models\Employee;
-use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
 use App\Console\Commands\SectorCommand;
+use App\Console\Concerns\RunsForTenants;
+use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
+use App\Models\Employee;
 
 class GeneratePlantillaItemsCommand extends SectorCommand
 {

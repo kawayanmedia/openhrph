@@ -12,7 +12,20 @@ class ServiceRecord extends Model
     use FilterScope;
     use SoftDeletes;
 
-    protected $fillable = ['date_from', 'date_to', 'designation'];
+    protected $fillable = [
+        'employee_id',
+        'date_from',
+        'date_to',
+        'designation',
+        'status',
+        'salary',
+        'office_entity',
+        'branch',
+        'remarks',
+        'lwop',
+        'separation_date',
+        'separation_cause',
+    ];
 
     protected $table = 'service_records';
 
