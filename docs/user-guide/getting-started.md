@@ -85,6 +85,8 @@ company remits GSIS instead of SSS.
 
 ## Find your way around
 
+![Dashboard showing setup progress, employee and office totals, pending requests, and the latest payroll runs](../images/admin-dashboard-light.png)
+
 The left sidebar contains the areas your group allows:
 
 - **Dashboard** — an overview of the workspace.

@@ -108,6 +108,8 @@ Add `--employee=ID` (repeatable) to restrict a run.
 2. Create a payroll for the period, or open an existing one.
 3. Check the payroll group, payroll date, cut-off, and date range.
 
+![Payroll list showing an open run for the current period and the Run payroll action](../images/admin-payroll-list-light.png)
+
 The payroll run page shows a step indicator and the payroll status.
 
 ## The payroll flow
@@ -125,6 +127,8 @@ Use the preview to check:
 - missing attendance or incomplete records
 
 Preview is a dry run. It is safe to repeat.
+
+![Payroll run preview with the step indicator, headcount, gross pay, deductions, net pay, and the employee register](../images/admin-payroll-run-preview-light.png)
 
 ### 2. Process
 
@@ -146,6 +150,8 @@ When processing finishes, the status becomes **processed**. Review the payroll d
 - statutory contributions and tax
 - employer contributions
 - totals and headcount
+
+![Processed payroll with the review panel and a register that links to each employee's payslip](../images/admin-payroll-run-processed-light.png)
 
 ### 4. Approve and lock
 

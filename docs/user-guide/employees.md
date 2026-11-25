@@ -16,6 +16,8 @@ This page helps you keep employee records complete and ready for attendance and 
 3. Use the filters to narrow the list.
 4. Select a row to view it, or choose **Edit** to change it.
 
+![Employee list with the search box, employment type and office filters, and the actions for each row](../images/admin-employees-list-light.png)
+
 ## Create an employee
 
 ![Create form in light mode](../images/admin-form-light.png)
