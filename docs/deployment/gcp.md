@@ -326,7 +326,7 @@ The stack creates billable resources even when idle:
 - Network egress
 - Optional Cloud DNS zone and queries
 
-Use the Google Cloud Pricing Calculator for current regional prices. Stop the instance when it is not needed; the disk and bucket remain billable.
+Use the Google Cloud Pricing Calculator for current regional prices. Stop the instance when it is not needed; the disk and bucket remain billable. [Serverless and pause-when-idle](serverless.md) covers scheduling that stop and start, health checks after a restart, and the compute-and-database-pause alternatives.
 
 ## 10. Teardown
 

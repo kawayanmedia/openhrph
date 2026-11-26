@@ -114,6 +114,7 @@ const config: Config = {
             {label: 'Docker Compose', to: '/docs/deployment/docker'},
             {label: 'Operations', to: '/docs/deployment/operations'},
             {label: 'Laravel Cloud', to: '/docs/deployment/laravel-cloud'},
+            {label: 'Serverless / pause when idle', to: '/docs/deployment/serverless'},
             {label: 'Desktop app', to: '/docs/deployment/desktop'},
           ],
         },

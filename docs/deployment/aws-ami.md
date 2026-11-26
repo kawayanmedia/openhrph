@@ -268,6 +268,8 @@ The stack creates billable resources even when idle:
 - Optional ALB, Route 53 hosted zone, and ACM (ACM public certificates are free)
 - Optional Multi-AZ RDS
 
+If the installation is only used during office hours, [Serverless and pause-when-idle](serverless.md) shows how to stop the instance and database between shifts.
+
 Use the AWS Pricing Calculator for current regional prices. For a disposable test, set `db_instance_class = "db.t3.micro"`, `deletion_protection = false`, and `skip_final_snapshot = true`.
 
 ## 10. Teardown

@@ -5,7 +5,7 @@ description: Deploy OpenHR PH with Docker Compose, AWS, GCP, Azure, or managed L
 
 # Deployment overview
 
-OpenHR PH can run as a Docker Compose stack, on a golden-image VM in AWS, GCP, or Azure, or on managed Laravel hosting. Choose the path that matches your team's operational capacity.
+OpenHR PH can run as a Docker Compose stack, on a golden-image VM in AWS, GCP, or Azure, on managed Laravel hosting, or serverless so an idle installation stops billing. Choose the path that matches your team's operational capacity and budget.
 
 | Option | Best for | Trade-offs |
 | --- | --- | --- |
@@ -15,7 +15,7 @@ OpenHR PH can run as a Docker Compose stack, on a golden-image VM in AWS, GCP, o
 | [Azure image + Terraform](azure.md) | Teams running on Microsoft Azure that want a golden image and native MySQL | Single VM; you own patching, backups, and scaling |
 | [Laravel Cloud](laravel-cloud.md) | Teams that want managed PHP hosting, queues, and databases | Less infrastructure control; the Go payroll binary and some PHP extensions need verification |
 | [Desktop app](desktop.md) | Single-workstation or offline installs that need no server, MySQL, or terminal | Local SQLite data; no multi-device sync; uses the PHP payroll driver |
-| Laravel Vapor | Existing Vapor users | Vapor is Lambda-based; long payroll runs, local binaries, and WebSockets need extra design |
+| [Serverless and pause-when-idle](serverless.md) | Installations that must stop billing when nobody is using them: AWS Vapor + Aurora Serverless v2, GCP Cloud Run, Azure Container Apps, or pausing the existing VM stacks | Cold starts; payroll must be queued; on GCP and Azure the database only stops if you accept downtime |
 
 ## Before deploying
 
@@ -44,4 +44,4 @@ Application secrets are never baked into the image. Terraform writes an encrypte
 
 The Docker path builds the same application once and runs it with Nginx, PHP-FPM, queue workers, a scheduler, and MySQL 8 in Compose.
 
-Continue with [Docker Compose](docker.md), [AWS AMI deployment](aws-ami.md), [GCP deployment](gcp.md), or [Azure deployment](azure.md). For an install that runs on a single workstation without a server, see [Desktop app](desktop.md).
+Continue with [Docker Compose](docker.md), [AWS AMI deployment](aws-ami.md), [GCP deployment](gcp.md), or [Azure deployment](azure.md). For an install that runs on a single workstation without a server, see [Desktop app](desktop.md). To stop paying for capacity nobody is using, see [Serverless and pause-when-idle](serverless.md).

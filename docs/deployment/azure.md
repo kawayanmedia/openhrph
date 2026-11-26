@@ -400,7 +400,7 @@ The stack creates billable resources even when idle:
 - Network egress
 - Optional Azure DNS zone and queries
 
-Use the Azure Pricing Calculator for current regional prices. Deallocate the VM when it is not needed; the disks, public IP, and storage remain billable.
+Use the Azure Pricing Calculator for current regional prices. Deallocate the VM when it is not needed; the disks, public IP, and storage remain billable. [Serverless and pause-when-idle](serverless.md) covers scheduling that stop and start, health checks after a restart, and the compute-and-database-pause alternatives.
 
 ## 10. Teardown
 

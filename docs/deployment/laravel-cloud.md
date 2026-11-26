@@ -93,17 +93,7 @@ Demo companies are not removed automatically. Plan a retention window and delete
 
 ## Vapor
 
-The repository includes a starter `vapor.yml`, but it targets an older PHP runtime. Before using Vapor:
-
-- Update the runtime to a PHP version supported by Laravel 13 and the provider.
-- Add a build step for `make -C payroll-engine build`.
-- Account for Lambda time limits. Payroll runs above the inline threshold are queued; make sure the queue worker timeout fits the platform.
-- Provide a VPC connection if the database is private.
-- Store media in S3.
-- Use a persistent cache/session store.
-- Configure WebSockets separately if you enable Reverb.
-
-Vapor's Lambda model does not keep a long-running local filesystem or a single scheduler process, so verify every operational assumption before production.
+The repository includes a `vapor.yml`, but it is a starter file and serverless deployments need more than a manifest. Use [Serverless and pause-when-idle](serverless.md) as the authoritative guide: it contains a corrected manifest, the payroll build step, an Aurora Serverless v2 cluster with a 0 ACU minimum so the database pauses when idle, and the DynamoDB/SQS/S3 environment this application needs.
 
 ## Managed hosting checklist
 
