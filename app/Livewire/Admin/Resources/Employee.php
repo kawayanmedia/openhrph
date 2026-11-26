@@ -16,6 +16,7 @@ use App\Livewire\Admin\Fields\Heading;
 use App\Livewire\Admin\Fields\ID;
 use App\Livewire\Admin\Fields\Select;
 use App\Livewire\Admin\Fields\Text;
+use App\Livewire\Admin\Filters\EmployeeReadiness;
 use App\Livewire\Admin\Filters\EmploymentStatus;
 use App\Livewire\Admin\Filters\OfficeFilter;
 use App\Livewire\Admin\Resource;
@@ -418,6 +419,7 @@ class Employee extends Resource
         return [
             new EmploymentStatus,
             new OfficeFilter,
+            new EmployeeReadiness,
         ];
     }
 

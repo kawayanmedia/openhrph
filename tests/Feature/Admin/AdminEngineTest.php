@@ -333,3 +333,47 @@ it('only saves settings for the current company', function () {
         ->and($otherSetting->refresh()->value)->toBe('Theirs')
         ->and($other->company_id)->toBe(2);
 });
+
+it('filters the employee list to the records a checklist step needs', function () {
+    Employee::factory()->create([
+        'company_id' => 1,
+        'employee_number' => 'E-READY',
+        'first_name' => 'Ana',
+        'last_name' => 'Ready',
+        'basic_salary' => 3000000,
+        'daily_rate' => 0,
+        'payment_type' => Employee::PAYMENT_TYPE_MONTHLY,
+        'payroll_group_id' => 1,
+        'sss_number' => '00-0000000-0',
+        'philhealth_number' => '00-000000000-0',
+        'hdmf_number' => '0000-0000-0000',
+        'tin_number' => '000-000-000-000',
+        'tax_status' => 'S',
+    ]);
+
+    Employee::factory()->create([
+        'company_id' => 1,
+        'employee_number' => 'E-MISSING',
+        'first_name' => 'Ben',
+        'last_name' => 'Missing',
+        'basic_salary' => 0,
+        'daily_rate' => 0,
+        'payment_type' => '',
+        'payroll_group_id' => null,
+    ]);
+
+    $this->withoutVite()
+        ->get(route('admin.resource.index', [
+            'resource' => 'employee',
+            'filter' => ['employee-readiness' => 'pay-details'],
+        ]))
+        ->assertOk()
+        ->assertSee('Missing, Ben')
+        ->assertDontSee('Ready, Ana');
+});
+
+it('keeps the readiness filter in the url', function () {
+    Livewire::test(AdminIndex::class, ['resource' => 'employee'])
+        ->set('filterValues.employee-readiness', 'tax-status')
+        ->assertSet('filterValues.employee-readiness', 'tax-status');
+});

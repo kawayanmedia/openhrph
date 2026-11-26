@@ -9,16 +9,9 @@ class ProcessPayrollAction extends BaseAction
 {
     use AsAction;
 
-    // public function handle(User $user, string $newPassword)
-    // {
-    //     $user->password = Hash::make($newPassword);
-    //     $user->save();
-    // }
-
     public function handle()
     {
-        return 111;
-        dd(111);
+        // Implement payroll processing logic here
     }
 
     // We can add this as controller route

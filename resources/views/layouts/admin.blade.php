@@ -103,6 +103,13 @@
                                     </div>
                                     <a href="{{ route('admin.resource.edit', ['resource' => 'change-password', 'resourceId' => Auth::id()]) }}"
                                        class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-navy-800">Change password</a>
+                                    @if (\App\Services\Desktop\DesktopEnvironment::isRunning())
+                                        <div class="border-t border-slate-100 px-4 py-2 dark:border-navy-800">
+                                            <p class="text-[0.7rem] text-slate-500 dark:text-slate-400">
+                                                OpenHR PH desktop v{{ config('nativephp.version') }}
+                                            </p>
+                                        </div>
+                                    @endif
                                     <form method="POST" action="{{ route('admin.logout') }}">
                                         @csrf
                                         <button type="submit" class="block w-full px-4 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10">Sign out</button>

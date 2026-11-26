@@ -65,12 +65,26 @@
     </nav>
 
     <div class="border-t border-white/5 p-3">
+        @if (\App\Services\Desktop\DesktopEnvironment::isRunning())
+            <a href="{{ route('admin.updates') }}"
+               class="ui-nav-link mb-2 {{ request()->routeIs('admin.updates') ? 'ui-nav-link-active' : 'ui-nav-link-idle' }}"
+               title="Software update">
+                <span class="h-1.5 w-1.5 rounded-full bg-teal-400"></span>
+                <span class="truncate">Software update</span>
+            </a>
+        @endif
+
         <div class="rounded-xl bg-white/5 px-3 py-3">
             <p class="text-xs font-semibold text-white">Payroll engine</p>
             @php($engineDriver = strtolower((string) config('payroll.engine.driver', 'go')))
             <p class="mt-1 text-[0.7rem] leading-relaxed text-slate-400">
                 {{ $engineDriver === 'go' ? 'Go engine' : 'PHP engine' }} · Philippine statutory rates
             </p>
+            @if (\App\Services\Desktop\DesktopEnvironment::isRunning())
+                <p class="mt-1 text-[0.7rem] text-slate-500">
+                    Desktop v{{ config('nativephp.version') }}
+                </p>
+            @endif
         </div>
     </div>
 </aside>

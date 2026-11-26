@@ -20,6 +20,7 @@ use App\Livewire\Admin\Payroll\PayrollRun;
 use App\Livewire\Admin\Reports\EmployeeMasterFile as EmployeeMasterFileReport;
 use App\Livewire\Admin\Reports\Remittances as RemittancesReport;
 use App\Livewire\Admin\Settings\Settings;
+use App\Livewire\Admin\SoftwareUpdate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,8 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
         Route::get('dashboard', Main::class)->name('dashboard');
 
         Route::get('getting-started', GettingStarted::class)->name('getting-started');
+
+        Route::get('updates', SoftwareUpdate::class)->name('updates');
 
         Route::get('imports', DataImport::class)->name('import');
         Route::get('imports/template', ImportTemplateController::class)->name('import.template');

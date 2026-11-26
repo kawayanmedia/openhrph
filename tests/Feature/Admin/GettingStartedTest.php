@@ -169,3 +169,22 @@ it('hides the setup progress banner once payroll is ready', function () {
 
     expect($html)->not->toContain('Finish setting up payroll');
 });
+
+it('links each people step to the employees that still need it', function () {
+    $people = collect(app(PayrollReadiness::class)->summary()['sections'])
+        ->firstWhere('key', 'people');
+
+    $expected = [
+        'employees' => 'unassigned',
+        'employee-pay' => 'pay-details',
+        'government-ids' => 'government-ids',
+        'tax-status' => 'tax-status',
+    ];
+
+    foreach ($people['items'] as $item) {
+        expect($item['action']['url'])->toBe(route('admin.resource.index', [
+            'resource' => 'employee',
+            'filter' => ['employee-readiness' => $expected[$item['key']]],
+        ]));
+    }
+});

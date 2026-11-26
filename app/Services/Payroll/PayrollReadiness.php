@@ -3,6 +3,7 @@
 namespace App\Services\Payroll;
 
 use App\Actions\GeneratePayrollDateAction;
+use App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme;
 use App\Models\AttendanceShift;
 use App\Models\Employee;
 use App\Models\EmployeeSchedule;
@@ -15,9 +16,6 @@ use App\Models\PayrollGroup;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Timesheet;
-use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
-use App\Jurisdictions\Philippines\Statutory\Schemes\SchemeResolver;
-use App\Jurisdictions\Philippines\Statutory\Schemes\SocialInsuranceScheme;
 use App\Sectors\Contracts\SectorReadiness;
 use App\Sectors\SectorManager;
 use App\Services\Payroll\Statutory\ComponentResolver;
@@ -38,7 +36,6 @@ class PayrollReadiness
     protected ?PayrollGroup $focusGroup = null;
 
     protected bool $focusGroupResolved = false;
-
 
     /**
      * The full readiness report.
@@ -314,7 +311,7 @@ class PayrollReadiness
                     meta: $assigned > 0
                         ? $this->plural($assigned, 'employee').' assigned'
                         : ($group === null ? 'Waiting for a payroll group' : 'No employees assigned yet'),
-                    action: $this->link('Manage employees', 'admin.resource.index', ['resource' => 'employee']),
+                    action: $this->employeeAction('unassigned'),
                 ),
                 $this->item(
                     key: 'employee-pay',
@@ -325,7 +322,7 @@ class PayrollReadiness
                     meta: $employees->isEmpty()
                         ? 'Waiting for employees'
                         : "{$payable->count()} of {$employees->count()} employees ready",
-                    action: $this->link('Review employees', 'admin.resource.index', ['resource' => 'employee']),
+                    action: $this->employeeAction('pay-details'),
                 ),
                 $this->item(
                     key: 'government-ids',
@@ -336,7 +333,7 @@ class PayrollReadiness
                     meta: $employees->isEmpty()
                         ? null
                         : "{$governmentIds->count()} of {$employees->count()} employees complete",
-                    action: $this->link('Review employees', 'admin.resource.index', ['resource' => 'employee']),
+                    action: $this->employeeAction('government-ids'),
                 ),
                 $this->item(
                     key: 'tax-status',
@@ -347,7 +344,7 @@ class PayrollReadiness
                     meta: $employees->isEmpty()
                         ? null
                         : "{$taxStatus->count()} of {$employees->count()} employees complete",
-                    action: $this->link('Review employees', 'admin.resource.index', ['resource' => 'employee']),
+                    action: $this->employeeAction('tax-status'),
                 ),
             ],
         ];
@@ -722,12 +719,7 @@ class PayrollReadiness
      */
     protected function socialInsurance(): SocialInsuranceScheme
     {
-        $companyId = app(TenantContext::class)->id();
-        $agency = $companyId === null
-            ? 'sss'
-            : app(SectorManager::class)->forCompany($companyId)->socialInsuranceAgency();
-
-        return SchemeResolver::make($agency, [], GsisSchedule::default());
+        return SocialInsuranceResolver::current();
     }
 
     /**
@@ -845,6 +837,20 @@ class PayrollReadiness
             'url' => $route === null ? null : route($route, $parameters ?? []),
             'method' => $method,
         ];
+    }
+
+    /**
+     * Link to the employee list narrowed to the records a step still needs.
+     *
+     * The value matches an option of the admin `employee-readiness` filter,
+     * which mirrors the checks made above.
+     */
+    protected function employeeAction(string $readiness): array
+    {
+        return $this->link('Review employees', 'admin.resource.index', [
+            'resource' => 'employee',
+            'filter' => ['employee-readiness' => $readiness],
+        ]);
     }
 
     /**

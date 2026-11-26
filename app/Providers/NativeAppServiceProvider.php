@@ -26,7 +26,7 @@ class NativeAppServiceProvider implements ProvidesPhpIni
 
         Window::open()
             ->route($this->startRoute())
-            ->title(config('app.name'))
+            ->title($this->windowTitle())
             ->width(1360)
             ->height(860)
             ->minWidth(1100)
@@ -46,6 +46,16 @@ class NativeAppServiceProvider implements ProvidesPhpIni
         }
 
         return $installed ? 'admin.login' : 'desktop.setup';
+    }
+
+    /**
+     * The window title, with the bundled version so support can identify the build.
+     */
+    private function windowTitle(): string
+    {
+        $version = (string) config('nativephp.version', '');
+
+        return $version === '' ? (string) config('app.name') : config('app.name').' '.$version;
     }
 
     /**

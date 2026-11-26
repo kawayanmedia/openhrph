@@ -44,12 +44,20 @@
                 </ul>
             </div>
 
-            <p class="relative text-xs text-slate-400">© {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+            <p class="relative text-xs text-slate-400">
+                © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.@if (\App\Services\Desktop\DesktopEnvironment::isRunning()) · v{{ config('nativephp.version') }}@endif
+            </p>
         </aside>
 
         <main class="flex w-full flex-col justify-center px-6 py-12 lg:w-1/2 lg:px-16">
             <div class="mx-auto w-full max-w-sm">
                 {{ $slot }}
+
+                @if (\App\Services\Desktop\DesktopEnvironment::isRunning())
+                    <p class="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                        OpenHR PH desktop v{{ config('nativephp.version') }}
+                    </p>
+                @endif
             </div>
         </main>
     </div>

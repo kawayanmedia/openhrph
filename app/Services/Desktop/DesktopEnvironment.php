@@ -2,6 +2,7 @@
 
 namespace App\Services\Desktop;
 
+use App\Support\Installation\Installation;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -16,6 +17,8 @@ use Throwable;
  */
 final class DesktopEnvironment
 {
+    private const KEY_MIGRATED_VERSION = 'desktop_migrated_version';
+
     public static function isRunning(): bool
     {
         if ((bool) config('nativephp-internal.running', false)) {
@@ -53,12 +56,14 @@ final class DesktopEnvironment
     }
 
     /**
-     * Create the SQLite schema on a fresh install.
+     * Create the SQLite schema on a fresh install and keep it current after an
+     * in-app update.
      *
      * NativePHP only runs `migrate` when its stored app version changes, so an
      * existing install that lost its database (or a rebuilt app shipped under
-     * the same version) would serve pages against an empty file. Every page —
-     * and the setup wizard — needs the cache, session and users tables.
+     * the same version) would serve pages against an empty file. The version
+     * check below repeats NativePHP's migration on the PHP side, so a failed
+     * or skipped shell migration cannot leave the app on an old schema.
      */
     public static function ensureDatabaseIsMigrated(): void
     {
@@ -67,15 +72,41 @@ final class DesktopEnvironment
         }
 
         try {
-            if (Schema::hasTable('migrations')) {
+            if (! Schema::hasTable('migrations')) {
+                Artisan::call('migrate', ['--force' => true]);
+
                 return;
             }
 
-            Artisan::call('migrate', ['--force' => true]);
+            self::migratePendingForCurrentVersion();
         } catch (Throwable $exception) {
-            // Leave the failure in the log; the setup wizard reports it with
-            // the command output when the owner retries the installation.
+            // Leave the failure in the log; the setup wizard and the software
+            // update screen report it with the command output on retry.
             report($exception);
+        }
+    }
+
+    /**
+     * Apply outstanding migrations once per bundled application version.
+     */
+    private static function migratePendingForCurrentVersion(): void
+    {
+        $version = (string) config('nativephp.version', '');
+
+        if ($version === '') {
+            return;
+        }
+
+        if (Installation::get(self::KEY_MIGRATED_VERSION) === $version) {
+            return;
+        }
+
+        if (DesktopUpdater::pendingMigrations() !== []) {
+            Artisan::call('migrate', ['--force' => true]);
+        }
+
+        if (Schema::hasTable('installation_settings')) {
+            Installation::set(self::KEY_MIGRATED_VERSION, $version);
         }
     }
 

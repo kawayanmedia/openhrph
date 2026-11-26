@@ -4,8 +4,8 @@ namespace App\Actions;
 
 class BaseAction
 {
-    // public function execute()
-    // {
+    public function execute()
+    {
 
-    // }
+    }
 }

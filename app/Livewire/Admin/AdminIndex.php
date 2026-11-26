@@ -41,6 +41,11 @@ class AdminIndex extends Component
     #[Url]
     public int $perPage = 25;
 
+    /**
+     * Filter values keyed by filter URI key, kept in the query string so a
+     * filtered list can be linked to (Getting started uses this) and shared.
+     */
+    #[Url(as: 'filter')]
     public array $filterValues = [];
 
     public array $selected = [];

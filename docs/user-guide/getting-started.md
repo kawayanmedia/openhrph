@@ -13,8 +13,27 @@ in. Delete the `D-000x` sample employees once you add your own; empty workspaces
 from **Getting started → Load sample data**.
 
 All data is stored on that computer. To move an installation, close the app and copy its data folder;
-the path for each operating system is listed in [Desktop app](../deployment/desktop.md). Later
-versions update themselves from the application's releases page.
+the path for each operating system is listed in [Desktop app](../deployment/desktop.md).
+
+The installed version is shown at the bottom of the sidebar, in the account menu, and on the
+**Software update** page. That page updates the application: select **Check for updates**, wait for
+the download to finish, then **Restart and install**. Migrations for the new version are applied the
+first time it starts; **Run migrations** is there if a page ever reports a missing column or table.
+
+## Finish setting up payroll
+
+**Getting started** lists the steps a company needs before its first payroll run. Each step that
+names employees opens the employee list already filtered to the records that still need that step:
+
+| Step | Opens |
+| --- | --- |
+| Add employees to the payroll group | Employees not yet in a payroll group |
+| Set basic salary or daily rate | Employees without a basic salary or daily rate |
+| Record government IDs | Employees missing SSS/GSIS, PhilHealth, Pag-IBIG or TIN numbers |
+| Set tax status and dependants | Employees without a tax status |
+
+The filter stays in the address (`?filter[employee-readiness]=…`), so the list can be bookmarked or
+shared. Clear it from the filter bar to return to all employees.
 
 ## Before you start
 

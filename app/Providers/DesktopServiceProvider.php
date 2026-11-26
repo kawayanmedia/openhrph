@@ -3,9 +3,18 @@
 namespace App\Providers;
 
 use App\Http\Middleware\BlockNativeRoutes;
+use App\Listeners\RecordDesktopUpdateEvent;
 use App\Services\Desktop\DesktopEnvironment;
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Native\Desktop\Events\AutoUpdater\CheckingForUpdate;
+use Native\Desktop\Events\AutoUpdater\DownloadProgress;
+use Native\Desktop\Events\AutoUpdater\Error;
+use Native\Desktop\Events\AutoUpdater\UpdateAvailable;
+use Native\Desktop\Events\AutoUpdater\UpdateCancelled;
+use Native\Desktop\Events\AutoUpdater\UpdateDownloaded;
+use Native\Desktop\Events\AutoUpdater\UpdateNotAvailable;
 use Native\Desktop\Http\Middleware\PreventRegularBrowserAccess;
 
 class DesktopServiceProvider extends ServiceProvider
@@ -36,6 +45,18 @@ class DesktopServiceProvider extends ServiceProvider
         DesktopEnvironment::enableDebug();
 
         DesktopEnvironment::ensureDatabaseIsMigrated();
+
+        // The desktop profile uses the log broadcasting driver, so updater
+        // events are stored in the cache for the software update screen.
+        Event::listen([
+            CheckingForUpdate::class,
+            UpdateAvailable::class,
+            UpdateNotAvailable::class,
+            DownloadProgress::class,
+            UpdateDownloaded::class,
+            UpdateCancelled::class,
+            Error::class,
+        ], RecordDesktopUpdateEvent::class);
 
         if ((string) config('nativephp-internal.secret') === '') {
             return;

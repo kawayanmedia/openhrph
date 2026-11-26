@@ -186,6 +186,19 @@ The updater uses GitHub Releases (`config/nativephp.php` → `updater`). A relea
 NativePHP attaches the platform artifacts to the draft release. The app checks for updates on launch, downloads them in
 the background, and applies them on quit. Publish the draft when every platform has uploaded.
 
+### Updating from inside the app
+
+The desktop sidebar shows the installed version and links to **Software update** (`/app/updates`), a page only the
+desktop runtime serves (404 on the web deployment). It shows the installed version, the updater state, and:
+
+- **Check for updates** — asks the Electron shell to look at the GitHub release feed;
+- **Restart and install** — appears once a release has downloaded and calls `quitAndInstall()`, so the app closes and
+  the downloaded build replaces the installed one;
+- **Run migrations** — applies any pending migration, for the rare case where a page reports a missing column or table.
+
+The shell reports each updater step back to Laravel, and `App\Listeners\RecordDesktopUpdateEvent` stores it for the
+page, because the desktop profile broadcasts over the log driver and the events cannot reach the UI directly.
+
 ### GitHub Actions
 
 `.github/workflows/desktop.yml` builds all four targets:
@@ -232,6 +245,10 @@ as a previous run therefore keeps an empty database, and every page (including t
 `cache` and `users` tables. `DesktopEnvironment::ensureDatabaseIsMigrated()` migrates the database when the `migrations`
 table is absent, and CI builds get a unique prerelease version (`0.0.0-ci.<run number>`) so upgrades always re-run
 pending migrations.
+
+After an in-app update the same hook re-checks pending migrations once per bundled version (the applied version is kept
+in `installation_settings`), so a skipped or failed shell migration cannot leave the app on an old schema. The
+**Software update** page shows the pending count and can run the migration on demand.
 
 ### Debug builds
 
