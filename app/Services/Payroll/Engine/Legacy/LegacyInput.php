@@ -1529,15 +1529,34 @@ final class LegacyInput
     public static function loadMinimumWage(Run $run): int
     {
         if (Schema::hasTable('statutory_min_wage')) {
-            $row = DB::table('statutory_min_wage')
+            $query = DB::table('statutory_min_wage')
                 ->where(function ($query) use ($run): void {
                     $query->whereNull('company_id')->orWhere('company_id', $run->companyID);
                 })
                 ->where(function ($query) use ($run): void {
                     $query->whereNull('effective_from')->orWhere('effective_from', '<=', $run->payrollDate);
-                })
-                ->orderByDesc('effective_from')
-                ->first(['amount_centavos']);
+                });
+
+            // The baseline is a fallback for employees without their own
+            // region, so it must come from the installation's region and
+            // industry rather than whichever wage order was published last.
+            $region = (string) (Installation::countryProfile()['minimum_wage_region'] ?? 'NCR');
+
+            if ($region !== '' && Schema::hasColumn('statutory_min_wage', 'region')) {
+                $query->where(function ($query) use ($region): void {
+                    $query->where('region', $region)->orWhereNull('region');
+                });
+            }
+
+            if (Schema::hasColumn('statutory_min_wage', 'industry')) {
+                $industry = 'NON-AGRICULTURE';
+
+                $query->where(function ($query) use ($industry): void {
+                    $query->where('industry', $industry)->orWhereNull('industry')->orWhere('industry', '');
+                });
+            }
+
+            $row = $query->orderByDesc('effective_from')->first(['amount_centavos']);
 
             if ($row !== null && (int) ($row->amount_centavos ?? 0) > 0) {
                 return (int) $row->amount_centavos;

@@ -532,9 +532,17 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		Add(slip.GSISEmployer).
 		Add(genericEmployerTotal)
 
-	if cfg.MinimumWage > 0 && daily > 0 && daily < cfg.MinimumWage {
+	// Compare against the wage order for this employee's region and industry;
+	// the company-level figure is only a fallback and can belong to another
+	// region.
+	applicableMinimumWage := cfg.MinimumWage
+	if employee.MinimumWage > 0 {
+		applicableMinimumWage = employee.MinimumWage
+	}
+
+	if applicableMinimumWage > 0 && daily > 0 && daily < applicableMinimumWage {
 		slip.Warnings = append(slip.Warnings,
-			fmt.Sprintf("daily rate %s is below the minimum wage %s", daily, cfg.MinimumWage))
+			fmt.Sprintf("daily rate %s is below the minimum wage %s", daily, applicableMinimumWage))
 	}
 
 	return slip, nil

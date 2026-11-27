@@ -3,8 +3,8 @@
 namespace App\Services\Payroll\Computation;
 
 use App\Jurisdictions\Contracts\PayrollPolicy;
-use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
 use App\Jurisdictions\Philippines\Statutory\Bir\TaxPeriod;
+use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
 use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
 use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
 use App\Jurisdictions\Philippines\Statutory\Generic\GenericContributionService;
@@ -597,11 +597,16 @@ final class Computer
             + $slip->gsisEmployer
             + $genericEmployerTotal;
 
-        if ($cfg->minimumWage > 0 && $daily > 0 && $daily < $cfg->minimumWage) {
+        // Compare against the wage order for this employee's region and
+        // industry; the company-level figure is only a fallback and can belong
+        // to another region.
+        $applicableMinimumWage = $employee->minimumWage > 0 ? $employee->minimumWage : $cfg->minimumWage;
+
+        if ($applicableMinimumWage > 0 && $daily > 0 && $daily < $applicableMinimumWage) {
             $slip->warnings[] = sprintf(
                 'daily rate %s is below the minimum wage %s',
                 Money::format($daily),
-                Money::format($cfg->minimumWage),
+                Money::format($applicableMinimumWage),
             );
         }
 
@@ -1772,7 +1777,7 @@ final class Computer
         }
 
         if ($cfg->payUnworkedRegularHolidays) {
-            foreach ($cfg->holidays as $holiday) {
+            foreach (self::uniqueHolidays($cfg->holidays) as $holiday) {
                 if (! Rules::isRegularHoliday($holiday->code) || self::workedOn($employee->timesheets, $holiday->date)) {
                     continue;
                 }

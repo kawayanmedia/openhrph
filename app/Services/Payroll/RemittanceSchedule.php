@@ -116,6 +116,14 @@ final class RemittanceSchedule
         return $remittance;
     }
 
+    /**
+     * The statutory due date for one agency.
+     *
+     * The remittance covering a month is due on a set day of the *following*
+     * month (see `payroll.remittances.due`), not a fixed number of days after
+     * the payroll date: a payroll dated 30 November would otherwise show an
+     * SSS deadline of 15 December when the rule is the 10th.
+     */
     private function dueDate(Payroll $payroll, string $agency): ?CarbonInterface
     {
         $date = $payroll->payroll_date ?? $payroll->date_to;
@@ -124,8 +132,12 @@ final class RemittanceSchedule
             return null;
         }
 
-        $days = (int) (config('payroll.remittances.due_days.'.$agency) ?? 15);
+        $rule = (array) config('payroll.remittances.due.'.$agency, []);
+        $day = (int) ($rule['day'] ?? 15);
 
-        return $date->copy()->addDays($days);
+        $due = $date->copy()->startOfMonth()->addMonthNoOverflow();
+        $day = max(1, min($day, $due->daysInMonth));
+
+        return $due->setDay($day);
     }
 }

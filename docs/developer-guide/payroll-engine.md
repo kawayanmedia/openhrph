@@ -266,6 +266,35 @@ The employee benefit switches (`rest_day_pay`, `regular_holiday_pay`, `special_h
 
 Re-processing snapshots the current rows into `payroll_detail_revisions` and records a `payroll_audit_events` entry before replacing `payroll_details`. An approved or closed run can only be re-processed through `--reopen --reason`, which the UI also requires. The engine stores the engine version, an input hash and the per-employee warnings on the run.
 
+## Rates, premiums and conventions
+
+**Daily and hourly rates.** `daily = monthly x 12 / days_year` (default 261 for a
+five-day week, 313 for Monday to Saturday). `hourly = daily / hours_day`. A
+daily-paid employee's `employees.basic_salary` holds the *daily* rate, so the
+engine never treats it as a month's pay: `daily_rate` drives the hourly rate,
+and statutory contributions are assessed on the monthly equivalent
+(`daily_rate x days_year / 12`).
+
+**Monthly-paid staff and rest days.** A monthly-paid employee receives a fixed
+period basic based on the 261-day divisor, which excludes rest days. Work on a
+rest day or holiday therefore adds only the premium portion of the day-type
+multiplier (30% for a rest day, 100% for a regular holiday). This matches the
+DOLE convention that a monthly salary already covers rest days and holidays, and
+it keeps the 30% premium larger than the 365-day equivalent. The convention is
+recorded in `payrolls.rules_snapshot` with every run, so a later change of
+policy cannot silently restate an earlier payroll.
+
+**Premiums.** Rest day 130%, special non-working day 130%, regular holiday 200%,
+rest day plus special 150%, rest day plus regular holiday 260%, double holiday
+300%, rest day plus double holiday 390%, regular plus special 260%, rest plus
+regular plus special 300%. Overtime adds 25% on an ordinary day and 30% on a
+premium day (Art. 87). Night differential is 10% of the hourly rate of the day
+worked, including on overtime hours (Art. 86).
+
+**One day, one holiday.** Holidays are read once per `(date, code)` in the
+period. A duplicated reference row can never pay a second unworked-holiday
+day.
+
 ## Run types
 
 `payrolls.type` selects the computation:

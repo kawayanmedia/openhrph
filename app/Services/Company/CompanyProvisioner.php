@@ -104,7 +104,10 @@ final class CompanyProvisioner
             'auto_compute_overtime' => '1',
             'minutes_qualified_overtime' => '30',
             'auto_compute_nt' => '1',
-            'auto_absent_no_timesheet' => '0',
+            // A missing timesheet is treated as an absence (no pay) until the
+            // company deliberately switches this off. Paying the period basic
+            // with no attendance evidence is a control failure, not a default.
+            'auto_absent_no_timesheet' => '1',
             'auto_employee_number' => '1',
             'display_logo_payslip' => '1',
             'sss_schedule' => PayrollGroup::PAY_SCHEDULE_EVERYPAY,

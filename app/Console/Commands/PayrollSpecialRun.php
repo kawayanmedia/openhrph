@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Payroll;
 use App\Models\PayrollGroup;
+use App\Sectors\SectorManager;
 use App\Services\Payroll\Engine\EngineManager;
 use App\Services\Payroll\PayrollAudit;
 use Illuminate\Console\Command;
@@ -43,6 +44,19 @@ class PayrollSpecialRun extends Command
 
         if (! $group) {
             $this->error('Payroll group not found.');
+
+            return self::FAILURE;
+        }
+
+        // The sector profile decides whether 13th-month pay exists at all: it
+        // is a PD 851 entitlement of rank-and-file private employees, while
+        // government personnel receive the Mid-Year Bonus, Year-End Bonus and
+        // Cash Gift instead (EO 201 s. 2016; DBM BC 2016-4 and 2017-2).
+        $rules = app(SectorManager::class)->forCompany((int) $group->company_id)->rules();
+
+        if ($type === Payroll::TYPE_THIRTEENTH_MONTH && array_key_exists('thirteenth_month', $rules)
+            && $rules['thirteenth_month'] === false) {
+            $this->error('Thirteenth-month pay does not apply to this sector. Use the year-end bonus and cash gift instead.');
 
             return self::FAILURE;
         }

@@ -96,9 +96,10 @@ it('seeds the PhilHealth, Pag-IBIG and tax schedules', function () {
         ->and((float) $pagIbig->low_rate)->toBe(0.01)
         ->and($pagIbig->low_threshold_centavos)->toBe(150000)
         ->and($pagIbig->max_fund_salary_centavos)->toBe(1000000)
-        ->and(DB::table('statutory_tax_brackets')->count())->toBe(12)
+        ->and(DB::table('statutory_tax_brackets')->count())->toBe(18)
         ->and(DB::table('statutory_tax_brackets')->where('frequency', 'monthly')->count())->toBe(6)
-        ->and(DB::table('statutory_tax_brackets')->where('frequency', 'semi-monthly')->count())->toBe(6);
+        ->and(DB::table('statutory_tax_brackets')->where('frequency', 'semi-monthly')->count())->toBe(6)
+        ->and(DB::table('statutory_tax_brackets')->where('frequency', 'annual')->count())->toBe(6);
 });
 
 it('seeds the BIR TRAIN band bases to the centavo', function (string $frequency, int $fromCentavos, int $baseTaxCentavos, float $rate) {
@@ -149,7 +150,7 @@ it('is idempotent, so a redeploy does not duplicate the schedule', function () {
     $this->artisan('payroll:statutory:import')->assertExitCode(0);
 
     expect(DB::table('statutory_sss_brackets')->count())->toBe(61)
-        ->and(DB::table('statutory_tax_brackets')->count())->toBe(12)
+        ->and(DB::table('statutory_tax_brackets')->count())->toBe(18)
         ->and(DB::table('statutory_de_minimis')->count())->toBe(9)
         ->and(DB::table('statutory_sources')->count())->toBe(6);
 });

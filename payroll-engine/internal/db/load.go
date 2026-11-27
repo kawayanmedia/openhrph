@@ -2202,12 +2202,26 @@ func loadMinimumWage(ctx context.Context, db *sql.DB, run Run) money.Centavos {
 	if tableExists(ctx, db, "statutory_min_wage") {
 		var amount int64
 
+		// The baseline is a fallback for employees without their own region, so
+		// it must come from the installation's region and industry rather than
+		// whichever wage order was published last.
+		regionClause := ""
+		industryClause := ""
+
+		if columnExists(ctx, db, "statutory_min_wage", "region") {
+			regionClause = " AND (region IS NULL OR region = 'NCR')"
+		}
+
+		if columnExists(ctx, db, "statutory_min_wage", "industry") {
+			industryClause = " AND (industry IS NULL OR industry = '' OR industry = 'NON-AGRICULTURE')"
+		}
+
 		err := db.QueryRowContext(ctx, `
 			SELECT amount_centavos
 			FROM statutory_min_wage
 			WHERE country_code = ?
 			  AND (company_id IS NULL OR company_id = ?)
-			  AND (effective_from IS NULL OR effective_from <= ?)
+			  AND (effective_from IS NULL OR effective_from <= ?)`+regionClause+industryClause+`
 			ORDER BY effective_from DESC
 			LIMIT 1`, "PH", run.CompanyID, run.PayrollDate).Scan(&amount)
 		if err == nil && amount > 0 {

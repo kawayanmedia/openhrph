@@ -53,7 +53,11 @@ it('generates and updates the remittance register', function () {
 
     expect($rows->pluck('agency')->all())->toContain('sss', 'philhealth', 'pagibig', 'bir')
         ->and($rows->firstWhere('agency', 'sss')->status)->toBe(PayrollRemittance::STATUS_PENDING)
-        ->and($rows->firstWhere('agency', 'sss')->due_date->format('Y-m-d'))->toBe('2026-11-30');
+        // RA 11199 Sec. 22: the November remittance is due within the first
+        // 10 days of December, not 15 days after the payroll date.
+        ->and($rows->firstWhere('agency', 'sss')->due_date->format('Y-m-d'))->toBe('2026-12-10')
+        ->and($rows->firstWhere('agency', 'philhealth')->due_date->format('Y-m-d'))->toBe('2026-12-15')
+        ->and($rows->firstWhere('agency', 'bir')->due_date->format('Y-m-d'))->toBe('2026-12-10');
 
     $sss = $rows->firstWhere('agency', 'sss');
 

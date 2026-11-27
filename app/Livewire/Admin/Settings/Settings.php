@@ -373,6 +373,12 @@ class Settings extends Component
                 ->placeholder('Ex: 313')
                 ->rules('numeric', 'max:366', 'min:1'),
 
+            ...(Installation::jurisdiction()->statutoryDriver()->code() === 'ph' ? [
+                Boolean::make('Pay unworked regular holidays', 'pay_unworked_regular_holidays')
+                    ->help('Pays 100% of the daily rate for an unworked regular holiday to daily-paid employees who were present or on paid leave on the preceding workday (Labor Code Art. 94). Leave it on unless a collective agreement or agency rule grants a different treatment.')
+                    ->default(true),
+            ] : []),
+
             Boolean::make('Deduct Withholding Tax', 'deduct_tax')
                 ->help('If you want to deduct Withholding then check this')
                 ->default(true),
