@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\BankFileDownloadController;
+use App\Http\Controllers\Admin\DocumentDownloadController;
 use App\Http\Controllers\Admin\EmployeeFileController;
 use App\Http\Controllers\Admin\EmployeeMasterFileController;
 use App\Http\Controllers\Admin\ImportTemplateController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Admin\RemittanceDownloadController;
 use App\Livewire\Admin\AdminDetail;
 use App\Livewire\Admin\AdminForm;
 use App\Livewire\Admin\AdminIndex;
+use App\Livewire\Admin\Approvals\Inbox as ApprovalsInbox;
 use App\Livewire\Admin\Assistant\Chat as AssistantChat;
 use App\Livewire\Admin\Auth\Login;
 use App\Livewire\Admin\Dashboards\Main;
@@ -60,6 +62,10 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
         Route::get('imports/template', ImportTemplateController::class)->name('import.template');
 
         Route::get('assistant', AssistantChat::class)->name('assistant');
+
+        Route::get('approvals', ApprovalsInbox::class)->name('approvals');
+
+        Route::get('documents/{document}/download', DocumentDownloadController::class)->name('documents.download');
 
         Route::get('reports/remittances/{payroll}/download/{format}', [RemittanceDownloadController::class, 'download'])
             ->name('reports.remittances.download');

@@ -43,6 +43,18 @@ class Employee extends Model implements HasMedia
 
     const CONTRACTUAL_PLANTILLA = 7;
 
+    public const LIFECYCLE_APPLICANT = 'applicant';
+
+    public const LIFECYCLE_PRE_HIRE = 'pre_hire';
+
+    public const LIFECYCLE_ACTIVE = 'active';
+
+    public const LIFECYCLE_ON_LEAVE = 'on_leave';
+
+    public const LIFECYCLE_SEPARATED = 'separated';
+
+    public const LIFECYCLE_ARCHIVED = 'archived';
+
     protected $fillable = [
         'company_id',
         'employee_number',
@@ -71,6 +83,10 @@ class Employee extends Model implements HasMedia
         'bank_account_number',
         'bank_branch',
         'pay_mode',
+        'organization_unit_id',
+        'location_id',
+        'cost_center_id',
+        'lifecycle_status',
     ];
 
     protected $appends = ['fullname', 'office_name'];
@@ -137,6 +153,51 @@ class Employee extends Model implements HasMedia
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function organizationUnit()
+    {
+        return $this->belongsTo(OrganizationUnit::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function costCenter()
+    {
+        return $this->belongsTo(CostCenter::class);
+    }
+
+    public function positionAssignments()
+    {
+        return $this->hasMany(PositionAssignment::class);
+    }
+
+    public function currentPositionAssignment()
+    {
+        return $this->hasOne(PositionAssignment::class)->current()->latestOfMany('effective_from');
+    }
+
+    public function reportingRelationships()
+    {
+        return $this->hasMany(ReportingRelationship::class);
+    }
+
+    public function directReports()
+    {
+        return $this->hasMany(ReportingRelationship::class, 'supervisor_employee_id');
+    }
+
+    public function employmentChanges()
+    {
+        return $this->hasMany(EmploymentChange::class);
+    }
+
+    public function documents()
+    {
+        return $this->morphMany(Document::class, 'owner');
     }
 
     public function employmentType()

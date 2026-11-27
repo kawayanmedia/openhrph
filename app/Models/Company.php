@@ -59,4 +59,24 @@ class Company extends Model
     {
         return $this->hasMany(PayrollGroup::class);
     }
+
+    public function organizationUnits()
+    {
+        return $this->hasMany(OrganizationUnit::class);
+    }
+
+    public function locations()
+    {
+        return $this->hasMany(Location::class);
+    }
+
+    public function costCenters()
+    {
+        return $this->hasMany(CostCenter::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
 }

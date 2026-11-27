@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\Workflow\WorkflowInstanceDecided;
+use App\Events\Workflow\WorkflowTaskAssigned;
 use App\Imports\OpenHrWorkbook;
 use App\Imports\Workbook\WorkbookDefinition;
 use App\Models\Company;
@@ -24,15 +26,20 @@ use App\Observers\PayrollGroupObserver;
 use App\Observers\PayrollObserver;
 use App\Observers\TimesheetRequestObserver;
 use App\Sectors\SectorManager;
+use App\Services\Documents\Listeners\RecordDocumentVersion;
 use App\Services\Payroll\Engine\EngineManager;
 use App\Services\Payroll\Engine\GoPayrollEngine;
+use App\Services\Workflow\Listeners\SendWorkflowDecisionNotification;
+use App\Services\Workflow\Listeners\SendWorkflowTaskNotification;
 use Illuminate\Database\Eloquent\Factories\Factory as FactoryNameResolver;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pennant\Feature;
 use Lorisleiva\Actions\Facades\Actions;
+use Spatie\MediaLibrary\MediaCollections\Events\MediaHasBeenAddedEvent;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -84,6 +91,10 @@ class AppServiceProvider extends ServiceProvider
         PayrollDetail::observe(PayrollDetailObserver::class);
         Payroll::observe(PayrollObserver::class);
         Company::observe(CompanyObserver::class);
+
+        Event::listen(WorkflowTaskAssigned::class, SendWorkflowTaskNotification::class);
+        Event::listen(WorkflowInstanceDecided::class, SendWorkflowDecisionNotification::class);
+        Event::listen(MediaHasBeenAddedEvent::class, RecordDocumentVersion::class);
 
         // New user can use
         // Old user not

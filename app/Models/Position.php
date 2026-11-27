@@ -38,4 +38,44 @@ class Position extends Model
     {
         return $this->belongsTo(Department::class);
     }
+
+    public function organizationUnit()
+    {
+        return $this->belongsTo(OrganizationUnit::class);
+    }
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function costCenter()
+    {
+        return $this->belongsTo(CostCenter::class);
+    }
+
+    public function requirements()
+    {
+        return $this->hasMany(PositionRequirement::class);
+    }
+
+    public function jobDescriptions()
+    {
+        return $this->hasMany(JobDescription::class)->orderByDesc('version');
+    }
+
+    public function currentJobDescription()
+    {
+        return $this->hasOne(JobDescription::class)->where('is_current', true);
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(PositionAssignment::class);
+    }
+
+    public function reportsToPosition()
+    {
+        return $this->belongsTo(self::class, 'reports_to_position_id');
+    }
 }

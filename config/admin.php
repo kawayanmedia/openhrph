@@ -105,6 +105,44 @@ return [
         ],
 
         [
+            'label' => 'HR',
+            'icon' => 'users',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'link', 'url' => '/approvals', 'label' => 'Approvals'],
+                ['type' => 'resource', 'key' => 'organization-unit', 'label' => 'Organization Units'],
+                ['type' => 'resource', 'key' => 'location', 'label' => 'Locations'],
+                ['type' => 'resource', 'key' => 'cost-center', 'label' => 'Cost Centers'],
+                ['type' => 'resource', 'key' => 'position', 'label' => 'Positions'],
+                ['type' => 'resource', 'key' => 'position-requirement', 'label' => 'Position Requirements'],
+                ['type' => 'resource', 'key' => 'position-assignment', 'label' => 'Position Assignments'],
+                ['type' => 'resource', 'key' => 'reporting-relationship', 'label' => 'Reporting Relationships'],
+                ['type' => 'resource', 'key' => 'job-description', 'label' => 'Job Descriptions'],
+                ['type' => 'resource', 'key' => 'employment-change', 'label' => 'Employment Changes'],
+            ],
+        ],
+
+        [
+            'label' => 'Documents',
+            'icon' => 'document-text',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'document', 'label' => 'Documents'],
+            ],
+        ],
+
+        [
+            'label' => 'Workflow',
+            'icon' => 'adjustments',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'workflow-definition', 'label' => 'Workflow Definitions'],
+                ['type' => 'resource', 'key' => 'workflow-delegation', 'label' => 'Delegations'],
+                ['type' => 'resource', 'key' => 'audit-event', 'label' => 'Audit Trail'],
+            ],
+        ],
+
+        [
             'label' => 'Reports',
             'icon' => 'document-text',
             'items' => [

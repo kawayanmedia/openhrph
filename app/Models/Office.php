@@ -35,6 +35,11 @@ class Office extends Model
         return $this->hasMany(Employee::class);
     }
 
+    public function organizationUnit()
+    {
+        return $this->belongsTo(OrganizationUnit::class);
+    }
+
     public static function officesList()
     {
         return Office::orderBy('name')->pluck('name', 'id')->toArray();
