@@ -91,6 +91,8 @@
                            @keydown.enter.prevent="choose(activeOption)"
                            @keydown.escape.prevent="close({ restoreFocus: true })"
                            @keydown.tab="close()"
+                           :aria-controls="listboxId"
+                           :aria-activedescendant="activeOption ? `${listboxId}-option-${activeIndex}` : null"
                            class="ui-input py-2"
                            placeholder="Search options…"
                            aria-label="Search options"
@@ -104,6 +106,7 @@
                      class="max-h-64 overflow-y-auto py-1">
                     <template x-for="(option, index) in visibleOptions" :key="`${option.value}-${index}`">
                         <div role="option"
+                             :id="`${listboxId}-option-${index}`"
                              :data-index="index"
                              :aria-selected="option.value === value ? 'true' : 'false'"
                              :class="index === activeIndex
