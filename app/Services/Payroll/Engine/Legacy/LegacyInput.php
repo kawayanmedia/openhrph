@@ -4,6 +4,7 @@ namespace App\Services\Payroll\Engine\Legacy;
 
 use App\Jurisdictions\Contracts\PayrollPolicy;
 use App\Jurisdictions\Philippines\Statutory\Bir\TaxBracket;
+use App\Jurisdictions\Philippines\Statutory\Bir\TaxPeriod;
 use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
 use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
 use App\Jurisdictions\Philippines\Statutory\Gsis\GsisSchedule;
@@ -168,7 +169,7 @@ final class LegacyInput
             pagIbig: PagIbigSchedule::default(),
             gsis: GsisSchedule::default(),
             taxBrackets: WithholdingTaxTable::train(PayFrequency::SEMI_MONTHLY),
-            annualTaxBrackets: WithholdingTaxTable::train(PayFrequency::MONTHLY),
+            annualTaxBrackets: WithholdingTaxTable::trainForPeriod(TaxPeriod::ANNUAL),
             payWithoutTimesheet: true,
             payUnworkedRegularHolidays: true,
             sssBase: 'basic',
@@ -287,7 +288,7 @@ final class LegacyInput
             }
 
             $config->taxBrackets = self::loadTaxBrackets($run, $config->frequency);
-            $config->annualTaxBrackets = self::loadTaxBrackets($run, Config::FREQUENCY_MONTHLY);
+            $config->annualTaxBrackets = self::loadTaxBrackets($run, 'annual');
             $config->minimumWage = self::loadMinimumWage($run);
             $config->minimumWages = self::loadMinimumWages($run);
             $config->defaultRegion = (string) (Installation::countryProfile()['minimum_wage_region'] ?? 'NCR');
@@ -1115,6 +1116,7 @@ final class LegacyInput
         }
 
         $holidays = [];
+        $seen = [];
 
         $rows = DB::table('holidays')
             ->whereNull('deleted_at')
@@ -1125,10 +1127,22 @@ final class LegacyInput
 
         foreach ($rows as $row) {
             $code = (string) ($row->code ?? '');
+            $date = self::date($row->date);
 
-            if ($code !== '') {
-                $holidays[] = new Holiday(date: self::date($row->date), code: $code);
+            if ($code === '' || $date === '') {
+                continue;
             }
+
+            // A duplicate reference row must never pay a second holiday: the
+            // engine pays one day per date and code in the period.
+            $key = $date.'|'.$code;
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $holidays[] = new Holiday(date: $date, code: $code);
         }
 
         return $holidays;
@@ -1389,6 +1403,13 @@ final class LegacyInput
         }
 
         if ($brackets === []) {
+            // The annual table is used only to annualise supplementary
+            // payments. An installation whose statutory import predates it
+            // still gets the published annual table rather than failing.
+            if ($frequency === 'annual') {
+                return WithholdingTaxTable::trainForPeriod(TaxPeriod::ANNUAL);
+            }
+
             throw new PayrollEngineException(
                 "statutory table does not cover the payroll date: statutory_tax_brackets has no schedule effective on {$run->payrollDate}",
             );

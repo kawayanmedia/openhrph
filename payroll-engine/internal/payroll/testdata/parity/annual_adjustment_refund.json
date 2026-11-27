@@ -685,38 +685,38 @@
     "annual_tax_brackets": [
       {
         "from": 0,
-        "to": 2083299,
+        "to": 25000000,
         "base_tax": 0,
         "rate": 0
       },
       {
-        "from": 2083300,
-        "to": 3333299,
+        "from": 25000001,
+        "to": 40000000,
         "base_tax": 0,
         "rate": 0.15
       },
       {
-        "from": 3333300,
-        "to": 6666699,
-        "base_tax": 187500,
+        "from": 40000001,
+        "to": 80000000,
+        "base_tax": 2250000,
         "rate": 0.2
       },
       {
-        "from": 6666700,
-        "to": 16666699,
-        "base_tax": 854180,
+        "from": 80000001,
+        "to": 200000000,
+        "base_tax": 10250000,
         "rate": 0.25
       },
       {
-        "from": 16666700,
-        "to": 66666699,
-        "base_tax": 3354180,
+        "from": 200000001,
+        "to": 800000000,
+        "base_tax": 40250000,
         "rate": 0.3
       },
       {
-        "from": 66666700,
+        "from": 800000001,
         "to": 0,
-        "base_tax": 18354180,
+        "base_tax": 220250000,
         "rate": 0.35
       }
     ],
@@ -808,7 +808,7 @@
     "thirteenth_month": 0,
     "leave_conversion": 0,
     "separation_pay": 0,
-    "annual_adjustment": 250080,
+    "annual_adjustment": 250000,
     "gross": 0,
     "sss_employee": 0,
     "sss_provident": 0,
@@ -827,12 +827,12 @@
     "non_taxable": 0,
     "benefit_exempt": 0,
     "minimum_wage_exemption": 0,
-    "withholding_tax": 250080,
+    "withholding_tax": 250000,
     "other_deductions": 0,
     "loans": 0,
-    "total_deductions": 250080,
+    "total_deductions": 250000,
     "total_employer_cost": 0,
-    "net_pay": -250080,
+    "net_pay": -250000,
     "warnings": []
   }
 }

@@ -67,14 +67,11 @@ func ComputeThirteenthMonth(cfg model.Config, employee model.Employee) (model.Pa
 			slip.WithholdingTax = tax
 		}
 	} else {
-		brackets := annualBrackets(cfg)
-		if len(brackets) > 0 && taxable > 0 {
-			tax, err := statutory.ComputeTax(taxable, brackets)
-			if err != nil {
-				slip.Warnings = append(slip.Warnings, err.Error())
-			} else {
-				slip.WithholdingTax = tax
-			}
+		tax, err := taxOnBenefitExcess(cfg, money.Max(0, employee.YTD.TaxableIncome), taxable)
+		if err != nil {
+			slip.Warnings = append(slip.Warnings, err.Error())
+		} else {
+			slip.WithholdingTax = tax
 		}
 	}
 
@@ -152,12 +149,14 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 	separation, separationTaxable := separationPay(cfg, employee, slip)
 
 	gross := slip.Gross.Add(thirteenth).Add(leave).Add(separation)
-	taxable := slip.TaxableIncome.Add(thirteenthTaxable).Add(leaveTaxableAmount)
+	regularTaxable := slip.TaxableIncome
+	benefitTaxable := thirteenthTaxable.Add(leaveTaxableAmount)
 	slip.NonTaxable = slip.NonTaxable.Add(leaveExempt)
 	if separationTaxable {
-		taxable = taxable.Add(separation)
+		benefitTaxable = benefitTaxable.Add(separation)
 	}
 
+	taxable := regularTaxable.Add(benefitTaxable)
 	tax := money.Zero
 	if taxable > 0 {
 		var (
@@ -168,7 +167,20 @@ func ComputeFinalPay(cfg model.Config, employee model.Employee) (model.Payslip, 
 		if generic {
 			computed, taxErr = genericTax(cfg, taxable)
 		} else {
-			computed, taxErr = withholding(cfg, taxable, cfg.PeriodsPerMonth())
+			// The final period's basic is taxed at the period table; the
+			// benefit payments that settle with it follow the annualised
+			// computation on the year's regular income.
+			computed, taxErr = withholding(cfg, regularTaxable, cfg.PeriodsPerMonth())
+
+			if taxErr == nil {
+				var benefitTax money.Centavos
+				benefitTax, taxErr = taxOnBenefitExcess(
+					cfg,
+					money.Max(0, employee.YTD.TaxableIncome).Add(regularTaxable),
+					benefitTaxable,
+				)
+				computed = computed.Add(benefitTax)
+			}
 		}
 
 		if taxErr != nil {
@@ -229,24 +241,24 @@ func ComputeAnnualAdjustment(cfg model.Config, employee model.Employee) (model.P
 		return slip, nil
 	}
 
-	monthlyEquivalent := employee.YTD.TaxableIncome.Mul(1.0 / 12.0)
-
 	var (
-		monthlyTax money.Centavos
-		err        error
+		annualTax money.Centavos
+		err       error
 	)
 
 	if generic {
-		monthlyTax, err = genericTax(cfg, monthlyEquivalent)
+		var monthlyTax money.Centavos
+		monthlyTax, err = genericTax(cfg, employee.YTD.TaxableIncome.Mul(1.0/12.0))
+
+		annualTax = monthlyTax.Mul(12)
 	} else {
-		monthlyTax, err = statutory.ComputeTax(monthlyEquivalent, brackets)
+		annualTax, err = statutory.ComputeTax(employee.YTD.TaxableIncome, brackets)
 	}
 
 	if err != nil {
 		return slip, err
 	}
 
-	annualTax := monthlyTax.Mul(12)
 	adjustment := annualTax.Sub(employee.YTD.TaxWithheld)
 	slip.AnnualAdjustment = adjustment
 	slip.WithholdingTax = adjustment
@@ -333,7 +345,44 @@ func annualBrackets(cfg model.Config) []statutory.TaxBracket {
 		return nil
 	}
 
-	return statutory.TRAINTaxBrackets(statutory.FrequencyMonthly)
+	return statutory.TRAINTaxBrackets(statutory.FrequencyAnnual)
+}
+
+// taxOnBenefitExcess reports the withholding on a benefit payment. A
+// 13th-month excess, or any other supplementary payment, is added to the
+// employee's annualised regular taxable income and the difference is withheld
+// (BIR annualised computation for supplementary compensation). Taxing the
+// payment on its own would apply the lower brackets a second time.
+func taxOnBenefitExcess(cfg model.Config, annualTaxableRegular, excess money.Centavos) (money.Centavos, error) {
+	if excess <= 0 {
+		return 0, nil
+	}
+
+	brackets := annualBrackets(cfg)
+	if len(brackets) == 0 {
+		return 0, nil
+	}
+
+	base := money.Max(0, annualTaxableRegular)
+
+	if base <= 0 {
+		// Without a year-to-date taxable base there is nothing to annualise
+		// against; withhold on the payment itself with the monthly table
+		// rather than exempting it.
+		return statutory.ComputeTax(excess, statutory.TRAINTaxBrackets(statutory.FrequencyMonthly))
+	}
+
+	withExcess, err := statutory.ComputeTax(base.Add(excess), brackets)
+	if err != nil {
+		return 0, err
+	}
+
+	without, err := statutory.ComputeTax(base, brackets)
+	if err != nil {
+		return 0, err
+	}
+
+	return money.Max(0, withExcess.Sub(without)), nil
 }
 
 // separationPay returns the separation pay for the run and whether it is

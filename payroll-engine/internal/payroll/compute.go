@@ -256,7 +256,7 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 	// the day inside their fixed period basic; daily-paid staff are paid 100%
 	// of the daily rate when they worked or were on paid leave the day before.
 	if !monthlyPaid && cfg.PayUnworkedRegularHolidays {
-		for _, holiday := range cfg.Holidays {
+		for _, holiday := range uniqueHolidays(cfg.Holidays) {
 			if !rules.IsRegularHoliday(holiday.Code) || workedOn(employee.Timesheets, holiday.Date) {
 				continue
 			}
@@ -304,13 +304,9 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 	for _, earning := range employee.Bonuses {
 		slip.Bonus = slip.Bonus.Add(earning.Amount)
 
-		if ceiling := earning.NonTaxableCeiling; ceiling > 0 {
-			exempt := money.Min(earning.Amount, ceiling)
+		if exempt := benefitExemption(cfg, employee, earning, slip); exempt > 0 {
 			slip.NonTaxable = slip.NonTaxable.Add(exempt)
 			slip.BenefitExempt = slip.BenefitExempt.Add(exempt)
-		} else if !earning.Taxable {
-			slip.NonTaxable = slip.NonTaxable.Add(earning.Amount)
-			slip.BenefitExempt = slip.BenefitExempt.Add(earning.Amount)
 		}
 	}
 
@@ -356,10 +352,10 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 	if !generic {
 		// Each agency has its own contribution base so a company can follow the
 		// agency circular without code changes.
-		sssBase := contributionBase(cfg.SssBase, employee, slip, periods)
-		philHealthBase := contributionBase(cfg.PhilHealthBase, employee, slip, periods)
-		pagIBIGBase := contributionBase(cfg.PagIBIGBase, employee, slip, periods)
-		gsisBase := contributionBase(cfg.GSISBase, employee, slip, periods)
+		sssBase := contributionBase(cfg.SssBase, employee, slip, periods, cfg)
+		philHealthBase := contributionBase(cfg.PhilHealthBase, employee, slip, periods, cfg)
+		pagIBIGBase := contributionBase(cfg.PagIBIGBase, employee, slip, periods, cfg)
+		gsisBase := contributionBase(cfg.GSISBase, employee, slip, periods, cfg)
 
 		// A government agency remits GSIS instead of SSS: the two are mutually
 		// exclusive. GSIS reuses the group's statutory cut-off schedule.
@@ -405,9 +401,9 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 		}
 	}
 
-	// Minimum wage earners are exempt on the statutory minimum wage and on
-	// the holiday, overtime and night-shift pay attributable to it (RA 9504
-	// as amended by RA 10963).
+	// Minimum wage earners are exempt on the statutory minimum wage and on the
+	// holiday, overtime, night-shift and hazard pay attributable to it (RA 9504
+	// as amended by RA 10963; BIR RR 10-2008).
 	minWageExemption := money.Zero
 	if cfg.Policy.MinimumWageTaxExempt && employee.IsMinimumWage && employee.MinimumWage > 0 {
 		// A minimum-wage flag must be supported by the rate actually paid.
@@ -426,7 +422,8 @@ func computeRegular(cfg model.Config, employee model.Employee) (model.Payslip, e
 				Add(slip.RestDayPay).
 				Add(slip.OvertimePay).
 				Add(slip.NightPay).
-				Add(slip.NightOTPay)
+				Add(slip.NightOTPay).
+				Add(hazardPay(employee))
 			minWageExemption = money.Min(slip.Gross, statutoryWage.Add(premiums))
 			slip.MinimumWageExemption = minWageExemption
 		}
@@ -955,15 +952,106 @@ func slug(value string) string {
 }
 
 // contributionBase selects what a statutory contribution is assessed on.
-func contributionBase(base string, employee model.Employee, slip model.Payslip, periods int) money.Centavos {
+// benefitExemption reports the exempt part of one benefit payment. The
+// PHP 90,000 exclusion for 13th-month pay and other benefits is a single
+// annual amount shared by every benefit payment, so a payment is exempt only
+// up to what the employee has left after earlier benefits. A country without
+// the exclusion falls back to the line's own ceiling.
+func benefitExemption(cfg model.Config, employee model.Employee, earning model.Earning, slip model.Payslip) money.Centavos {
+	if earning.Taxable {
+		return 0
+	}
+
+	lineCeiling := earning.Amount
+	if earning.NonTaxableCeiling > 0 {
+		lineCeiling = earning.NonTaxableCeiling
+	}
+
+	annualCeiling := cfg.Policy.ThirteenthMonthExempt
+	if annualCeiling <= 0 {
+		return money.Min(earning.Amount, lineCeiling)
+	}
+
+	remaining := money.Max(0, annualCeiling.Sub(employee.YTD.OtherBenefits).Sub(slip.BenefitExempt))
+
+	return money.Min(earning.Amount, money.Min(lineCeiling, remaining))
+}
+
+func contributionBase(base string, employee model.Employee, slip model.Payslip, periods int, cfg model.Config) money.Centavos {
 	switch strings.ToLower(strings.TrimSpace(base)) {
 	case "gross":
 		return slip.Gross.Mul(float64(periods))
 	case "period_gross":
 		return slip.Gross
 	default:
+		return monthlyContributionBase(cfg, employee)
+	}
+}
+
+// uniqueHolidays drops duplicate date/code pairs. A duplicated reference row
+// must never pay a second holiday, whatever the caller passed in: one day in
+// the period earns one unworked-holiday pay.
+func uniqueHolidays(holidays []model.Holiday) []model.Holiday {
+	unique := make([]model.Holiday, 0, len(holidays))
+	seen := make(map[string]bool, len(holidays))
+
+	for _, holiday := range holidays {
+		key := holiday.Date + "|" + holiday.Code
+
+		if holiday.Date == "" || holiday.Code == "" || seen[key] {
+			continue
+		}
+
+		seen[key] = true
+		unique = append(unique, holiday)
+	}
+
+	return unique
+}
+
+// hazardPay reports the hazardous-work pay paid in the period. RA 9504 also
+// exempts it for a minimum wage earner. The catalogue has no dedicated flag
+// for hazardous-work pay, so the line is recognised by its code or name, the
+// same way de minimis benefits are.
+func hazardPay(employee model.Employee) money.Centavos {
+	total := money.Zero
+
+	for _, earning := range append(append([]model.Earning(nil), employee.Compensations...), employee.Allowances...) {
+		label := strings.ToUpper(strings.TrimSpace(earning.Code)) + " " + strings.ToUpper(strings.TrimSpace(earning.Name))
+
+		if earning.Amount > 0 && strings.Contains(label, "HAZARD") {
+			total = total.Add(earning.Amount)
+		}
+	}
+
+	return total
+}
+
+// monthlyContributionBase reports the monthly salary a contribution is
+// assessed on. A daily-paid employee's MonthlyBasic holds the contracted daily
+// rate, not a month's pay, so assessing SSS, PhilHealth and Pag-IBIG on it
+// understates every contribution by the days-per-year divisor. The monthly
+// equivalent of the daily rate is used instead; a stored figure above the daily
+// rate is already a monthly salary and is kept.
+func monthlyContributionBase(cfg model.Config, employee model.Employee) money.Centavos {
+	if !strings.EqualFold(strings.TrimSpace(employee.PaymentType), model.PaymentDaily) {
 		return employee.MonthlyBasic
 	}
+
+	if employee.MonthlyBasic > 0 && employee.MonthlyBasic > employee.DailyRate {
+		return employee.MonthlyBasic
+	}
+
+	if employee.DailyRate <= 0 {
+		return employee.MonthlyBasic
+	}
+
+	days := cfg.DaysPerYear
+	if days <= 0 {
+		days = 261
+	}
+
+	return employee.DailyRate.Mul(float64(days) / 12)
 }
 
 func minimumWagePay(cfg model.Config, employee model.Employee, slip model.Payslip, daysPerYear, periods int) money.Centavos {
@@ -1020,7 +1108,7 @@ func paidDays(cfg model.Config, employee model.Employee) float64 {
 	}
 
 	if cfg.PayUnworkedRegularHolidays {
-		for _, holiday := range cfg.Holidays {
+		for _, holiday := range uniqueHolidays(cfg.Holidays) {
 			if !rules.IsRegularHoliday(holiday.Code) || workedOn(employee.Timesheets, holiday.Date) {
 				continue
 			}
@@ -1050,17 +1138,25 @@ func withholding(cfg model.Config, taxable money.Centavos, periods int) (money.C
 		return statutory.ComputeTax(taxable, cfg.TaxBrackets)
 	}
 
-	brackets := cfg.AnnualTaxBrackets
+	brackets := annualBrackets(cfg)
 	if len(brackets) == 0 {
-		brackets = statutory.TRAINTaxBrackets(statutory.FrequencyMonthly)
+		return statutory.ComputeTax(taxable, cfg.TaxBrackets)
 	}
 
-	monthlyTax, err := statutory.ComputeTax(taxable.Mul(float64(periods)), brackets)
+	// A contribution taken only on one cut-off leaves this period's taxable
+	// income unrepresentative of a month, so annualise the period and allocate
+	// the annual tax back over the year's pays.
+	partsPerYear := cfg.PeriodsPerYear()
+	if partsPerYear <= 0 {
+		partsPerYear = 1
+	}
+
+	annualTax, err := statutory.ComputeTax(taxable.Mul(float64(partsPerYear)), brackets)
 	if err != nil {
 		return 0, err
 	}
 
-	return firstPart(monthlyTax, periods), nil
+	return firstPart(annualTax, partsPerYear), nil
 }
 
 func uniformSchedules(cfg model.Config) bool {

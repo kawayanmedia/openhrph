@@ -403,13 +403,20 @@ func TestWithholdingUsesMonthlyEquivalentForNonUniformSchedules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	monthlyTax, err := statutory.ComputeTax(money.FromPesos(40000), statutory.TRAINTaxBrackets(statutory.FrequencyMonthly))
+	// 20,000 a cut-off annualises to 480,000: the annual table charges
+	// 22,500 + 20% of the 80,000 above 400,000 = 38,500, allocated over the
+	// 24 pays of a semi-monthly year.
+	annualTax, err := statutory.ComputeTax(money.FromPesos(480000), statutory.TRAINTaxBrackets(statutory.FrequencyAnnual))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if nonUniform != monthlyTax.Split(2)[0] {
-		t.Fatalf("non-uniform withholding = %s, want %s", nonUniform, monthlyTax.Split(2)[0])
+	if annualTax != money.FromPesos(38500) {
+		t.Fatalf("annual tax = %s, want 38500.00", annualTax)
+	}
+
+	if nonUniform != annualTax.Split(24)[0] {
+		t.Fatalf("non-uniform withholding = %s, want %s", nonUniform, annualTax.Split(24)[0])
 	}
 
 	if uniform == nonUniform {
@@ -460,5 +467,160 @@ func TestDeMinimisCeilingCapsTheExemptAllowance(t *testing.T) {
 
 	if slip.NonTaxable != money.FromPesos(500) {
 		t.Fatalf("remaining non-taxable = %s, want 500.00", slip.NonTaxable)
+	}
+}
+
+// --- 27 November 2026 compliance audit regressions -------------------------
+// Each expectation is derived from the statute, not from the engine: Labor
+// Code Art. 94, RA 9504 (minimum wage earners), RA 10963 / NIRC
+// Sec. 32(B)(7)(e) (the PHP 90,000 benefit exclusion), and RA 11199, RA 11223
+// and RA 9679 (contribution bases).
+
+func TestDuplicateHolidayRowsPayOneHoliday(t *testing.T) {
+	cfg := semiMonthlyConfig()
+	cfg.PayUnworkedRegularHolidays = true
+	cfg.Holidays = []model.Holiday{
+		{Date: "2026-11-30", Code: "rh"},
+		{Date: "2026-11-30", Code: "rh"},
+		{Date: "2026-11-30", Code: "rh"},
+		{Date: "2026-11-30", Code: "rh"},
+	}
+
+	employee := model.Employee{
+		ID:          61,
+		DailyRate:   money.FromPesos(1200),
+		PaymentType: model.PaymentDaily,
+		Benefits:    allBenefits(),
+		Timesheets:  []model.TimesheetLine{{Date: "2026-11-27", DayType: "regular", Hours: 8}},
+	}
+
+	slip, err := Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Art. 94: one day's pay for the unworked regular holiday, whatever the
+	// number of reference rows.
+	if slip.HolidayPay != money.FromPesos(1200) {
+		t.Fatalf("holiday pay = %s, want 1200.00", slip.HolidayPay)
+	}
+
+	if slip.Gross != money.FromPesos(2400) {
+		t.Fatalf("gross = %s, want 2400.00", slip.Gross)
+	}
+}
+
+func TestDailyPaidEmployeeContributionsUseMonthlyEquivalent(t *testing.T) {
+	cfg := semiMonthlyConfig()
+
+	employee := model.Employee{
+		ID:           62,
+		MonthlyBasic: money.FromPesos(7000), // the basic-salary column holds the daily rate
+		DailyRate:    money.FromPesos(7000),
+		PaymentType:  model.PaymentDaily,
+		Benefits:     allBenefits(),
+	}
+
+	for day := 3; day <= 16; day++ {
+		employee.Timesheets = append(employee.Timesheets, model.TimesheetLine{
+			Date: dateOf(2026, 11, day), DayType: "regular", Hours: 8,
+		})
+	}
+
+	slip, err := Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 7,000 x 261 / 12 = 152,250 a month: the maximum salary credit and a
+	// premium at the PhilHealth ceiling.
+	if slip.SSSEmployee != money.FromPesos(500) {
+		t.Fatalf("sss employee = %s, want 500.00", slip.SSSEmployee)
+	}
+
+	if slip.SSSProvident != money.FromPesos(375) {
+		t.Fatalf("sss provident = %s, want 375.00", slip.SSSProvident)
+	}
+
+	if slip.PhilHealthEmployee != money.FromPesos(1250) {
+		t.Fatalf("philhealth employee = %s, want 1250.00", slip.PhilHealthEmployee)
+	}
+
+	if slip.PagIBIGEmployee != money.FromPesos(100) {
+		t.Fatalf("pagibig employee = %s, want 100.00", slip.PagIBIGEmployee)
+	}
+}
+
+func TestBenefitExclusionIsSharedAcrossPayments(t *testing.T) {
+	cfg := semiMonthlyConfig()
+
+	employee := model.Employee{
+		ID:           63,
+		MonthlyBasic: money.FromPesos(100000),
+		PaymentType:  model.PaymentMonthly,
+		Benefits:     allBenefits(),
+		Bonuses: []model.Earning{
+			{Code: "YEAR-END BONUS", Name: "Year-End Bonus", Amount: money.FromPesos(60000), NonTaxableCeiling: money.FromPesos(90000)},
+			{Code: "CASH GIFT", Name: "Cash Gift", Amount: money.FromPesos(60000), NonTaxableCeiling: money.FromPesos(90000)},
+		},
+	}
+
+	for day := 3; day <= 13; day++ {
+		employee.Timesheets = append(employee.Timesheets, model.TimesheetLine{
+			Date: dateOf(2026, 11, day), DayType: "regular", Hours: 8,
+		})
+	}
+
+	slip, err := Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slip.BenefitExempt != money.FromPesos(90000) {
+		t.Fatalf("benefit exempt = %s, want 90000.00", slip.BenefitExempt)
+	}
+
+	// 120,000 of benefits less the single 90,000 exclusion leaves 30,000.
+	taxableWithoutBenefits := slip.Gross.Sub(money.FromPesos(90000)).
+		Sub(slip.SSSEmployee).Sub(slip.SSSProvident).
+		Sub(slip.PhilHealthEmployee).Sub(slip.PagIBIGEmployee)
+
+	if slip.TaxableIncome != taxableWithoutBenefits {
+		t.Fatalf("taxable income = %s, want %s", slip.TaxableIncome, taxableWithoutBenefits)
+	}
+}
+
+func TestMinimumWageEarnerHazardPayIsExempt(t *testing.T) {
+	cfg := semiMonthlyConfig()
+
+	employee := model.Employee{
+		ID:            64,
+		MonthlyBasic:  money.FromPesos(16421.25),
+		DailyRate:     money.FromPesos(755),
+		PaymentType:   model.PaymentDaily,
+		IsMinimumWage: true,
+		MinimumWage:   money.FromPesos(755),
+		Benefits:      allBenefits(),
+		Compensations: []model.Earning{{Code: "HAZARD PAY", Name: "Hazard Pay", Amount: money.FromPesos(15000), Taxable: true}},
+	}
+
+	for day := 3; day <= 14; day++ {
+		employee.Timesheets = append(employee.Timesheets, model.TimesheetLine{
+			Date: dateOf(2026, 11, day), DayType: "regular", Hours: 8,
+		})
+	}
+
+	slip, err := Compute(cfg, employee)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 755 x 12 days = 9,060 statutory wage plus the 15,000 hazard pay.
+	if slip.MinimumWageExemption != money.FromPesos(24060) {
+		t.Fatalf("minimum wage exemption = %s, want 24060.00", slip.MinimumWageExemption)
+	}
+
+	if slip.WithholdingTax != 0 {
+		t.Fatalf("withholding tax = %s, want 0.00", slip.WithholdingTax)
 	}
 }

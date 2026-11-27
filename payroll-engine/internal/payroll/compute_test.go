@@ -37,7 +37,7 @@ func semiMonthlyConfig() model.Config {
 		PhilHealth:                 statutory.DefaultPhilHealthConfig(),
 		PagIBIG:                    statutory.DefaultPagIBIGConfig(),
 		TaxBrackets:                statutory.TRAINTaxBrackets(statutory.FrequencySemiMonthly),
-		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyMonthly),
+		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyAnnual),
 		PayUnworkedRegularHolidays: true,
 		PayrollDate:                time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 	}

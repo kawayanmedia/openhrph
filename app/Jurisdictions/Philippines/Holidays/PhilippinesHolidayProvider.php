@@ -65,14 +65,13 @@ final class PhilippinesHolidayProvider implements HolidayProvider
 
         foreach ($this->calendar($year) as $row) {
             DB::table('holidays')->updateOrInsert(
-                ['company_id' => $companyId, 'date' => $row['date']],
+                ['company_id' => $companyId, 'date' => $row['date'], 'code' => $row['code']],
                 [
                     'country_code' => 'PH',
                     'year' => $year,
                     'name' => $row['name'],
                     'type' => $row['type'],
                     'holiday_type' => $row['type'],
-                    'code' => $row['code'],
                     'deleted_at' => null,
                     'created_at' => $now,
                     'updated_at' => $now,

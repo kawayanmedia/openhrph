@@ -217,6 +217,7 @@ func TestThirteenthMonthAggregatesOtherBenefits(t *testing.T) {
 		MonthlyBasic: money.FromPesos(300000),
 		YTD: model.YtdTotals{
 			BasicEarned:   money.FromPesos(3600000),
+			TaxableIncome: money.FromPesos(3400000),
 			OtherBenefits: money.FromPesos(60000),
 		},
 	})
@@ -239,13 +240,16 @@ func TestThirteenthMonthAggregatesOtherBenefits(t *testing.T) {
 		t.Fatalf("non-taxable = %s, want 30000.00", slip.NonTaxable)
 	}
 
-	// Annual table: 15% x (270,000 - 250,000) = 3,000.
-	if slip.WithholdingTax != money.FromPesos(3000) {
-		t.Fatalf("withholding tax = %s, want 3000.00", slip.WithholdingTax)
+	// The excess is supplementary compensation: it is added to the year's
+	// regular taxable income and taxed at the marginal rate (BIR annualised
+	// computation). 3,400,000 and 3,670,000 both sit in the 30% band, so the
+	// incremental tax is 30% x 270,000 = 81,000.
+	if slip.WithholdingTax != money.FromPesos(81000) {
+		t.Fatalf("withholding tax = %s, want 81000.00", slip.WithholdingTax)
 	}
 
-	if slip.NetPay != money.FromPesos(297000) {
-		t.Fatalf("net pay = %s, want 297000.00", slip.NetPay)
+	if slip.NetPay != money.FromPesos(219000) {
+		t.Fatalf("net pay = %s, want 219000.00", slip.NetPay)
 	}
 }
 

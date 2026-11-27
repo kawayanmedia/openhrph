@@ -28,6 +28,7 @@ type Frequency string
 const (
 	FrequencyMonthly     Frequency = "monthly"
 	FrequencySemiMonthly Frequency = "semi-monthly"
+	FrequencyAnnual      Frequency = "annual"
 )
 
 // NormalizeSchedule maps the values stored on payroll groups to a Schedule.
@@ -300,6 +301,17 @@ func ComputeTax(taxable money.Centavos, brackets []TaxBracket) (money.Centavos, 
 // law) rather than being derived by division, so they match payroll reports
 // to the centavo.
 func TRAINTaxBrackets(f Frequency) []TaxBracket {
+	if f == FrequencyAnnual {
+		return []TaxBracket{
+			{From: 0, To: money.FromPesos(250000), BaseTax: 0, Rate: 0},
+			{From: money.FromPesos(250000.01), To: money.FromPesos(400000), BaseTax: 0, Rate: 0.15},
+			{From: money.FromPesos(400000.01), To: money.FromPesos(800000), BaseTax: money.FromPesos(22500), Rate: 0.20},
+			{From: money.FromPesos(800000.01), To: money.FromPesos(2000000), BaseTax: money.FromPesos(102500), Rate: 0.25},
+			{From: money.FromPesos(2000000.01), To: money.FromPesos(8000000), BaseTax: money.FromPesos(402500), Rate: 0.30},
+			{From: money.FromPesos(8000000.01), To: 0, BaseTax: money.FromPesos(2202500), Rate: 0.35},
+		}
+	}
+
 	if f == FrequencySemiMonthly {
 		return []TaxBracket{
 			{From: 0, To: money.FromPesos(10416.99), BaseTax: 0, Rate: 0},

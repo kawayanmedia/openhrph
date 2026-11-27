@@ -244,7 +244,7 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 		PagIBIG:                    statutory.DefaultPagIBIGConfig(),
 		GSIS:                       statutory.DefaultGSISConfig(),
 		TaxBrackets:                statutory.TRAINTaxBrackets(statutory.FrequencySemiMonthly),
-		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyMonthly),
+		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyAnnual),
 		PayWithoutTimesheet:        true,
 		PayUnworkedRegularHolidays: true,
 		SssBase:                    "basic",
@@ -384,7 +384,7 @@ func loadConfig(ctx context.Context, db *sql.DB, run Run) (model.Config, error) 
 			return cfg, err
 		}
 
-		if cfg.AnnualTaxBrackets, err = loadTaxBrackets(ctx, db, run, statutory.FrequencyMonthly); err != nil {
+		if cfg.AnnualTaxBrackets, err = loadTaxBrackets(ctx, db, run, statutory.FrequencyAnnual); err != nil {
 			return cfg, err
 		}
 
@@ -1712,13 +1712,24 @@ func loadHolidays(ctx context.Context, db *sql.DB, run Run) []model.Holiday {
 	defer rows.Close()
 
 	holidays := []model.Holiday{}
+	seen := map[string]bool{}
 
 	for rows.Next() {
 		var holiday model.Holiday
 
-		if err := rows.Scan(&holiday.Date, &holiday.Code); err == nil && holiday.Code != "" {
-			holidays = append(holidays, holiday)
+		if err := rows.Scan(&holiday.Date, &holiday.Code); err != nil || holiday.Code == "" || holiday.Date == "" {
+			continue
 		}
+
+		// A duplicate reference row must never pay a second holiday: the
+		// engine pays one day per date and code in the period.
+		key := holiday.Date + "|" + holiday.Code
+		if seen[key] {
+			continue
+		}
+
+		seen[key] = true
+		holidays = append(holidays, holiday)
 	}
 
 	return holidays
@@ -2049,6 +2060,13 @@ func loadTaxBrackets(ctx context.Context, db *sql.DB, run Run, frequency statuto
 	}
 
 	if len(brackets) == 0 {
+		// The annual table is used only to annualise supplementary payments.
+		// An installation whose statutory import predates it still gets the
+		// published annual table rather than failing every payroll.
+		if frequency == statutory.FrequencyAnnual {
+			return statutory.TRAINTaxBrackets(statutory.FrequencyAnnual), nil
+		}
+
 		return nil, coverageError("statutory_tax_brackets", run)
 	}
 

@@ -600,7 +600,7 @@ func baseConfig() model.Config {
 		PagIBIG:                    statutory.DefaultPagIBIGConfig(),
 		GSIS:                       statutory.DefaultGSISConfig(),
 		TaxBrackets:                statutory.TRAINTaxBrackets(statutory.FrequencySemiMonthly),
-		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyMonthly),
+		AnnualTaxBrackets:          statutory.TRAINTaxBrackets(statutory.FrequencyAnnual),
 		DefaultRegion:              "NCR",
 		DefaultIndustry:            "NON-AGRICULTURE",
 		SssBase:                    "basic",
@@ -899,6 +899,45 @@ func parityScenarios() []struct {
 		})
 	}
 
+	// 22. Duplicate holiday rows must pay one holiday (audit A-01).
+	duplicateHolidayCfg := baseConfig()
+	duplicateHolidayCfg.PayUnworkedRegularHolidays = true
+	duplicateHolidayCfg.Holidays = []model.Holiday{
+		{Date: "2026-09-07", Code: "rh"},
+		{Date: "2026-09-07", Code: "rh"},
+		{Date: "2026-09-07", Code: "rh"},
+	}
+	duplicateHoliday := dailyEmployee()
+	duplicateHoliday.Timesheets = []model.TimesheetLine{
+		{Date: "2026-09-04", DayType: "regular", Hours: 8},
+	}
+
+	// 23. A daily-paid employee is assessed on the monthly equivalent of the
+	// daily rate, not on the daily rate stored in the basic-salary column
+	// (audit A-03).
+	contributionBase := dailyEmployee()
+	contributionBase.MonthlyBasic = money.FromPesos(7000)
+	contributionBase.DailyRate = money.FromPesos(7000)
+	contributionBase.Timesheets = nil
+	for day := 1; day <= 10; day++ {
+		contributionBase.Timesheets = append(contributionBase.Timesheets, model.TimesheetLine{
+			Date: dateOf(2026, 3, day), DayType: "regular", Hours: 8,
+		})
+	}
+
+	// 24. The 90,000 exclusion is shared by every benefit paid in the year
+	// (audit A-04).
+	benefitCeiling := monthlyEmployee()
+	benefitCeiling.Bonuses = []model.Earning{
+		{Code: "YEAR-END BONUS", Name: "Year-End Bonus", Amount: money.FromPesos(60000), NonTaxableCeiling: money.FromPesos(90000)},
+		{Code: "CASH GIFT", Name: "Cash Gift", Amount: money.FromPesos(60000), NonTaxableCeiling: money.FromPesos(90000)},
+	}
+	for day := 1; day <= 10; day++ {
+		benefitCeiling.Timesheets = append(benefitCeiling.Timesheets, model.TimesheetLine{
+			Date: dateOf(2026, 3, day), DayType: "regular", Hours: 8,
+		})
+	}
+
 	return []struct {
 		name     string
 		cfg      model.Config
@@ -926,6 +965,9 @@ func parityScenarios() []struct {
 		{"final_pay_retrenchment", finalCfg, final},
 		{"annual_adjustment_refund", annualCfg, annual},
 		{"regular_government_gsis", governmentCfg, government},
+		{"regular_duplicate_holiday_rows", duplicateHolidayCfg, duplicateHoliday},
+		{"regular_daily_paid_contribution_base", cfg, contributionBase},
+		{"regular_benefit_ceiling_shared", cfg, benefitCeiling},
 	}
 }
 

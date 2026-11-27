@@ -4,6 +4,7 @@ namespace App\Services\Payroll\Computation;
 
 use App\Jurisdictions\Contracts\PayrollPolicy;
 use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxService;
+use App\Jurisdictions\Philippines\Statutory\Bir\TaxPeriod;
 use App\Jurisdictions\Philippines\Statutory\Bir\WithholdingTaxTable;
 use App\Jurisdictions\Philippines\Statutory\ContributionSchedule;
 use App\Jurisdictions\Philippines\Statutory\Generic\GenericContributionService;
@@ -283,7 +284,7 @@ final class Computer
         // paid 100% of the daily rate when they worked or were on paid leave
         // the day before.
         if (! $monthlyPaid && $cfg->payUnworkedRegularHolidays) {
-            foreach ($cfg->holidays as $holiday) {
+            foreach (self::uniqueHolidays($cfg->holidays) as $holiday) {
                 if (! Rules::isRegularHoliday($holiday->code) || self::workedOn($employee->timesheets, $holiday->date)) {
                     continue;
                 }
@@ -336,13 +337,11 @@ final class Computer
         foreach ($employee->bonuses as $earning) {
             $slip->bonus += $earning->amount;
 
-            if ($earning->nonTaxableCeiling > 0) {
-                $exempt = Money::min($earning->amount, $earning->nonTaxableCeiling);
+            $exempt = self::benefitExemption($cfg, $employee, $earning, $slip);
+
+            if ($exempt > 0) {
                 $slip->nonTaxable += $exempt;
                 $slip->benefitExempt += $exempt;
-            } elseif (! $earning->taxable) {
-                $slip->nonTaxable += $earning->amount;
-                $slip->benefitExempt += $earning->amount;
             }
         }
 
@@ -385,8 +384,8 @@ final class Computer
         if (! $generic) {
             // Each agency has its own contribution base so a company can follow
             // the agency circular without code changes.
-            $philHealthBase = self::contributionBase($cfg->philHealthBase, $employee, $slip, $periods);
-            $pagIbigBase = self::contributionBase($cfg->pagIbigBase, $employee, $slip, $periods);
+            $philHealthBase = self::contributionBase($cfg->philHealthBase, $employee, $slip, $periods, $cfg);
+            $pagIbigBase = self::contributionBase($cfg->pagIbigBase, $employee, $slip, $periods, $cfg);
 
             // Government agencies remit GSIS and private establishments remit
             // SSS; the scheme is mutually exclusive and owns its own schedule.
@@ -396,6 +395,7 @@ final class Computer
                 $employee,
                 $slip,
                 $periods,
+                $cfg,
             );
             $divisor = self::divisor($cfg, $cfg->sssSchedule);
 
@@ -444,8 +444,8 @@ final class Computer
         }
 
         // Minimum wage earners are exempt on the statutory minimum wage and on
-        // the holiday, overtime and night-shift pay attributable to it
-        // (RA 9504 as amended by RA 10963).
+        // the holiday, overtime, night-shift and hazard pay attributable to it
+        // (RA 9504 as amended by RA 10963; BIR RR 10-2008).
         $minWageExemption = Money::ZERO;
 
         if ($cfg->policy->minimumWageTaxExempt() && $employee->isMinimumWage && $employee->minimumWage > 0) {
@@ -469,7 +469,8 @@ final class Computer
                     + $slip->restDayPay
                     + $slip->overtimePay
                     + $slip->nightPay
-                    + $slip->nightOTPay;
+                    + $slip->nightOTPay
+                    + self::hazardPay($employee);
 
                 $minWageExemption = Money::min($slip->gross, $statutoryWage + $premiums);
                 $slip->minimumWageExemption = $minWageExemption;
@@ -560,7 +561,7 @@ final class Computer
             );
         } elseif (self::divisor($cfg, $cfg->taxSchedule) > 0) {
             try {
-                $slip->withholdingTax = self::withholding($cfg, $slip->taxableIncome, $periods);
+                $slip->withholdingTax = self::withholding($cfg, $slip->taxableIncome);
             } catch (RuntimeException $exception) {
                 $slip->warnings[] = $exception->getMessage();
             }
@@ -654,14 +655,14 @@ final class Computer
         if ($generic) {
             $slip->withholdingTax = self::genericTax($cfg, $taxable, $slip);
         } else {
-            $brackets = self::annualBrackets($cfg);
-
-            if ($brackets !== [] && $taxable > 0) {
-                try {
-                    $slip->withholdingTax = (new WithholdingTaxService($brackets))->compute($taxable);
-                } catch (RuntimeException $exception) {
-                    $slip->warnings[] = $exception->getMessage();
-                }
+            try {
+                $slip->withholdingTax = self::taxOnBenefitExcess(
+                    $cfg,
+                    Money::max(0, $employee->ytd->taxableIncome),
+                    $taxable,
+                );
+            } catch (RuntimeException $exception) {
+                $slip->warnings[] = $exception->getMessage();
             }
         }
 
@@ -732,20 +733,32 @@ final class Computer
         [$separation, $separationTaxable] = self::separationPay($cfg, $employee, $slip);
 
         $gross = $slip->gross + $thirteenth + $leave + $separation;
-        $taxable = $slip->taxableIncome + $thirteenthTaxable + $leaveTaxable;
+        $regularTaxable = $slip->taxableIncome;
+        $benefitTaxable = $thirteenthTaxable + $leaveTaxable;
         $slip->nonTaxable += $leaveExempt;
 
         if ($separationTaxable) {
-            $taxable += $separation;
+            $benefitTaxable += $separation;
         }
 
+        $taxable = $regularTaxable + $benefitTaxable;
         $tax = Money::ZERO;
 
         if ($taxable > 0) {
             try {
-                $tax = $generic
-                    ? self::genericTax($cfg, $taxable, $slip)
-                    : self::withholding($cfg, $taxable, $cfg->periodsPerMonth());
+                if ($generic) {
+                    $tax = self::genericTax($cfg, $taxable, $slip);
+                } else {
+                    // The final period's basic is taxed at the period table;
+                    // the benefit payments that settle with it follow the
+                    // annualised computation on the year's regular income.
+                    $tax = self::withholding($cfg, $regularTaxable);
+                    $tax += self::taxOnBenefitExcess(
+                        $cfg,
+                        Money::max(0, $employee->ytd->taxableIncome) + $regularTaxable,
+                        $benefitTaxable,
+                    );
+                }
             } catch (RuntimeException $exception) {
                 $slip->warnings[] = $exception->getMessage();
             }
@@ -805,12 +818,13 @@ final class Computer
             return $slip;
         }
 
-        $monthlyEquivalent = Money::mul($employee->ytd->taxableIncome, 1.0 / 12.0);
-        $monthlyTax = $generic
-            ? self::genericTax($cfg, $monthlyEquivalent, $slip)
-            : (new WithholdingTaxService($brackets))->compute($monthlyEquivalent);
+        if ($generic) {
+            $monthlyEquivalent = Money::mul($employee->ytd->taxableIncome, 1.0 / 12.0);
+            $annualTax = Money::mul(self::genericTax($cfg, $monthlyEquivalent, $slip), 12);
+        } else {
+            $annualTax = (new WithholdingTaxService($brackets))->compute($employee->ytd->taxableIncome);
+        }
 
-        $annualTax = Money::mul($monthlyTax, 12);
         $adjustment = $annualTax - $employee->ytd->taxWithheld;
 
         $slip->annualAdjustment = $adjustment;
@@ -821,6 +835,38 @@ final class Computer
         self::appendGenericTaxLine($cfg, $slip);
 
         return $slip;
+    }
+
+    /**
+     * The exempt part of one benefit payment.
+     *
+     * The ₱90,000 exclusion for 13th-month pay and other benefits is a single
+     * annual amount shared by every benefit payment, so a payment is exempt
+     * only up to what the employee has left after earlier benefits. A country
+     * without the exclusion falls back to the line's own ceiling.
+     */
+    private static function benefitExemption(Config $cfg, Employee $employee, Earning $earning, Payslip $slip): int
+    {
+        if ($earning->taxable) {
+            return 0;
+        }
+
+        $lineCeiling = $earning->nonTaxableCeiling > 0
+            ? $earning->nonTaxableCeiling
+            : $earning->amount;
+
+        $annualCeiling = $cfg->policy->thirteenthMonthExemptCentavos();
+
+        if ($annualCeiling <= 0) {
+            return Money::min($earning->amount, $lineCeiling);
+        }
+
+        $remaining = Money::max(
+            0,
+            $annualCeiling - $employee->ytd->otherBenefits - $slip->benefitExempt,
+        );
+
+        return Money::min($earning->amount, Money::min($lineCeiling, $remaining));
     }
 
     /**
@@ -904,7 +950,42 @@ final class Computer
             return [];
         }
 
-        return WithholdingTaxTable::train(PayFrequency::MONTHLY);
+        return WithholdingTaxTable::trainForPeriod(TaxPeriod::ANNUAL);
+    }
+
+    /**
+     * Withholding on a benefit payment.
+     *
+     * A 13th-month excess, or any other supplementary payment, is added to the
+     * employee's annualised regular taxable income and the difference is
+     * withheld (BIR annualised computation for supplementary compensation).
+     * Taxing the payment on its own would apply the lower brackets twice.
+     */
+    public static function taxOnBenefitExcess(Config $cfg, int $annualTaxableRegular, int $excess): int
+    {
+        if ($excess <= 0) {
+            return 0;
+        }
+
+        $brackets = self::annualBrackets($cfg);
+
+        if ($brackets === []) {
+            return 0;
+        }
+
+        $base = Money::max(0, $annualTaxableRegular);
+
+        if ($base <= 0) {
+            // Without a year-to-date taxable base there is nothing to
+            // annualise against; withhold on the payment itself with the
+            // monthly table rather than exempting it.
+            return (new WithholdingTaxService(WithholdingTaxTable::trainForPeriod(TaxPeriod::MONTHLY)))
+                ->compute($excess);
+        }
+
+        $service = new WithholdingTaxService($brackets);
+
+        return Money::max(0, $service->compute($base + $excess) - $service->compute($base));
     }
 
     /**
@@ -1421,13 +1502,89 @@ final class Computer
     /**
      * Select what a statutory contribution is assessed on.
      */
-    private static function contributionBase(string $base, Employee $employee, Payslip $slip, int $periods): int
+    private static function contributionBase(string $base, Employee $employee, Payslip $slip, int $periods, ?Config $cfg = null): int
     {
         return match ($base |> trim(...) |> strtolower(...)) {
             'gross' => Money::mul($slip->gross, (float) $periods),
             'period_gross' => $slip->gross,
-            default => $employee->monthlyBasic,
+            default => self::monthlyContributionBase($cfg, $employee),
         };
+    }
+
+    /**
+     * Holidays deduplicated by date and code.
+     *
+     * A duplicated reference row must never pay a second holiday, whatever the
+     * caller passed in: one day in the period earns one unworked-holiday pay.
+     *
+     * @param  list<Holiday>  $holidays
+     * @return list<Holiday>
+     */
+    private static function uniqueHolidays(array $holidays): array
+    {
+        $unique = [];
+        $seen = [];
+
+        foreach ($holidays as $holiday) {
+            $key = $holiday->date.'|'.$holiday->code;
+
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $unique[] = $holiday;
+        }
+
+        return $unique;
+    }
+
+    /**
+     * Hazard pay paid to a minimum wage earner, which RA 9504 also exempts.
+     * The catalogue has no dedicated flag for hazardous-work pay, so the line
+     * is recognised by its code or name, the same way de minimis benefits are.
+     */
+    private static function hazardPay(Employee $employee): int
+    {
+        $total = 0;
+
+        foreach ([...$employee->compensations, ...$employee->allowances] as $earning) {
+            $label = ($earning->code |> trim(...) |> strtoupper(...)).' '.($earning->name |> trim(...) |> strtoupper(...));
+
+            if ($earning->amount > 0 && str_contains($label, 'HAZARD')) {
+                $total += $earning->amount;
+            }
+        }
+
+        return $total;
+    }
+
+    /**
+     * The monthly salary a contribution is assessed on.
+     *
+     * A daily-paid employee's `basicSalary` is the contracted daily rate, not a
+     * month's pay, so assessing SSS, PhilHealth and Pag-IBIG on it understates
+     * every contribution by the days-per-year divisor. The monthly equivalent
+     * of the daily rate is used instead; a stored figure above the daily rate
+     * is already a monthly salary and is kept.
+     */
+    public static function monthlyContributionBase(?Config $cfg, Employee $employee): int
+    {
+        if (($employee->paymentType |> trim(...) |> strtolower(...)) !== Employee::PAYMENT_DAILY) {
+            return $employee->monthlyBasic;
+        }
+
+        if ($employee->monthlyBasic > 0 && $employee->monthlyBasic > $employee->dailyRate) {
+            return $employee->monthlyBasic;
+        }
+
+        if ($employee->dailyRate <= 0) {
+            return $employee->monthlyBasic;
+        }
+
+        $days = ($cfg?->daysPerYear ?? 0) > 0 ? $cfg->daysPerYear : 261;
+
+        return Money::round($employee->dailyRate * $days / 12);
     }
 
     /**
@@ -1642,19 +1799,26 @@ final class Computer
      * monthly equivalent and allocated, so the two cut-offs reconcile to the
      * monthly table.
      */
-    private static function withholding(Config $cfg, int $taxable, int $periods): int
+    private static function withholding(Config $cfg, int $taxable): int
     {
         if (self::uniformSchedules($cfg)) {
             return (new WithholdingTaxService($cfg->taxBrackets))->compute($taxable);
         }
 
-        $brackets = $cfg->annualTaxBrackets !== []
-            ? $cfg->annualTaxBrackets
-            : WithholdingTaxTable::train(PayFrequency::MONTHLY);
+        $brackets = self::annualBrackets($cfg);
 
-        $monthlyTax = (new WithholdingTaxService($brackets))->compute(Money::mul($taxable, (float) $periods));
+        if ($brackets === []) {
+            return (new WithholdingTaxService($cfg->taxBrackets))->compute($taxable);
+        }
 
-        return self::firstPart($monthlyTax, $periods);
+        // A contribution taken only on one cut-off leaves this period's
+        // taxable income unrepresentative of a month, so annualise the period
+        // and allocate the annual tax back over the year's pays.
+        $partsPerYear = max(1, $cfg->periodsPerYear());
+        $annualTax = (new WithholdingTaxService($brackets))
+            ->compute(Money::mul($taxable, (float) $partsPerYear));
+
+        return self::firstPart($annualTax, $partsPerYear);
     }
 
     private static function uniformSchedules(Config $cfg): bool

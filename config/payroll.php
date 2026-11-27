@@ -194,12 +194,18 @@ return [
             'pagibig' => 'Pag-IBIG',
             'bir' => 'BIR',
         ],
-        'due_days' => [
-            'sss' => 15,
-            'gsis' => 10,
-            'philhealth' => 15,
-            'pagibig' => 15,
-            'bir' => 10,
+
+        // Statutory filing deadlines are month-based, not a fixed number of
+        // days after the payroll date: the remittance for a month is due on
+        // the same calendar day of the following month. `day` is the latest
+        // day of that month; `source` names the rule the default follows and
+        // is a working default, not legal advice.
+        'due' => [
+            'sss' => ['day' => 10, 'source' => 'RA 11199 Sec. 22 — within the first 10 days of the following month'],
+            'gsis' => ['day' => 10, 'source' => 'RA 8291 — within the first 10 days of the following month'],
+            'philhealth' => ['day' => 15, 'source' => 'RA 11223 IRR — within 15 days of the following month'],
+            'pagibig' => ['day' => 15, 'source' => 'RA 9679 — within 15 days of the following month'],
+            'bir' => ['day' => 10, 'source' => 'BIR RR 11-2018 — on or before the 10th of the following month (15th where e-filing applies)'],
         ],
     ],
 

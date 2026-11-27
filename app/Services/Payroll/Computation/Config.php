@@ -158,7 +158,11 @@ final class Config
                 array_values((array) ($data['holidays'] ?? [])),
             ),
             payWithoutTimesheet: (bool) ($data['pay_without_timesheet'] ?? false),
-            payUnworkedRegularHolidays: (bool) ($data['pay_unworked_regular_holidays'] ?? false),
+            // Unworked regular holidays are payable by default in the
+            // Philippine driver, matching LegacyInput::loadConfig and
+            // db.loadConfig; the key only turns the entitlement off.
+            payUnworkedRegularHolidays: (bool) ($data['pay_unworked_regular_holidays']
+                ?? ((string) ($data['statutory_driver'] ?? 'ph') === 'ph')),
             computeUndertime: (bool) ($data['compute_undertime'] ?? false),
             countryCode: (string) ($data['country_code'] ?? 'PH'),
             statutoryDriver: (string) ($data['statutory_driver'] ?? 'ph'),

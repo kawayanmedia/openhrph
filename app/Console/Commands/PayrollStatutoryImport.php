@@ -304,6 +304,17 @@ class PayrollStatutoryImport extends Command
                 [166667, 666666.99, 33541.80, 0.30],
                 [666667, null, 183541.80, 0.35],
             ],
+            // The annual table is the statutory table itself; the monthly and
+            // semi-monthly tables are its published instalments and are used
+            // to annualise supplementary payments.
+            'annual' => [
+                [0, 250000, 0, 0],
+                [250001, 400000, 0, 0.15],
+                [400001, 800000, 22500.00, 0.20],
+                [800001, 2000000, 102500.00, 0.25],
+                [2000001, 8000000, 402500.00, 0.30],
+                [8000001, null, 2202500.00, 0.35],
+            ],
         ];
     }
 
