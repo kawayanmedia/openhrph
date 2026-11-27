@@ -7,18 +7,21 @@
 
 <x-admin.field :label="$field->name" :help="$field->help" :error="$errorKey" :id="$fieldId" :required="$field->isRequired()">
     <div class="flex items-center gap-2">
-        <select id="{{ $fieldId }}"
-                wire:model{{ $field->live ? '.live' : '' }}="{{ $name }}.{{ $field->attribute }}"
-                @disabled($field->readonly)
-                @required($field->isRequired())
-                @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
-                @error($errorKey) aria-invalid="true" @enderror
-                class="ui-select">
+        <x-admin.searchable-select
+                id="{{ $fieldId }}"
+                :model="$name . '.' . $field->attribute"
+            :live="$field->live"
+                :disabled="$field->readonly"
+                :required="$field->isRequired()"
+                :label="$field->name"
+                :aria-describedby="$describedBy ?: null"
+                :aria-invalid="$errors->has($errorKey) ? 'true' : null"
+                wrapper-class="min-w-0 flex-1">
             <option value="">Select an option</option>
             @foreach ($field->options as $value => $label)
                 <option value="{{ $value }}">{{ $label }}</option>
             @endforeach
-        </select>
+        </x-admin.searchable-select>
 
         @php($relatedKey = collect([
             \Illuminate\Support\Str::kebab($field->name),

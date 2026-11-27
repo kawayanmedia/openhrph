@@ -32,7 +32,7 @@
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label for="payroll" class="ui-label">Payroll</label>
-                    <select id="payroll" wire:model.live="payrollId" class="ui-select">
+                    <x-admin.searchable-select id="payroll" wire:model.live="payrollId" label="Payroll">
                         @foreach ($payrolls as $option)
                             <option value="{{ $option->getKey() }}">
                                 #{{ $option->getKey() }} · {{ $option->payroll_date?->format('M d, Y') ?? 'No date' }}
@@ -40,16 +40,16 @@
                                 ({{ ucfirst((string) $option->status) }})
                             </option>
                         @endforeach
-                    </select>
+                    </x-admin.searchable-select>
                 </div>
 
                 <div>
                     <label for="format" class="ui-label">Working paper</label>
-                    <select id="format" wire:model.live="format" class="ui-select">
+                    <x-admin.searchable-select id="format" wire:model.live="format" label="Working paper">
                         @foreach ($formats as $key => $label)
                             <option value="{{ $key }}">{{ $label }}</option>
                         @endforeach
-                    </select>
+                    </x-admin.searchable-select>
                 </div>
 
                 <div>

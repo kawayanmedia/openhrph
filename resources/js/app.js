@@ -1,5 +1,6 @@
 import './bootstrap';
 import './calculators';
+import './searchable-select';
 
 // import Alpine from 'alpinejs';
 // import focus from '@alpinejs/focus';

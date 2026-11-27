@@ -32,21 +32,21 @@
             <div class="grid gap-4 sm:grid-cols-3">
                 <div>
                     <label for="template" class="ui-label">Template</label>
-                    <select id="template" wire:model.live="templateId" class="ui-select">
+                    <x-admin.searchable-select id="template" wire:model.live="templateId" label="Template">
                         @foreach ($templates as $option)
                             <option value="{{ $option->getKey() }}">{{ $option->name }}{{ $option->is_active ? '' : ' (inactive)' }}</option>
                         @endforeach
-                    </select>
+                    </x-admin.searchable-select>
                 </div>
 
                 <div>
                     <label for="debitAccount" class="ui-label">Company debit account</label>
-                    <select id="debitAccount" wire:model.live="debitAccountId" class="ui-select">
+                    <x-admin.searchable-select id="debitAccount" wire:model.live="debitAccountId" label="Company debit account">
                         <option value="">— none —</option>
                         @foreach ($accounts as $account)
                             <option value="{{ $account->getKey() }}">{{ $account->name }} · {{ $account->account_number }}</option>
                         @endforeach
-                    </select>
+                    </x-admin.searchable-select>
                 </div>
 
                 <div>

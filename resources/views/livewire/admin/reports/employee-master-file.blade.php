@@ -22,61 +22,61 @@
 
             <div>
                 <label for="office" class="ui-label">Office</label>
-                <select id="office" wire:model.live="officeId" class="ui-select">
+                <x-admin.searchable-select id="office" wire:model.live="officeId" label="Office">
                     <option value="">All offices</option>
                     @foreach ($offices as $office)
                         <option value="{{ $office->getKey() }}">{{ $office->name }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </div>
 
             <div>
                 <label for="department" class="ui-label">Department</label>
-                <select id="department" wire:model.live="departmentId" class="ui-select">
+                <x-admin.searchable-select id="department" wire:model.live="departmentId" label="Department">
                     <option value="">All departments</option>
                     @foreach ($departments as $department)
                         <option value="{{ $department->getKey() }}">{{ $department->name }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </div>
 
             <div>
                 <label for="employmentType" class="ui-label">Employment type</label>
-                <select id="employmentType" wire:model.live="employmentTypeId" class="ui-select">
+                <x-admin.searchable-select id="employmentType" wire:model.live="employmentTypeId" label="Employment type">
                     <option value="">All types</option>
                     @foreach ($employmentTypes as $type)
                         <option value="{{ $type->getKey() }}">{{ $type->name }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </div>
 
             <div>
                 <label for="employmentStatus" class="ui-label">Employment status</label>
-                <select id="employmentStatus" wire:model.live="employmentStatus" class="ui-select">
+                <x-admin.searchable-select id="employmentStatus" wire:model.live="employmentStatus" label="Employment status">
                     <option value="">All statuses</option>
                     @foreach ($statuses as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </div>
 
             <div>
                 <label for="payrollGroup" class="ui-label">Payroll group</label>
-                <select id="payrollGroup" wire:model.live="payrollGroupId" class="ui-select">
+                <x-admin.searchable-select id="payrollGroup" wire:model.live="payrollGroupId" label="Payroll group">
                     <option value="">All groups</option>
                     @foreach ($payrollGroups as $group)
                         <option value="{{ $group->getKey() }}">{{ $group->name }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </div>
 
             <div>
                 <label for="active" class="ui-label">Status</label>
-                <select id="active" wire:model.live="active" class="ui-select">
+                <x-admin.searchable-select id="active" wire:model.live="active" label="Status">
                     <option value="">Active and resigned</option>
                     <option value="active">Active only</option>
                     <option value="resigned">Resigned only</option>
-                </select>
+                </x-admin.searchable-select>
             </div>
         </div>
 
@@ -84,11 +84,11 @@
             <p class="text-xs text-slate-500 dark:text-slate-400">{{ $employees->total() }} employee(s) · page total {{ currency_symbol() }}{{ number_format($totalMonthlyBasic / 100, 2) }}</p>
             <div class="flex items-center gap-2">
                 <label for="perPage" class="text-xs text-slate-500 dark:text-slate-400">Rows</label>
-                <select id="perPage" wire:model.live="perPage" class="ui-select ui-select-auto py-1.5">
+                <x-admin.searchable-select id="perPage" wire:model.live="perPage" label="Rows per page" class="ui-select-auto py-1.5">
                     @foreach ([10, 25, 50, 100] as $size)
                         <option value="{{ $size }}">{{ $size }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
                 <button type="button" wire:click="resetFilters" class="ui-btn-ghost text-xs">Reset filters</button>
             </div>
         </div>

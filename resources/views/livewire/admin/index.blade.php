@@ -55,11 +55,11 @@
 
             <label class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                 Show
-                <select wire:model.live="perPage" class="ui-select ui-select-auto py-2">
+                <x-admin.searchable-select wire:model.live="perPage" label="Rows per page" class="ui-select-auto py-2">
                     @foreach ([10, 25, 50, 100] as $size)
                         <option value="{{ $size }}">{{ $size }}</option>
                     @endforeach
-                </select>
+                </x-admin.searchable-select>
             </label>
         </div>
     </div>
@@ -67,12 +67,14 @@
     <div class="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-navy-800 dark:bg-navy-900/40">
         <label class="flex min-w-[12rem] flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Saved view
-            <select wire:model.live="savedViewId" class="ui-select font-normal normal-case tracking-normal">
+            <x-admin.searchable-select wire:model.live="savedViewId"
+                                       :label="'Saved view'"
+                                       class="font-normal normal-case tracking-normal">
                 <option value="">Current filters</option>
                 @foreach ($savedViews as $view)
                     <option value="{{ $view->id }}">{{ $view->name }}</option>
                 @endforeach
-            </select>
+            </x-admin.searchable-select>
         </label>
 
         <label class="flex min-w-[14rem] flex-1 flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -122,13 +124,14 @@
                             @endforeach
                         </div>
                     @else
-                        <select wire:model.live="filterValues.{{ $filter->uriKey() }}"
-                                class="ui-select font-normal normal-case tracking-normal">
+                        <x-admin.searchable-select wire:model.live="filterValues.{{ $filter->uriKey() }}"
+                                                   :label="$filter->name()"
+                                                   class="font-normal normal-case tracking-normal">
                             <option value="">All</option>
                             @foreach ($filter->options(request()) as $value => $label)
                                 <option value="{{ $value }}">{{ $label }}</option>
                             @endforeach
-                        </select>
+                        </x-admin.searchable-select>
                     @endif
                 </label>
             @endforeach

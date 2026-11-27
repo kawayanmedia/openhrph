@@ -6,16 +6,18 @@
 @endphp
 
 <x-admin.field :label="$field->name" :help="$field->help" :error="$errorKey" :id="$fieldId" :required="$field->isRequired()">
-    <select id="{{ $fieldId }}"
-            wire:model{{ $field->live ? '.live' : '' }}="{{ $name }}.{{ $field->attribute }}"
-            @disabled($field->readonly)
-            @required($field->isRequired())
-            @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif
-            @error($errorKey) aria-invalid="true" @enderror
-            class="ui-select">
+    <x-admin.searchable-select
+            id="{{ $fieldId }}"
+            :model="$name . '.' . $field->attribute"
+            :live="$field->live"
+            :disabled="$field->readonly"
+            :required="$field->isRequired()"
+            :label="$field->name"
+            :aria-describedby="$describedBy ?: null"
+            :aria-invalid="$errors->has($errorKey) ? 'true' : null">
         <option value="">Select an option</option>
         @foreach ($field->options as $value => $label)
             <option value="{{ $value }}">{{ $label }}</option>
         @endforeach
-    </select>
+    </x-admin.searchable-select>
 </x-admin.field>
