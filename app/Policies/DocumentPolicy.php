@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Document;
+use App\Models\Employee;
 use App\Models\User;
 use App\Policies\Concerns\TenantScopedAuthorization;
 
@@ -14,6 +15,10 @@ class DocumentPolicy
     {
         if (! $this->sameTenant($user, $document)) {
             return false;
+        }
+
+        if ($this->ownsDocument($user, $document)) {
+            return true;
         }
 
         if (! $document->isSensitive()) {
@@ -40,6 +45,15 @@ class DocumentPolicy
     public function delete(User $user, Document $document): bool
     {
         return $this->update($user, $document);
+    }
+
+    protected function ownsDocument(User $user, Document $document): bool
+    {
+        $employeeId = $user->employee_id;
+
+        return $employeeId !== null
+            && $document->owner_type === (new Employee)->getMorphClass()
+            && (int) $document->owner_id === (int) $employeeId;
     }
 
     protected function canManageSensitive(User $user, Document $document): bool

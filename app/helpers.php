@@ -15,6 +15,7 @@ use App\Support\Tenancy\TenantCache;
 use App\Support\Tenancy\TenantContext;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Nova\Http\Requests\NovaRequest;
@@ -85,6 +86,19 @@ if (! function_exists('portal_company_logo')) {
         } catch (Throwable) {
             return null;
         }
+    }
+}
+
+if (! function_exists('portal_user')) {
+    /**
+     * The signed-in employee portal user, falling back to the default guard.
+     */
+    function portal_user(): ?User
+    {
+        $user = Auth::guard('portal')->user()
+            ?? Auth::user();
+
+        return $user instanceof User ? $user : null;
     }
 }
 

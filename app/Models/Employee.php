@@ -223,6 +223,31 @@ class Employee extends Model implements HasMedia
         return $this->hasMany(OnboardingChecklist::class);
     }
 
+    public function performanceGoals()
+    {
+        return $this->hasMany(PerformanceGoal::class);
+    }
+
+    public function performanceReviews()
+    {
+        return $this->hasMany(PerformanceReview::class);
+    }
+
+    public function developmentPlans()
+    {
+        return $this->hasMany(DevelopmentPlan::class);
+    }
+
+    public function trainingEnrollments()
+    {
+        return $this->hasMany(TrainingEnrollment::class);
+    }
+
+    public function certifications()
+    {
+        return $this->hasMany(EmployeeCertification::class);
+    }
+
     public function employmentType()
     {
         return $this->belongsTo(EmploymentType::class);

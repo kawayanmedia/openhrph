@@ -190,6 +190,41 @@ return [
         ],
 
         [
+            'label' => 'Workforce',
+            'icon' => 'clock',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'attendance-correction', 'label' => 'Attendance Corrections'],
+                ['type' => 'resource', 'key' => 'timesheet-approval', 'label' => 'Timesheet Approvals'],
+            ],
+        ],
+
+        [
+            'label' => 'Performance',
+            'icon' => 'chart-bar',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'performance-cycle', 'label' => 'Performance Cycles'],
+                ['type' => 'resource', 'key' => 'performance-goal', 'label' => 'Goals'],
+                ['type' => 'resource', 'key' => 'performance-review', 'label' => 'Reviews'],
+                ['type' => 'resource', 'key' => 'performance-rating', 'label' => 'Ratings'],
+                ['type' => 'resource', 'key' => 'development-plan', 'label' => 'Development Plans'],
+            ],
+        ],
+
+        [
+            'label' => 'Learning',
+            'icon' => 'academic-cap',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'training-course', 'label' => 'Courses'],
+                ['type' => 'resource', 'key' => 'training-session', 'label' => 'Sessions'],
+                ['type' => 'resource', 'key' => 'training-enrollment', 'label' => 'Enrollments'],
+                ['type' => 'resource', 'key' => 'employee-certification', 'label' => 'Certifications'],
+            ],
+        ],
+
+        [
             'label' => 'Reports',
             'icon' => 'document-text',
             'items' => [

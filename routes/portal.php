@@ -1,14 +1,38 @@
 <?php
 
+use App\Http\Controllers\Portal\DocumentDownloadController;
+use App\Livewire\Portal\Attendance\AttendanceCreate;
+use App\Livewire\Portal\Attendance\AttendanceIndex;
+use App\Livewire\Portal\Attendance\AttendanceReport;
+use App\Livewire\Portal\Dashboard;
+use App\Livewire\Portal\Documents;
+use App\Livewire\Portal\Leaves\ApplicantCreate;
+use App\Livewire\Portal\Leaves\JobIndex;
+use App\Livewire\Portal\Leaves\JobSuccess;
+use App\Livewire\Portal\Leaves\LeaveCreate;
+use App\Livewire\Portal\Leaves\LeaveIndex;
+use App\Livewire\Portal\Login;
+use App\Livewire\Portal\OfficialBusiness\OfficialBusinessCreate;
+use App\Livewire\Portal\OfficialBusiness\OfficialBusinessIndex;
+use App\Livewire\Portal\Overtimes\OvertimeCreate;
+use App\Livewire\Portal\Overtimes\OvertimeIndex;
+use App\Livewire\Portal\Performance;
+use App\Livewire\Portal\Schedules\ScheduleAdjustmentCreate;
+use App\Livewire\Portal\Schedules\ScheduleAdjustmentIndex;
+use App\Livewire\Portal\Schedules\ScheduleCreate;
+use App\Livewire\Portal\Schedules\ScheduleIndex;
+use App\Livewire\Portal\Timesheets\TimesheetPunch;
+use App\Livewire\Portal\Training;
+use App\Livewire\Portal\Undertimes\UndertimeCreate;
+use App\Livewire\Portal\Undertimes\UndertimeIndex;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::get('portal/login', \App\Livewire\Portal\Login::class)->name('portal.login');
+Route::get('portal/login', Login::class)->name('portal.login');
 
-Route::get('job-vacancies', \App\Livewire\Portal\Leaves\JobIndex::class)->name('portal.jobs');
-Route::get('job-success', \App\Livewire\Portal\Leaves\JobSuccess::class)->name('portal.jobs.success');
-Route::get('job-vacancies/{id}/apply', \App\Livewire\Portal\Leaves\ApplicantCreate::class)->name('portal.job.apply');
-
+Route::get('job-vacancies', JobIndex::class)->name('portal.jobs');
+Route::get('job-success', JobSuccess::class)->name('portal.jobs.success');
+Route::get('job-vacancies/{id}/apply', ApplicantCreate::class)->name('portal.job.apply');
 
 Route::middleware('auth:portal')->prefix('portal')->group(function () {
 
@@ -16,31 +40,37 @@ Route::middleware('auth:portal')->prefix('portal')->group(function () {
         return redirect()->route('portal.dashboard');
     });
 
-    Route::get('dashboard', \App\Livewire\Portal\Dashboard::class)->name('portal.dashboard');
-    Route::get('leaves', \App\Livewire\Portal\Leaves\LeaveIndex::class)->name('portal.leaves');
-    Route::get('leaves/create', \App\Livewire\Portal\Leaves\LeaveCreate::class)->name('portal.leaves.create');
+    Route::get('dashboard', Dashboard::class)->name('portal.dashboard');
+    Route::get('leaves', LeaveIndex::class)->name('portal.leaves');
+    Route::get('leaves/create', LeaveCreate::class)->name('portal.leaves.create');
 
-    Route::get('attendance', \App\Livewire\Portal\Attendance\AttendanceIndex::class)->name('portal.attendance');
-    Route::get('attendance/create', \App\Livewire\Portal\Attendance\AttendanceCreate::class)->name('portal.attendance.create');
+    Route::get('attendance', AttendanceIndex::class)->name('portal.attendance');
+    Route::get('attendance/create', AttendanceCreate::class)->name('portal.attendance.create');
 
-    Route::get('timesheet', \App\Livewire\Portal\Timesheets\TimesheetPunch::class)->name('portal.timesheet');
+    Route::get('timesheet', TimesheetPunch::class)->name('portal.timesheet');
 
-    Route::get('schedules', \App\Livewire\Portal\Schedules\ScheduleIndex::class)->name('portal.schedules');
-    Route::get('schedules/create', \App\Livewire\Portal\Schedules\ScheduleCreate::class)->name('portal.schedules.create');
+    Route::get('schedules', ScheduleIndex::class)->name('portal.schedules');
+    Route::get('schedules/create', ScheduleCreate::class)->name('portal.schedules.create');
 
-    Route::get('schedule-adjustments', \App\Livewire\Portal\Schedules\ScheduleAdjustmentIndex::class)->name('portal.schedulesadjustment');
-    Route::get('schedule-adjustments/create', \App\Livewire\Portal\Schedules\ScheduleAdjustmentCreate::class)->name('portal.schedulesadjustment.create');
+    Route::get('schedule-adjustments', ScheduleAdjustmentIndex::class)->name('portal.schedulesadjustment');
+    Route::get('schedule-adjustments/create', ScheduleAdjustmentCreate::class)->name('portal.schedulesadjustment.create');
 
-    Route::get('overtimes', \App\Livewire\Portal\Overtimes\OvertimeIndex::class)->name('portal.overtimes');
-    Route::get('overtimes/create', \App\Livewire\Portal\Overtimes\OvertimeCreate::class)->name('portal.overtimes.create');
+    Route::get('overtimes', OvertimeIndex::class)->name('portal.overtimes');
+    Route::get('overtimes/create', OvertimeCreate::class)->name('portal.overtimes.create');
 
-    Route::get('undertimes', \App\Livewire\Portal\Undertimes\UndertimeIndex::class)->name('portal.undertimes');
-    Route::get('undertimes/create', \App\Livewire\Portal\Undertimes\UndertimeCreate::class)->name('portal.undertimes.create');
+    Route::get('undertimes', UndertimeIndex::class)->name('portal.undertimes');
+    Route::get('undertimes/create', UndertimeCreate::class)->name('portal.undertimes.create');
 
-    Route::get('officialbusiness', \App\Livewire\Portal\OfficialBusiness\OfficialBusinessIndex::class)->name('portal.officialbusiness');
-    Route::get('officialbusiness/create', \App\Livewire\Portal\OfficialBusiness\OfficialBusinessCreate::class)->name('portal.officialbusiness.create');
+    Route::get('officialbusiness', OfficialBusinessIndex::class)->name('portal.officialbusiness');
+    Route::get('officialbusiness/create', OfficialBusinessCreate::class)->name('portal.officialbusiness.create');
 
-    Route::get('attendance/report', \App\Livewire\Portal\Attendance\AttendanceReport::class)->name('portal.atendance.report');
+    Route::get('attendance/report', AttendanceReport::class)->name('portal.atendance.report');
+
+    Route::get('performance', Performance::class)->name('portal.performance');
+    Route::get('training', Training::class)->name('portal.training');
+    Route::get('documents', Documents::class)->name('portal.documents');
+    Route::get('documents/{document}/download', DocumentDownloadController::class)
+        ->name('portal.documents.download');
 
     Route::get('signout', function () {
         Auth::logout();

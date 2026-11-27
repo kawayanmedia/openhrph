@@ -58,6 +58,9 @@
             </div>
 
             <a href="{{ route('portal.atendance.report') }}" class="{{ $linkClass(request()->routeIs('portal.atendance.report')) }}">Attendance Report</a>
+            <a href="{{ route('portal.performance') }}" class="{{ $linkClass(request()->routeIs('portal.performance')) }}">Performance</a>
+            <a href="{{ route('portal.training') }}" class="{{ $linkClass(request()->routeIs('portal.training')) }}">Training</a>
+            <a href="{{ route('portal.documents') }}" class="{{ $linkClass(request()->routeIs('portal.documents*')) }}">Documents</a>
             <a href="{{ route('portal.jobs') }}" class="{{ $linkClass(request()->routeIs('portal.jobs*')) }}">Job Opportunities</a>
         </nav>
 
@@ -109,6 +112,9 @@
                 <a href="{{ route($link['route']) }}" wire:navigate class="{{ $linkClass(request()->routeIs(...$link['active'])) }} block">{{ $link['label'] }}</a>
             @endforeach
             <a href="{{ route('portal.atendance.report') }}" class="{{ $linkClass(request()->routeIs('portal.atendance.report')) }} block">Attendance Report</a>
+            <a href="{{ route('portal.performance') }}" class="{{ $linkClass(request()->routeIs('portal.performance')) }} block">Performance</a>
+            <a href="{{ route('portal.training') }}" class="{{ $linkClass(request()->routeIs('portal.training')) }} block">Training</a>
+            <a href="{{ route('portal.documents') }}" class="{{ $linkClass(request()->routeIs('portal.documents*')) }} block">Documents</a>
             <a href="{{ route('portal.jobs') }}" class="{{ $linkClass(request()->routeIs('portal.jobs*')) }} block">Job Opportunities</a>
             @auth
                 <a href="{{ route('portal.signout') }}" class="mt-2 block rounded-lg px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10">Sign out</a>

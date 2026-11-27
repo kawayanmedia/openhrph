@@ -4,14 +4,17 @@ namespace App\Console\Commands\Hr;
 
 use App\Console\Concerns\RunsForTenants;
 use App\Models\Document;
+use App\Models\EmployeeCertification;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTask;
+use App\Notifications\Hr\CertificationExpiringNotification;
 use App\Notifications\Hr\DocumentExpiringNotification;
 use App\Notifications\Hr\WorkflowTaskAssignedNotification;
 use App\Services\Documents\DocumentService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 class HrReminders extends Command
@@ -20,7 +23,7 @@ class HrReminders extends Command
 
     protected $signature = 'hr:reminders {--company= : Only process one company id}';
 
-    protected $description = 'Expire documents and send workflow/document due-date reminders';
+    protected $description = 'Expire documents and send workflow, document and certification due-date reminders';
 
     public function handle(DocumentService $documents): int
     {
@@ -28,13 +31,15 @@ class HrReminders extends Command
             $expired = $documents->expireDueDocuments();
             $taskReminders = $this->remindWorkflowTasks();
             $documentReminders = $this->remindExpiringDocuments();
+            $certificationReminders = $this->remindExpiringCertifications();
 
             $this->line(sprintf(
-                'Company %s: %d expired, %d task reminders, %d document reminders.',
+                'Company %s: %d expired, %d task reminders, %d document reminders, %d certification reminders.',
                 app(TenantContext::class)->id(),
                 $expired,
                 $taskReminders,
                 $documentReminders,
+                $certificationReminders,
             ));
         });
 
@@ -78,18 +83,7 @@ class HrReminders extends Command
             return 0;
         }
 
-        $users = User::query()
-            ->forTenant((int) app(TenantContext::class)->id())
-            ->get()
-            ->filter(function (User $user): bool {
-                if ($user->owner || $user->ownsAnyCompany()) {
-                    return true;
-                }
-
-                $permissions = $user->groupForTenant()?->permissions ?? [];
-
-                return ! empty($permissions['Documents']);
-            });
+        $users = $this->hrRecipients('Documents');
 
         if ($users->isEmpty()) {
             return 0;
@@ -104,5 +98,54 @@ class HrReminders extends Command
         }
 
         return $documentList->count();
+    }
+
+    protected function remindExpiringCertifications(): int
+    {
+        $certifications = EmployeeCertification::query()
+            ->with('employee')
+            ->where('status', EmployeeCertification::STATUS_ACTIVE)
+            ->whereNotNull('expires_at')
+            ->whereBetween('expires_at', [now()->toDateString(), now()->addDays(30)->toDateString()])
+            ->get();
+
+        if ($certifications->isEmpty()) {
+            return 0;
+        }
+
+        $users = $this->hrRecipients('Employees');
+
+        if ($users->isEmpty()) {
+            return 0;
+        }
+
+        foreach ($certifications as $certification) {
+            try {
+                Notification::send($users, new CertificationExpiringNotification($certification));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $certifications->count();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    protected function hrRecipients(string $permission): Collection
+    {
+        return User::query()
+            ->forTenant((int) app(TenantContext::class)->id())
+            ->get()
+            ->filter(function (User $user) use ($permission): bool {
+                if ($user->owner || $user->ownsAnyCompany()) {
+                    return true;
+                }
+
+                $permissions = $user->groupForTenant()?->permissions ?? [];
+
+                return ! empty($permissions[$permission]);
+            });
     }
 }
