@@ -21,6 +21,7 @@ use App\Livewire\Admin\Payroll\PayrollPayslip;
 use App\Livewire\Admin\Payroll\PayrollRun;
 use App\Livewire\Admin\Reports\EmployeeMasterFile as EmployeeMasterFileReport;
 use App\Livewire\Admin\Reports\Remittances as RemittancesReport;
+use App\Livewire\Admin\Reports\WorkforceAnalytics as WorkforceAnalyticsReport;
 use App\Livewire\Admin\Settings\Settings;
 use App\Livewire\Admin\SoftwareUpdate;
 use Illuminate\Http\Request;
@@ -78,6 +79,9 @@ Route::middleware(['web', 'auth:web,nova', 'can:'.config('admin.gate'), 'demo.ve
             ->name('reports.employee-master-file.csv');
         Route::get('reports/employee-master-file', EmployeeMasterFileReport::class)
             ->name('reports.employee-master-file');
+
+        Route::get('reports/workforce-analytics', WorkforceAnalyticsReport::class)
+            ->name('reports.workforce-analytics');
 
         Route::get('employees/{employee}/201', [EmployeeFileController::class, 'show'])
             ->name('employees.file');

@@ -225,11 +225,35 @@ return [
         ],
 
         [
+            'label' => 'Retirement',
+            'icon' => 'arrow-right-on-rectangle',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'retirement-case', 'label' => 'Retirement Cases'],
+                ['type' => 'resource', 'key' => 'retirement-plan', 'label' => 'Retirement Plans'],
+                ['type' => 'resource', 'key' => 'retirement-calculation', 'label' => 'Calculations'],
+                ['type' => 'resource', 'key' => 'external-claim-tracking', 'label' => 'External Claims'],
+            ],
+        ],
+
+        [
+            'label' => 'Compliance',
+            'icon' => 'shield-check',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'compliance-source', 'label' => 'Sources'],
+                ['type' => 'resource', 'key' => 'compliance-rule', 'label' => 'Rules'],
+                ['type' => 'resource', 'key' => 'compliance-rule-version', 'label' => 'Rule Versions'],
+            ],
+        ],
+
+        [
             'label' => 'Reports',
             'icon' => 'document-text',
             'items' => [
                 ['type' => 'link', 'url' => '/reports/remittances', 'label' => 'Government Remittances', 'can' => 'payroll_settings'],
                 ['type' => 'link', 'url' => '/reports/employee-master-file', 'label' => 'Employee Master File', 'can' => 'employees'],
+                ['type' => 'link', 'url' => '/reports/workforce-analytics', 'label' => 'Workforce Analytics', 'can' => 'employees'],
             ],
         ],
 

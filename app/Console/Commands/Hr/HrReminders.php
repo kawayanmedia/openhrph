@@ -3,13 +3,18 @@
 namespace App\Console\Commands\Hr;
 
 use App\Console\Concerns\RunsForTenants;
+use App\Models\ComplianceRule;
 use App\Models\Document;
 use App\Models\EmployeeCertification;
+use App\Models\ExternalClaimTracking;
+use App\Models\RetirementCase;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowTask;
 use App\Notifications\Hr\CertificationExpiringNotification;
+use App\Notifications\Hr\ComplianceRuleExpiringNotification;
 use App\Notifications\Hr\DocumentExpiringNotification;
+use App\Notifications\Hr\RetirementReminderNotification;
 use App\Notifications\Hr\WorkflowTaskAssignedNotification;
 use App\Services\Documents\DocumentService;
 use App\Support\Tenancy\TenantContext;
@@ -23,7 +28,7 @@ class HrReminders extends Command
 
     protected $signature = 'hr:reminders {--company= : Only process one company id}';
 
-    protected $description = 'Expire documents and send workflow, document and certification due-date reminders';
+    protected $description = 'Expire documents and send workflow, document, certification, retirement and compliance reminders';
 
     public function handle(DocumentService $documents): int
     {
@@ -32,14 +37,20 @@ class HrReminders extends Command
             $taskReminders = $this->remindWorkflowTasks();
             $documentReminders = $this->remindExpiringDocuments();
             $certificationReminders = $this->remindExpiringCertifications();
+            $retirementReminders = $this->remindRetirementCases();
+            $claimReminders = $this->remindExternalClaims();
+            $complianceReminders = $this->remindComplianceRules();
 
             $this->line(sprintf(
-                'Company %s: %d expired, %d task reminders, %d document reminders, %d certification reminders.',
+                'Company %s: %d expired, %d task reminders, %d document reminders, %d certification reminders, %d retirement reminders, %d claim reminders, %d compliance reminders.',
                 app(TenantContext::class)->id(),
                 $expired,
                 $taskReminders,
                 $documentReminders,
                 $certificationReminders,
+                $retirementReminders,
+                $claimReminders,
+                $complianceReminders,
             ));
         });
 
@@ -128,6 +139,84 @@ class HrReminders extends Command
         }
 
         return $certifications->count();
+    }
+
+    protected function remindRetirementCases(): int
+    {
+        $cases = RetirementCase::query()
+            ->with('employee')
+            ->whereIn('status', [RetirementCase::STATUS_APPLIED, RetirementCase::STATUS_APPROVED])
+            ->whereBetween('proposed_retirement_date', [
+                now()->toDateString(),
+                now()->addDays(90)->toDateString(),
+            ])
+            ->get();
+
+        $users = $this->hrRecipients('Employees');
+
+        foreach ($cases as $case) {
+            try {
+                Notification::send($users, new RetirementReminderNotification($case));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $cases->count();
+    }
+
+    protected function remindExternalClaims(): int
+    {
+        $claims = ExternalClaimTracking::query()
+            ->with('retirementCase.employee')
+            ->whereIn('status', [
+                ExternalClaimTracking::STATUS_SUBMITTED,
+                ExternalClaimTracking::STATUS_IN_PROCESS,
+                ExternalClaimTracking::STATUS_APPROVED,
+            ])
+            ->where(fn ($query) => $query->whereNull('last_checked_at')
+                ->orWhere('last_checked_at', '<=', now()->subDays(30)))
+            ->get();
+
+        $users = $this->hrRecipients('Employees');
+
+        foreach ($claims as $claim) {
+            if ($claim->retirementCase === null) {
+                continue;
+            }
+
+            try {
+                Notification::send($users, new RetirementReminderNotification($claim->retirementCase, 'claim'));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $claims->count();
+    }
+
+    protected function remindComplianceRules(): int
+    {
+        $rules = ComplianceRule::query()
+            ->where('status', ComplianceRule::STATUS_APPROVED)
+            ->whereNotNull('effective_until')
+            ->whereBetween('effective_until', [
+                now()->toDateString(),
+                now()->addDays(90)->toDateString(),
+            ])
+            ->get();
+
+        $users = $this->hrRecipients('Employees');
+
+        foreach ($rules as $rule) {
+            try {
+                Notification::send($users, new ComplianceRuleExpiringNotification($rule));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $rules->count();
     }
 
     /**
