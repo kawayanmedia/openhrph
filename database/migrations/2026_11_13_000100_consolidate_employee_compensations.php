@@ -505,10 +505,12 @@ return new class extends Migration
 
     private function recreateLegacyTables(): void
     {
+        // The consolidated catalogue holds system-wide rows with a NULL
+        // company_id, so the restored legacy rows must accept them.
         if (! Schema::hasTable('allowances')) {
             Schema::create('allowances', function (Blueprint $table): void {
                 $table->increments('id');
-                $table->integer('company_id');
+                $table->integer('company_id')->nullable();
                 $table->string('name', 128)->nullable();
                 $table->integer('amount')->nullable();
                 $table->string('tax_option', 32)->nullable();
@@ -522,7 +524,7 @@ return new class extends Migration
         if (! Schema::hasTable('bonuses')) {
             Schema::create('bonuses', function (Blueprint $table): void {
                 $table->increments('id');
-                $table->integer('company_id');
+                $table->integer('company_id')->nullable();
                 $table->string('name', 128);
                 $table->string('amount_basis', 32)->nullable();
                 $table->string('frequency', 32)->nullable();
@@ -538,7 +540,7 @@ return new class extends Migration
         if (! Schema::hasTable('commissions')) {
             Schema::create('commissions', function (Blueprint $table): void {
                 $table->increments('id');
-                $table->integer('company_id');
+                $table->integer('company_id')->nullable();
                 $table->string('name', 128);
                 $table->string('amount_basis', 32)->nullable();
                 $table->boolean('is_taxable')->default(false);
@@ -570,7 +572,7 @@ return new class extends Migration
                 $table->dateTime('created_at')->nullable();
                 $table->dateTime('updated_at')->nullable();
                 $table->dateTime('deleted_at')->nullable();
-                $table->unsignedBigInteger('company_id');
+                $table->unsignedBigInteger('company_id')->nullable();
                 $table->index(['employee_id', 'allowance_id']);
                 $table->index(['company_id']);
             });
@@ -588,7 +590,7 @@ return new class extends Migration
                 $table->dateTime('created_at')->nullable();
                 $table->dateTime('updated_at')->nullable();
                 $table->dateTime('deleted_at')->nullable();
-                $table->unsignedBigInteger('company_id');
+                $table->unsignedBigInteger('company_id')->nullable();
                 $table->index(['employee_id', 'employee_allowance_id'], 'ear_employee_allowance_index');
                 $table->index(['company_id']);
             });
@@ -605,7 +607,7 @@ return new class extends Migration
                 $table->dateTime('created_at')->nullable();
                 $table->dateTime('updated_at')->nullable();
                 $table->dateTime('deleted_at')->nullable();
-                $table->unsignedBigInteger('company_id');
+                $table->unsignedBigInteger('company_id')->nullable();
                 $table->index(['employee_id', 'bonus_id']);
                 $table->index(['company_id']);
             });
@@ -622,7 +624,7 @@ return new class extends Migration
                 $table->dateTime('created_at')->nullable();
                 $table->dateTime('updated_at')->nullable();
                 $table->dateTime('deleted_at')->nullable();
-                $table->unsignedBigInteger('company_id');
+                $table->unsignedBigInteger('company_id')->nullable();
                 $table->index(['employee_id', 'commission_id']);
                 $table->index(['company_id']);
             });

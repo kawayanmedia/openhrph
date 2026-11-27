@@ -94,7 +94,7 @@ return new class extends Migration
                 $table->text('notes')->nullable();
                 $table->timestamps();
 
-                $table->index(['company_id', 'employee_id', 'effective_from']);
+                $table->index(['company_id', 'employee_id', 'effective_from'], 'reporting_relationships_employee_effective_index');
                 $table->index(['company_id', 'supervisor_employee_id']);
             });
         }
