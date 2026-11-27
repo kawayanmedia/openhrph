@@ -2,15 +2,20 @@
 
 namespace App\Jurisdictions\Philippines\Government\Admin\Resources;
 
+use App\Jurisdictions\Philippines\Government\Models\PlantillaItem as PlantillaItemModel;
+use App\Jurisdictions\Philippines\Government\Models\PlantillaVersion as PlantillaVersionModel;
 use App\Livewire\Admin\Fields\BelongsTo;
 use App\Livewire\Admin\Fields\Boolean;
+use App\Livewire\Admin\Fields\Date;
 use App\Livewire\Admin\Fields\ID;
 use App\Livewire\Admin\Fields\Number;
+use App\Livewire\Admin\Fields\Select;
 use App\Livewire\Admin\Fields\Text;
 use App\Livewire\Admin\Resource;
 use App\Models\Office;
+use App\Models\OrganizationUnit;
+use App\Models\Position;
 use Illuminate\Http\Request;
-use KawayanMedia\Government\Models\PlantillaItem as PlantillaItemModel;
 
 /**
  * DBM plantilla item: the funded position an employee is appointed to.
@@ -57,6 +62,33 @@ class PlantillaItem extends Resource
 
             Boolean::make('Funded', 'have_budget')
                 ->default(true),
+
+            BelongsTo::make('Plantilla Version', 'version')
+                ->options(PlantillaVersionModel::query()->orderByDesc('id')->pluck('version', 'id')->toArray())
+                ->nullable()
+                ->hideFromIndex(),
+
+            BelongsTo::make('Position')
+                ->options(Position::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                ->nullable()
+                ->hideFromIndex(),
+
+            BelongsTo::make('Organization Unit', 'organizationUnit')
+                ->options(OrganizationUnit::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                ->nullable()
+                ->hideFromIndex(),
+
+            Text::make('Funding Source', 'funding_source')
+                ->rules('nullable', 'max:64')
+                ->hideFromIndex(),
+
+            Select::make('Status')
+                ->options(array_combine(PlantillaItemModel::STATUSES, PlantillaItemModel::STATUSES))
+                ->default(PlantillaItemModel::STATUS_AUTHORIZED)
+                ->sortable(),
+
+            Date::make('Effective From', 'effective_from')->hideFromIndex(),
+            Date::make('Effective Until', 'effective_until')->hideFromIndex(),
         ];
     }
 
