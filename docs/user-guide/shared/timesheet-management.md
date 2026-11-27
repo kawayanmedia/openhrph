@@ -125,7 +125,10 @@ It reports how many days it changed. It never touches a day that already has any
 | Source | Where it is captured | Locks honoured | Notes |
 |--------|---------------------|----------------|-------|
 | Portal | **Portal → My Timesheet** | Yes | Debounced, overnight-aware |
+| Biometric push (ADMS) | `/iclock/cdata` from ZKTeco/eSSL-style devices | Yes | Serial number selects the company; resent batches are de-duplicated |
 | Biometric device / API | `POST /api/attendance/logs` | Yes | Rejected punches return `rejected` with a reason |
+| Device pull | `attendance:devices:sync` or the on-premise agent | Yes | Hikvision, Dahua, Suprema and ZKTeco UDP devices on the LAN |
+| Device export file | **Attendance → Devices → Import Device Log** | Yes | CSV or ZKTeco `.dat`; re-uploading a file reports duplicates |
 | Import | **Import Timesheet** | Yes | Merges and reports |
 | Attendance request | **Approve** action | Yes | Writes the same `logs` array |
 
@@ -135,7 +138,7 @@ It reports how many days it changed. It never touches a day that already has any
 Confirm the time-in was recorded today. For a night shift, the time-out belongs to the previous day; check the previous day's row.
 
 **A punch is missing after a device sync.**
-Open the API response or the import summary. `unmatched` means the biometric id is not linked to an employee; `blocked` means the period is locked.
+Open the API response or the import summary. `unmatched` means the biometric id is not linked to an employee; `blocked` means the period is locked. For a registered device, open **Attendance → Devices** for the last sync status and **Attendance → Device Events** for the stored error.
 
 **A correction was approved but nothing changed.**
 Check the payroll period. If the payroll is approved, the timesheet is locked; reopen it as the owner and apply the correction again.

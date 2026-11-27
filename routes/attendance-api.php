@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AttendanceDeviceController;
 use App\Http\Controllers\Api\AttendanceLogController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['attendance.ingest', 'throttle:120,1'])->group(function () {
+    Route::get('attendance/devices', [AttendanceDeviceController::class, 'index'])
+        ->name('api.attendance.devices.index');
+
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->name('api.attendance.logs.store');
 

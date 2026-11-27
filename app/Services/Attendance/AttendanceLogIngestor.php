@@ -114,9 +114,17 @@ class AttendanceLogIngestor
     {
         $biometricId = $log['biometric_id'] ?? null;
 
-        if ($biometricId !== null && $biometricId !== '') {
+        if ($biometricId !== null && trim((string) $biometricId) !== '') {
+            $biometricId = trim((string) $biometricId);
+
+            $candidates = array_values(array_unique(array_filter([
+                $biometricId,
+                is_numeric($biometricId) ? (string) (int) $biometricId : null,
+                is_numeric($biometricId) ? ltrim($biometricId, '0') : null,
+            ], fn (?string $value): bool => $value !== null && $value !== '')));
+
             $employee = Employee::query()
-                ->where('biometric_id', (int) $biometricId)
+                ->whereIn('biometric_id', $candidates)
                 ->first();
 
             if ($employee !== null) {

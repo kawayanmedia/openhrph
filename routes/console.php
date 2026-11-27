@@ -26,3 +26,9 @@ Schedule::command('payroll_date:generate')->daily();
 Schedule::command('blank_timesheet:generate')->daily();
 
 Schedule::command('hr:reminders')->daily();
+
+// Pull LAN devices registered with sync enabled. Safe to run often: each device
+// honours its own sync interval and punches are de-duplicated by the ledger.
+Schedule::command('attendance:devices:sync')->everyFiveMinutes()->withoutOverlapping();
+
+Schedule::command('attendance:devices:prune')->dailyAt('03:20');

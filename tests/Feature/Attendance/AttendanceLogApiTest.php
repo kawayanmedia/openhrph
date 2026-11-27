@@ -227,3 +227,17 @@ it('rejects punches against a locked timesheet', function () {
 
     expect(Timesheet::query()->firstOrFail()->logs)->toBeNull();
 });
+
+it('matches an alphanumeric biometric id', function () {
+    $this->employee->forceFill(['biometric_id' => 'EMP-A1'])->save();
+
+    $this->postJson('/api/attendance/logs', [
+        'logs' => [['biometric_id' => 'EMP-A1', 'at' => '2026-11-12 08:00:00']],
+    ], ['X-Device-Key' => 'device-key'])
+        ->assertOk()
+        ->assertJsonPath('data.accepted', 1);
+
+    app(TenantContext::class)->set($this->company->id);
+
+    expect(Timesheet::query()->where('employee_id', $this->employee->id)->exists())->toBeTrue();
+});

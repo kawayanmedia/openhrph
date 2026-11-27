@@ -14,12 +14,13 @@ This guide is for developers, integrators, and system administrators who build, 
 3. [Local development](local-development.md) — get a working environment.
 4. [Admin panel](admin-panel.md) — how the Livewire admin works and how to extend it.
 5. [Data import](data-import.md) — the workbook import pipeline, sheets, columns, and limits.
-6. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
-7. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
-8. [Testing](testing.md) — Pest, Playwright, and Go tests.
-9. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
-10. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
-11. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
+6. [Attendance devices](attendance-devices.md) — ADMS push, device pull drivers, the on-premise agent, and log file imports.
+7. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
+8. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
+9. [Testing](testing.md) — Pest, Playwright, and Go tests.
+10. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
+11. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
+12. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
 
 ## Repository map
 
@@ -35,6 +36,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | `app/Jurisdictions/` | Country plugins: statutory law, payroll policy, holidays, leave, reports |
 | `app/Imports/` | Workbook import engine: `OpenHrWorkbook`, sheet definitions, columns, reader, and sample template |
 | `app/Sectors/` | Sector policy, catalogues, and the sector manager |
+| `kawayanmedia/attendance/` | Biometric device drivers, ADMS protocol, export parsers, and device commands |
 | `bootstrap/` | Laravel bootstrap, middleware, and health route |
 | `config/` | Application configuration, including `admin.php`, `payroll.php`, and `tenancy.php` |
 | `database/migrations/` | Application migrations; the only source of truth for the schema |
@@ -70,6 +72,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | Add a row/toolbar action | `app/Livewire/Admin/Actions/` |
 | Add a dashboard metric | `app/Livewire/Admin/Metrics/` |
 | Change the import template or add an import sheet | `app/Imports/` and `docs/developer-guide/data-import.md` |
+| Change device protocols, ADMS, or attendance ingestion | `kawayanmedia/attendance/src` and `docs/developer-guide/attendance-devices.md` |
 | Change the admin menu | `config/admin.php` and `app/Livewire/Admin/Support/Navigation.php` |
 | Change payroll rules | `payroll-engine/internal/` and `config/payroll.php` |
 | Add or change a country | `app/Jurisdictions/`, `config/jurisdictions.php`, and `docs/developer-guide/jurisdictions.md` |

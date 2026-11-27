@@ -51,6 +51,30 @@ Each row shows time in/out, **Worked Hours** and a status badge: **Open**, **Mis
 
 Always review the timesheet before processing payroll. Look for missing days, duplicate entries, and unusual overtime. See [Timesheet management](timesheet-management.md) for the common problems and the full cut-off checklist.
 
+## Attendance devices
+
+Open **Attendance → Devices** to register and monitor the time clocks that send punches.
+
+1. Choose **Create** and pick the **Protocol** that matches the device:
+   - *ZKTeco / eSSL ADMS push (iClock)* — the device sends its logs to the app.
+   - *ZKTeco UDP pull (port 4370)*, *Hikvision ISAPI pull*, *Dahua CGI pull*, or *Suprema BioStar 2 API pull* — the app (or an on-premise agent) reads the device on the local network.
+   - *Export file upload (CSV / DAT)* — for terminals that only produce a file.
+   - *Generic JSON push API* — for middleware or a custom terminal.
+2. Fill in the **Name** and, for push devices, the **Serial Number** exactly as the device reports it.
+3. For pull devices, fill in the **IP Address**, the port when it is not the default, and the credentials (`{"username":"…","password":"…"}`). Credentials are stored encrypted.
+4. Turn on **Sync Enabled** so the scheduler or the agent may read the device, and set the **Sync Interval**.
+5. Save, then use **Test Connection** and **Sync Now** to confirm the device answers.
+
+The list shows the last time the app saw the device, the last sync status, and any error message. Row actions also let you:
+
+- **Rotate API Key** — issue a new key for `POST /api/attendance/logs`; copy it immediately, it is shown once.
+- **Rotate Push Key** — issue an ADMS push key that must be entered on the device.
+- **Import Device Log** — upload a CSV or ZKTeco `.dat` export from the toolbar and review the accepted, duplicate and unmatched counts in the result.
+
+**Attendance → Device Events** keeps a read-only trail of pushes, imports, sync results and failures, which is the fastest place to look when a terminal stops sending punches. Keepalive traffic is not stored.
+
+Vendor setup details, the ADMS endpoints, and the on-premise agent are documented in the developer guide: [Attendance devices](/docs/developer-guide/attendance-devices).
+
 ## Employee portal requests
 
 Employees use `/portal` to submit their own requests:

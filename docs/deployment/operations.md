@@ -221,6 +221,39 @@ systemctl list-timers hris-scheduler.timer
 
 If a deploy changes job code, restart the worker so it picks up the new code.
 
+### Biometric device sync
+
+The same scheduler runs `attendance:devices:sync` every five minutes. It pulls
+the LAN protocols (ZKTeco UDP, Hikvision, Dahua, Suprema) for devices whose
+**Sync Enabled** is on; each device still honours its own interval. Check it with:
+
+```bash
+sudo -u www-data php /var/www/hris/artisan attendance:devices:sync --dry-run
+sudo -u www-data php /var/www/hris/artisan attendance:devices:test <device-id> --pull
+```
+
+Old device audit rows are pruned daily at 03:20 with
+`attendance:devices:prune` (retention defaults to 30 days).
+
+ADMS push devices do not need the scheduler; they call
+`https://your-host/iclock/cdata` themselves. The endpoint must be reachable from
+the device network over HTTPS, and the device serial must be registered in
+**Attendance → Devices**.
+
+When devices sit on a customer LAN that the application cannot reach, run the
+agent on an always-on machine in that network:
+
+```bash
+ATTENDANCE_AGENT_SERVER=https://your-host \
+ATTENDANCE_AGENT_COMPANY_KEY=<company API key> \
+php artisan attendance:agent
+```
+
+Run it under systemd or Supervisor with a restart policy, and keep its state
+file (`storage/app/attendance-agent-state.json` by default) on persistent disk.
+See [Attendance devices](../developer-guide/attendance-devices.md) for the full
+protocol and agent reference.
+
 ## Scaling
 
 The current stack is a single EC2 instance. Before adding more instances:

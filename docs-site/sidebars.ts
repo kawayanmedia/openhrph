@@ -28,6 +28,7 @@ const sidebars: SidebarsConfig = {
         'developer-guide/local-development',
         'developer-guide/admin-panel',
         'developer-guide/data-import',
+        'developer-guide/attendance-devices',
         'developer-guide/payroll-engine',
         'developer-guide/testing',
         'developer-guide/troubleshooting',
