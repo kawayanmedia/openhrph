@@ -33,6 +33,11 @@ class Department extends Model
         return $this->hasMany(Employee::class);
     }
 
+    public function organizationUnit()
+    {
+        return $this->belongsTo(OrganizationUnit::class);
+    }
+
     public function attendanceApprovalEmployee()
     {
         return $this->belongsTo(Employee::class, 'attendance_approval_employee_id');

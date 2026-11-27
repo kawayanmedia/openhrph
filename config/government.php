@@ -1,9 +1,12 @@
 <?php
 
+use App\Jurisdictions\Philippines\Government\Models\PlantillaItem;
+use App\Jurisdictions\Philippines\Government\Models\ServiceRecord;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmploymentType;
+use App\Models\JobVacancy;
 use App\Models\Office;
 use App\Models\PayrollGroup;
 use App\Models\Position;
@@ -11,11 +14,8 @@ use App\Models\ScheduleAdjustmentRequest;
 use App\Models\User;
 use KawayanMedia\Government\Models\Applicant;
 use KawayanMedia\Government\Models\EmployeePlantilla;
-use KawayanMedia\Government\Models\JobVacancy;
 use KawayanMedia\Government\Models\Nosa;
-use KawayanMedia\Government\Models\PlantillaItem;
 use KawayanMedia\Government\Models\SalaryGrade;
-use KawayanMedia\Government\Models\ServiceRecord;
 
 return [
 

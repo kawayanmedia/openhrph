@@ -3,6 +3,8 @@ slug: /
 description: "Choose where to start with OpenHR PH: day-to-day use, development, or deployment."
 ---
 
+import Link from '@docusaurus/Link';
+
 # OpenHR PH documentation
 
 This documentation is split into two paths. Pick the one that matches what you need to do.
@@ -14,23 +16,20 @@ Run it locally from `docs-site/` with `npm start`.
 > workspace with sample employees, timesheets, and an open payroll. Sign up, verify your email
 > address, and the workspace opens.
 
-## I use OpenHR PH
+## Choose your sector
 
-For HR officers, payroll staff, administrators, and employees who use the system day to day. No programming knowledge is needed.
+The user guide is published in two editions. Each edition contains the sector's own modules and its own copy
+of the shared modules, so a reader only sees the guides that apply to the installation.
 
-| Guide | What it covers |
+| Sector | Guide set |
 | --- | --- |
-| [Company to payslip walkthrough](user-guide/end-to-end-walkthrough.md) | One complete first run: company profile, reference data, payroll group, employee, portal access, payroll, payslip, and corrections |
-| [Getting started](user-guide/getting-started.md) | Signing in, switching companies, navigation, and changing your password |
-| [Employees](user-guide/employees.md) | Employee records, documents, schedules, compensation, and import |
-| [Data import](user-guide/data-import.md) | Bulk upload of offices, departments, payroll groups, positions, schedules, and employees from one workbook |
-| [Attendance and requests](user-guide/attendance-and-requests.md) | Timesheets, overtime, leave, undertime, official business, and corrections |
-| [Payroll](user-guide/payroll.md) | Payroll groups, previews, processing, approval, locking, and payslips |
-| [Reports and payslips](user-guide/reports-and-payslips.md) | Exports, registers, remittances, and employee payslip access |
-| [Settings and access](user-guide/settings-and-access.md) | Offices, departments, holidays, users, groups, and permissions |
-| [Troubleshooting](user-guide/troubleshooting.md) | Common problems and when to contact an administrator |
+| **Private** | <Link to="/docs/user-guide/private/private-hr">Private-sector user guide</Link> — recruitment, employment, separation, company retirement plans, plus every shared module |
+| **Government (PH)** | <Link to="/docs/user-guide/government/government-hr">Government-sector user guide</Link> — plantilla, appointments, personnel actions, HRMPSB, service records, leave cards, GSIS retirement, plus every shared module |
 
-Start with the [company-to-payslip walkthrough](user-guide/end-to-end-walkthrough.md) if you are setting up a company for the first time, or [Getting started](user-guide/getting-started.md) if you only need to sign in and find your way around.
+Both editions start with the company-to-payslip walkthrough, signing in, and data import, then cover the
+shared modules: employees, organization and positions, documents and workflow, attendance and timesheets,
+payroll, reports and payslips, analytics, performance, learning, retirement, compliance, self-service, and
+settings.
 
 ## I build, extend, or operate OpenHR PH
 
@@ -41,6 +40,7 @@ For developers, integrators, and system administrators.
 | Guide | What it covers |
 | --- | --- |
 | [Architecture](developer-guide/architecture.md) | Layers, request flow, admin panels, payroll engine, tenancy, queues, and storage |
+| [HR platform modules](developer-guide/hr-platform.md) | Namespaces, data model, services, admin UI, workflow, tenancy, testing, and extension points for the HR modules |
 | [Multi-tenancy](tenancy.md) | Tenant resolution, scoping rules, queues, cache, storage, and adding tenant tables |
 | [Payroll engine](developer-guide/payroll-engine.md) | Build, run, statutory tables, preview, processing, and fallback driver |
 | [Government and Private sectors](developer-guide/sectors.md) | Sector policy, catalogues, government commands, and the regulatory research matrix |
@@ -88,4 +88,4 @@ For developers, integrators, and system administrators.
 - **Payroll run** — one processing period for a payroll group.
 - **Payslip** — the employee-level result of a payroll run.
 
-If you are not sure where to start, read [Getting started](user-guide/getting-started.md) or open an issue on GitHub.
+If you are not sure where to start, open one of the two user guide editions above and follow "Start here", or open an issue on GitHub.

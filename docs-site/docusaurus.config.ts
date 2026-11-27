@@ -36,11 +36,13 @@ const config: Config = {
       'classic',
       {
         // The repository's docs/ directory is the single source of truth.
+        // The user guide body is rendered by the two sector instances below.
         docs: {
           path: '../docs',
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
           editUrl: `${repository}/edit/main/docs/`,
+          exclude: ['user-guide/shared/**', 'user-guide/private/**', 'user-guide/government/**'],
           showLastUpdateTime: true,
           breadcrumbs: true,
         },
@@ -53,12 +55,38 @@ const config: Config = {
   ],
 
   plugins: [
+    // The user guide is published twice from one source tree: a Private-sector
+    // guide and a Government-sector guide. Each instance owns its sector pages
+    // plus its own rendering of the shared modules, so a reader who picks a
+    // sector never sees the other sector's pages in the sidebar.
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'guide-private',
+        path: './.generated/user-guide/private',
+        routeBasePath: 'docs/user-guide/private',
+        sidebarPath: './sidebars/privateGuide.ts',
+        editUrl: ({docPath}) => `${repository}/edit/main/docs/user-guide/${docPath.startsWith('shared/') ? docPath : `private/${docPath}`}`,
+        breadcrumbs: true,
+      },
+    ],
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'guide-government',
+        path: './.generated/user-guide/government',
+        routeBasePath: 'docs/user-guide/government',
+        sidebarPath: './sidebars/governmentGuide.ts',
+        editUrl: ({docPath}) => `${repository}/edit/main/docs/user-guide/${docPath.startsWith('shared/') ? docPath : `government/${docPath}`}`,
+        breadcrumbs: true,
+      },
+    ],
     [
       '@easyops-cn/docusaurus-search-local',
       {
         hashed: true,
         language: ['en'],
-        docsRouteBasePath: 'docs',
+        docsRouteBasePath: ['docs', 'docs/user-guide/private', 'docs/user-guide/government'],
         docsDir: '../docs',
         indexBlog: false,
         highlightSearchTermsOnTargetPage: true,
@@ -77,7 +105,26 @@ const config: Config = {
       },
       items: [
         {type: 'doc', docId: 'README', label: 'Documentation', position: 'left'},
-        {type: 'doc', docId: 'user-guide/README', label: 'User guide', position: 'left'},
+        {
+          type: 'dropdown',
+          label: 'User guide',
+          position: 'left',
+          items: [
+            {type: 'doc', docId: 'user-guide/README', label: 'Choose your sector'},
+            {
+              type: 'doc',
+              docId: 'private-hr',
+              docsPluginId: 'guide-private',
+              label: 'Private sector guide',
+            },
+            {
+              type: 'doc',
+              docId: 'government-hr',
+              docsPluginId: 'guide-government',
+              label: 'Government sector guide',
+            },
+          ],
+        },
         {type: 'doc', docId: 'developer-guide/README', label: 'Developer guide', position: 'left'},
         {type: 'doc', docId: 'deployment/README', label: 'Deployment', position: 'left'},
         {to: '/screens', label: 'Screens', position: 'left'},
@@ -92,10 +139,10 @@ const config: Config = {
           title: 'Use OpenHR PH',
           items: [
             {label: 'Live demo', href: 'https://openhrph.laravel.cloud'},
-            {label: 'Company to payslip walkthrough', to: '/docs/user-guide/end-to-end-walkthrough'},
-            {label: 'Getting started', to: '/docs/user-guide/getting-started'},
-            {label: 'Payroll', to: '/docs/user-guide/payroll'},
-            {label: 'Reports and payslips', to: '/docs/user-guide/reports-and-payslips'},
+            {label: 'Choose your user guide', to: '/docs/user-guide'},
+            {label: 'Private sector guide', to: '/docs/user-guide/private/private-hr'},
+            {label: 'Government sector guide', to: '/docs/user-guide/government/government-hr'},
+            {label: 'Payroll', to: '/docs/user-guide/private/shared/payroll'},
           ],
         },
         {

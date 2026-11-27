@@ -1,0 +1,103 @@
+# Employees
+
+This page helps you keep employee records complete and ready for attendance and payroll.
+
+## Before you start
+
+- Decide on a consistent employee-number format. Payroll and attendance reports use it.
+- Prepare the employee's office, department, position, employment type, schedule, and payroll group.
+- Have the employee's government numbers and salary details ready.
+- Check whether the employee needs a portal login. If so, you will set an email and password on the employee record.
+
+## Find an employee
+
+1. Open **Settings → Employee → Employee**.
+2. Use the search box to search by name, employee number, or another visible column.
+3. Use the filters to narrow the list.
+4. Select a row to view it, or choose **Edit** to change it.
+
+![Employee list with the search box, employment type and office filters, and the actions for each row](../../images/admin-employees-list-light.png)
+
+## Create an employee
+
+![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../../images/admin-employee-payroll-light.png)
+
+1. Select **Create Employee**.
+2. Fill in the required fields. Fields marked with **\*** are required.
+3. Work through the sections in order:
+   - **Identity** — employee number, name, biometric ID, and contact details.
+   - **Assignment** — office, department, position, employment status, and employment type.
+   - **Schedule and payroll** — schedule, payroll group, payment type, basic salary, and daily rate.
+   - **Statutory numbers** — TIN, PhilHealth, and Pag-IBIG/HDMF for everyone, plus the SSS number for a Private installation or the GSIS BP number (and salary grade, step and item number) for a Government installation. The form only shows the fields that apply to the installation sector.
+   - **Leave balances** — vacation, sick, and personal leave totals.
+   - **Portal access** — login email and password if the employee will use the employee portal.
+4. Select **Create**.
+
+The employee now appears in the list and can be selected in attendance and payroll screens.
+
+## Edit an employee
+
+1. Find the employee in the list.
+2. Select **Edit**.
+3. Change the details.
+4. Select **Update**.
+
+Changes to salary, payroll group, or schedule can affect future payroll runs. Review the payroll preview after making these changes.
+
+## Bank and payment details
+
+Payroll uses an employee's bank details when it generates a bank-credit file.
+
+1. Open the employee and select **Edit**.
+2. In the **Bank & payment** section, choose the **Pay mode** (bank credit, cash, or cheque).
+3. Choose the company **Disbursement bank** and enter the account name, account number, and branch.
+4. Save.
+
+Only employees with **Pay mode = Bank credit**, a positive net pay, and an account number are
+included in a bank file. The payroll bank-file screen lists any bank-paid employee who is missing
+an account number so you can correct the record before generating the file.
+
+## Related employee records
+
+The employee detail page can show related records such as:
+
+- allowances, bonuses, commissions and other extra compensation
+- deductions and loans
+- schedules
+- certificates and trainings
+- plantilla items
+- compensation history
+
+Open the related record from the employee detail page or from the relevant menu under **Payroll Management** or **Settings**.
+
+## Import many records at once
+
+For bulk changes, use **Settings → Company → Data Import**. One workbook can add or update offices, departments, payroll groups, positions, schedules, and employees. You download a template, fill it in, preview the result, and only then import. See [Data import](data-import.md).
+
+Start with a small file of two or three employees before importing a large batch, and keep employee numbers unique.
+
+## Before the first payroll run
+
+Check the following for every employee who should be paid:
+
+- Employee number and name are correct.
+- Office, department, position, and employment status are set.
+- Payroll group and payment type are set.
+- Basic salary and daily rate are correct.
+- Government numbers are present where required.
+- Schedule and attendance records are up to date.
+- Allowances, deductions, and loans have the correct effectivity dates.
+- The employee is active and not marked as resigned or retired.
+
+See [Payroll](payroll.md) for the next step.
+
+## Common questions
+
+**Why can I not see the Employee menu?**
+Your group may not have the Employees permission. Ask your administrator.
+
+**Why is an employee missing from payroll?**
+Check the employee's payroll group, employment status, date hired, and attendance for the period. Also confirm that the payroll run includes the correct payroll group.
+
+**Can I delete an employee?**
+Deletion is controlled by your permissions and may be a soft delete. If you need to remove someone who has payroll history, ask your administrator before deleting. Consider marking the employee inactive or resigned instead so history stays intact.

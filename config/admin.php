@@ -105,11 +105,155 @@ return [
         ],
 
         [
+            'label' => 'HR',
+            'icon' => 'users',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'link', 'url' => '/approvals', 'label' => 'Approvals'],
+                ['type' => 'resource', 'key' => 'organization-unit', 'label' => 'Organization Units'],
+                ['type' => 'resource', 'key' => 'location', 'label' => 'Locations'],
+                ['type' => 'resource', 'key' => 'cost-center', 'label' => 'Cost Centers'],
+                ['type' => 'resource', 'key' => 'position', 'label' => 'Positions'],
+                ['type' => 'resource', 'key' => 'position-requirement', 'label' => 'Position Requirements'],
+                ['type' => 'resource', 'key' => 'position-assignment', 'label' => 'Position Assignments'],
+                ['type' => 'resource', 'key' => 'reporting-relationship', 'label' => 'Reporting Relationships'],
+                ['type' => 'resource', 'key' => 'job-description', 'label' => 'Job Descriptions'],
+                ['type' => 'resource', 'key' => 'employment-change', 'label' => 'Employment Changes'],
+            ],
+        ],
+
+        [
+            'label' => 'Documents',
+            'icon' => 'document-text',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'document', 'label' => 'Documents'],
+            ],
+        ],
+
+        [
+            'label' => 'Workflow',
+            'icon' => 'adjustments',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'workflow-definition', 'label' => 'Workflow Definitions'],
+                ['type' => 'resource', 'key' => 'workflow-delegation', 'label' => 'Delegations'],
+                ['type' => 'resource', 'key' => 'audit-event', 'label' => 'Audit Trail'],
+            ],
+        ],
+
+        [
+            'label' => 'Recruitment',
+            'icon' => 'briefcase',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'job-requisition', 'label' => 'Requisitions'],
+                ['type' => 'resource', 'key' => 'job-vacancy', 'label' => 'Vacancies'],
+                ['type' => 'resource', 'key' => 'applicant', 'label' => 'Applicants'],
+                ['type' => 'resource', 'key' => 'application', 'label' => 'Applications'],
+                ['type' => 'resource', 'key' => 'screening-result', 'label' => 'Screening'],
+                ['type' => 'resource', 'key' => 'interview', 'label' => 'Interviews'],
+                ['type' => 'resource', 'key' => 'interview-evaluation', 'label' => 'Evaluations'],
+                ['type' => 'resource', 'key' => 'assessment', 'label' => 'Assessments'],
+                ['type' => 'resource', 'key' => 'job-offer', 'label' => 'Offers'],
+            ],
+        ],
+
+        [
+            'label' => 'Employment',
+            'icon' => 'identification',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'employment', 'label' => 'Employments'],
+                ['type' => 'resource', 'key' => 'employment-contract', 'label' => 'Contracts'],
+                ['type' => 'resource', 'key' => 'probationary-review', 'label' => 'Probation Reviews'],
+                ['type' => 'resource', 'key' => 'regularization-decision', 'label' => 'Regularization'],
+                ['type' => 'resource', 'key' => 'onboarding-checklist', 'label' => 'Onboarding Checklists'],
+                ['type' => 'resource', 'key' => 'onboarding-task', 'label' => 'Onboarding Tasks'],
+                ['type' => 'resource', 'key' => 'leave-policy-rule', 'label' => 'Leave Policy Rules'],
+            ],
+        ],
+
+        [
+            'label' => 'Separation',
+            'icon' => 'arrow-right-on-rectangle',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'separation-case', 'label' => 'Separation Cases'],
+                ['type' => 'resource', 'key' => 'clearance-template', 'label' => 'Clearance Templates'],
+                ['type' => 'resource', 'key' => 'clearance-task', 'label' => 'Clearance Tasks'],
+                ['type' => 'resource', 'key' => 'final-settlement', 'label' => 'Final Settlements'],
+            ],
+        ],
+
+        [
+            'label' => 'Workforce',
+            'icon' => 'clock',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'attendance-correction', 'label' => 'Attendance Corrections'],
+                ['type' => 'resource', 'key' => 'timesheet-approval', 'label' => 'Timesheet Approvals'],
+            ],
+        ],
+
+        [
+            'label' => 'Performance',
+            'icon' => 'chart-bar',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'performance-cycle', 'label' => 'Performance Cycles'],
+                ['type' => 'resource', 'key' => 'performance-goal', 'label' => 'Goals'],
+                ['type' => 'resource', 'key' => 'performance-review', 'label' => 'Reviews'],
+                ['type' => 'resource', 'key' => 'performance-rating', 'label' => 'Ratings'],
+                ['type' => 'resource', 'key' => 'development-plan', 'label' => 'Development Plans'],
+            ],
+        ],
+
+        [
+            'label' => 'Learning',
+            'icon' => 'academic-cap',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'training-course', 'label' => 'Courses'],
+                ['type' => 'resource', 'key' => 'training-session', 'label' => 'Sessions'],
+                ['type' => 'resource', 'key' => 'training-enrollment', 'label' => 'Enrollments'],
+                ['type' => 'resource', 'key' => 'employee-certification', 'label' => 'Certifications'],
+            ],
+        ],
+
+        [
+            'label' => 'Retirement',
+            'icon' => 'arrow-right-on-rectangle',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'retirement-case', 'label' => 'Retirement Cases'],
+                ['type' => 'resource', 'key' => 'retirement-plan', 'label' => 'Retirement Plans'],
+                ['type' => 'resource', 'key' => 'retirement-calculation', 'label' => 'Calculations'],
+                ['type' => 'resource', 'key' => 'external-claim-tracking', 'label' => 'External Claims'],
+            ],
+        ],
+
+        [
+            'label' => 'Compliance',
+            'icon' => 'shield-check',
+            'can' => 'employees',
+            'items' => [
+                ['type' => 'resource', 'key' => 'compliance-source', 'label' => 'Sources'],
+                ['type' => 'resource', 'key' => 'compliance-rule', 'label' => 'Rules'],
+                ['type' => 'resource', 'key' => 'compliance-rule-version', 'label' => 'Rule Versions'],
+            ],
+        ],
+
+        [
             'label' => 'Reports',
             'icon' => 'document-text',
             'items' => [
                 ['type' => 'link', 'url' => '/reports/remittances', 'label' => 'Government Remittances', 'can' => 'payroll_settings'],
                 ['type' => 'link', 'url' => '/reports/employee-master-file', 'label' => 'Employee Master File', 'can' => 'employees'],
+                ['type' => 'link', 'url' => '/reports/workforce-analytics', 'label' => 'Workforce Analytics', 'can' => 'employees'],
             ],
         ],
 

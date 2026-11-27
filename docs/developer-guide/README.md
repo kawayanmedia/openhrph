@@ -10,15 +10,16 @@ This guide is for developers, integrators, and system administrators who build, 
 ## Recommended reading order
 
 1. [Architecture](architecture.md) — how the application is put together.
-2. [Local development](local-development.md) — get a working environment.
-3. [Admin panel](admin-panel.md) — how the Livewire admin works and how to extend it.
-4. [Data import](data-import.md) — the workbook import pipeline, sheets, columns, and limits.
-5. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
-6. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
-7. [Testing](testing.md) — Pest, Playwright, and Go tests.
-8. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
-9. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
-10. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
+2. [HR platform modules](hr-platform.md) — the HR, government, private, workforce, retirement, and compliance modules.
+3. [Local development](local-development.md) — get a working environment.
+4. [Admin panel](admin-panel.md) — how the Livewire admin works and how to extend it.
+5. [Data import](data-import.md) — the workbook import pipeline, sheets, columns, and limits.
+6. [Payroll engine](payroll-engine.md) — the Go engine and statutory tables.
+7. [Government and Private sectors](sectors.md) — sector policy, catalogues, and the regulatory research matrix.
+8. [Testing](testing.md) — Pest, Playwright, and Go tests.
+9. [Multi-tenancy](../tenancy.md) — tenant resolution and scoping rules.
+10. [Troubleshooting](troubleshooting.md) — common setup and runtime failures.
+11. [AWS AMI deployment](../deployment/aws-ami.md) — production infrastructure.
 
 ## Repository map
 
@@ -29,6 +30,7 @@ This guide is for developers, integrators, and system administrators who build, 
 | `app/Livewire/Portal/` | Employee self-service portal |
 | `app/Support/Tenancy/` | Tenant context, scopes, cache helpers, and exceptions |
 | `app/Services/Payroll/` | PHP payroll engine fallback and the Go engine wrapper |
+| `app/Services/Organization/`, `Documents/`, `Workflow/`, `Recruitment/`, `Employment/`, `Separation/`, `Attendance/`, `Performance/`, `Learning/`, `Retirement/`, `Compliance/`, `Analytics/` | HR domain services for the five-phase HR platform |
 | `app/Services/Statutory/Philippines/` | Philippine statutory calculators (SSS, PhilHealth, Pag-IBIG, GSIS, BIR) |
 | `app/Jurisdictions/` | Country plugins: statutory law, payroll policy, holidays, leave, reports |
 | `app/Imports/` | Workbook import engine: `OpenHrWorkbook`, sheet definitions, columns, reader, and sample template |

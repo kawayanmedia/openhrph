@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+
 /*
 |--------------------------------------------------------------------------
 | Console Routes
@@ -23,3 +24,5 @@ Schedule::command('payroll_date:generate')->daily();
 
 // $schedule->command('blank_timesheet:generate {from_date?} {to_date?}')->daily();
 Schedule::command('blank_timesheet:generate')->daily();
+
+Schedule::command('hr:reminders')->daily();

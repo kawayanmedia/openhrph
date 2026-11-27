@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
+use App\Models\JobVacancy;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use KawayanMedia\Government\Models\JobVacancy;
 
 class JobVacancyPolicy
 {

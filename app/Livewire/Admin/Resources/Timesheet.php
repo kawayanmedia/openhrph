@@ -11,6 +11,7 @@ use App\Livewire\Admin\Actions\MarkSelectedAbsent;
 use App\Livewire\Admin\Actions\MarkTimesheetAbsent;
 use App\Livewire\Admin\Actions\RecomputeSelected;
 use App\Livewire\Admin\Actions\RecomputeTimeSheet;
+use App\Livewire\Admin\Actions\Workforce\ManageTimesheetApproval;
 use App\Livewire\Admin\Fields\Badge;
 use App\Livewire\Admin\Fields\Date;
 use App\Livewire\Admin\Fields\ID;
@@ -178,6 +179,7 @@ class Timesheet extends Resource
             ]),
             (new EditViewTimeSheet($this->resource))->onlyOnTableRow(),
             (new RecomputeTimeSheet($this->resource))->onlyOnTableRow(),
+            (new ManageTimesheetApproval)->onlyOnTableRow(),
             (new RecomputeSelected)->onlyBulk(),
             (new MarkSelectedAbsent)->onlyBulk(),
         ];
