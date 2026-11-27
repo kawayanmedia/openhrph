@@ -37,6 +37,8 @@ record. See [the company-to-payslip walkthrough](end-to-end-walkthrough.md) and
 Requests follow the company's approval workflow. The employee sees pending, approved, and rejected states.
 Approved requests flow into attendance and payroll.
 
+![Employee portal leave application with the leave credits, leave type, dates, paid and unpaid days, attachment, and reason](../../images/portal-leave-request-light.png)
+
 ## Performance
 
 **Portal → Performance**

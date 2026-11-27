@@ -33,6 +33,12 @@ Unit hierarchy drives approvals when an approver scope is defined by organizatio
 hierarchy can change who approves future requests, so review workflow definitions after a large
 reorganization.
 
+![Organization Units list with the unit type, parent unit, and active state for each unit](../../images/admin-org-units-light.png)
+
+The create form asks for the unit type and the parent unit, which is what builds the hierarchy:
+
+![Create Organization Unit form with name, code, unit type, and parent unit fields](../../images/admin-org-unit-create-light.png)
+
 ## Locations and cost centers
 
 **HR → Locations** and **HR → Cost Centers**
@@ -57,6 +63,8 @@ not rewrite history.
    eligibility requirements.
 4. Use **HR → Job Descriptions** to attach the duties, responsibilities, and competencies. Job
    descriptions can be versioned by effective date.
+
+![Positions list showing the code, name, basic pay, and vacancy state for each position](../../images/admin-positions-light.png)
 
 A position is a catalogue entry. The person holding it is recorded through a position assignment, not by
 editing the position.

@@ -1,8 +1,10 @@
+import Link from '@docusaurus/Link';
+
 # Data import
 
 The data import lets one Excel workbook add or update offices, departments, payroll groups, positions, schedules, and employees in a single all-or-nothing run. This page explains the code so you can change the template, add a sheet, or debug a rejected workbook.
 
-Users see the feature under **Settings → Company → Data Import**; the [user guide](../user-guide/data-import.md) describes the screens.
+Users see the feature under **Settings → Company → Data Import**; the data import page in either user guide edition describes the screens: <Link to="/docs/user-guide/private/shared/data-import">Private edition</Link>, <Link to="/docs/user-guide/government/shared/data-import">Government edition</Link>.
 
 ## Entry point
 

@@ -89,6 +89,5 @@ missing, check the user's group before changing the data.
 
 ## Related documentation
 
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)
 - [HR platform modules — developer reference](../../developer-guide/hr-platform.md)
 - [User guide home](../README.md)

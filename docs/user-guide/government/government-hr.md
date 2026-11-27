@@ -4,10 +4,16 @@ description: "Government-sector OpenHR PH guide directory: plantilla, qualificat
 
 # Government-sector HR
 
+:::info You are in the Government-sector guide
+
+The sidebar on this page lists the Government modules plus the modules both sectors share. If your
+installation is Private, switch to the [Private-sector user guide](../private/private-hr.md).
+
+:::
+
 This is the entry point for Philippine national government agencies, LGUs, and GOCCs running OpenHR PH in
-**Government** sector with the **PH** jurisdiction. If your installation is Private, start at
-[Private-sector HR](../private/private-hr.md). Shared modules — organization, documents, approvals, corrections,
-performance, learning, retirement mechanics, compliance, and analytics — are listed in
+**Government** sector with the **PH** jurisdiction. Shared modules — organization, documents, approvals,
+corrections, performance, learning, retirement mechanics, compliance, and analytics — are listed in
 [HR, workforce and talent overview](../shared/hr-and-workforce.md).
 
 The **Government** menu and these guides apply only when both the sector and jurisdiction are
@@ -85,4 +91,3 @@ Plantilla version → Plantilla item → Qualification standard/screening
 - [Private-sector HR](../private/private-hr.md)
 - [Employees](../shared/employees.md)
 - [Government and Private sectors — developer guide](../../developer-guide/sectors.md)
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)

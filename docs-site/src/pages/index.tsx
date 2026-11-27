@@ -145,8 +145,8 @@ export default function Home(): ReactNode {
             <div className="heroButtons">
               <Link
                 className="button button--primary button--lg"
-                to="/docs/user-guide/end-to-end-walkthrough">
-                Start the company-to-payslip walkthrough
+                to="/docs/user-guide">
+                Choose your guide and start the walkthrough
               </Link>
               <Link
                 className="button button--outline button--lg"

@@ -19,6 +19,8 @@ Private and Government installations use the same repository and workflow engine
 3. Upload the file. Files are stored privately; downloads go through an authorized route.
 4. Set the issued date, expiry date, and retention date where they apply.
 
+![Create Document form with title, category, classification, owner, and retention fields](../../images/admin-document-create-light.png)
+
 ### Versions
 
 Editing a document's content creates a new version. Versions are immutable:
@@ -71,6 +73,8 @@ future acknowledgment lists but leaves audit events.
 
 Definitions are versioned. Changing an active definition creates a new version so in-flight instances keep
 their original steps.
+
+![Create Workflow Definition form with code, name, version, and the first approval step](../../images/admin-workflow-definition-create-light.png)
 
 ## Approvals inbox
 
@@ -128,4 +132,3 @@ the source record and produce a new audit event.
 - [HR, workforce and talent overview](hr-and-workforce.md)
 - [Organization and positions](organization-and-positions.md)
 - [Employee self-service](employee-self-service.md)
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)

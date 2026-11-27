@@ -24,6 +24,8 @@ The list includes each employee's statutory identifiers, bank account (masked to
 digits), portal e-mail, and employment details. Use it as the HR masterlist for audits, payroll
 reconciliation, and bank-file preparation.
 
+![Employee master file with the office and department filters, one row per employee, and the export and print actions](../../images/admin-employee-master-file-light.png)
+
 ## 201 file
 
 The 201 file is a single printable dossier for one employee. It contains:

@@ -4,10 +4,16 @@ description: "Private-sector OpenHR PH guide directory: recruitment to hire, emp
 
 # Private-sector HR
 
-This is the entry point for Private-sector organisations. If your installation is Government, start at
-[Government-sector HR](../government/government-hr.md). Shared modules — organization, documents, approvals, corrections,
-performance, learning, retirement mechanics, compliance, and analytics — are listed in
-[HR, workforce and talent overview](../shared/hr-and-workforce.md).
+:::info You are in the Private-sector guide
+
+The sidebar on this page lists the Private modules plus the modules both sectors share. If your installation
+is Government, switch to the [Government-sector user guide](../government/government-hr.md).
+
+:::
+
+This is the entry point for Private-sector organisations. Shared modules — organization, documents,
+approvals, corrections, performance, learning, retirement mechanics, compliance, and analytics — are
+listed in [HR, workforce and talent overview](../shared/hr-and-workforce.md).
 
 The private menus appear only when the installation's sector is **Private**. If they are missing, ask your
 administrator to check **Settings → Sector Settings**.
@@ -76,4 +82,3 @@ Shared menus such as **HR**, **Documents**, **Workflow**, **Workforce**, **Perfo
 - [Government-sector HR](../government/government-hr.md)
 - [Employees](../shared/employees.md)
 - [Attendance and requests](../shared/attendance-and-requests.md)
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)

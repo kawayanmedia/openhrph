@@ -18,6 +18,8 @@ the portal.
 The course catalogue is separate from the government PDS training records, which remain part of the
 employee's official service record.
 
+![Create Training Course form with the course code, title, provider, category, and duration](../../images/admin-training-course-create-light.png)
+
 ## Sessions
 
 **Learning → Sessions**

@@ -3,6 +3,8 @@ slug: /
 description: "Choose where to start with OpenHR PH: day-to-day use, development, or deployment."
 ---
 
+import Link from '@docusaurus/Link';
+
 # OpenHR PH documentation
 
 This documentation is split into two paths. Pick the one that matches what you need to do.
@@ -16,55 +18,18 @@ Run it locally from `docs-site/` with `npm start`.
 
 ## Choose your sector
 
-The installation is configured for one sector. Use the guide set that matches it:
+The user guide is published in two editions. Each edition contains the sector's own modules and its own copy
+of the shared modules, so a reader only sees the guides that apply to the installation.
 
 | Sector | Guide set |
 | --- | --- |
-| **Private** | [Private-sector HR](user-guide/private-hr.md) — recruitment, employment, separation, company retirement plans |
-| **Government (PH)** | [Government-sector HR](user-guide/government-hr.md) — plantilla, appointments, personnel actions, HRMPSB, service records, leave cards, GSIS retirement |
+| **Private** | <Link to="/docs/user-guide/private/private-hr">Private-sector user guide</Link> — recruitment, employment, separation, company retirement plans, plus every shared module |
+| **Government (PH)** | <Link to="/docs/user-guide/government/government-hr">Government-sector user guide</Link> — plantilla, appointments, personnel actions, HRMPSB, service records, leave cards, GSIS retirement, plus every shared module |
 
-Each sector hub links every sector-specific page. Shared modules (employees, organization, attendance,
-payroll, performance, learning, retirement mechanics, compliance, analytics) apply to both.
-
-## I use OpenHR PH
-
-For HR officers, payroll staff, administrators, and employees who use the system day to day. No programming knowledge is needed.
-
-| Guide | What it covers |
-| --- | --- |
-| [Company to payslip walkthrough](user-guide/end-to-end-walkthrough.md) | One complete first run: company profile, reference data, payroll group, employee, portal access, payroll, payslip, and corrections |
-| [Getting started](user-guide/getting-started.md) | Signing in, switching companies, navigation, search, and changing your password |
-| [Employees](user-guide/employees.md) | Employee records, documents, schedules, compensation, and import |
-| [Organization and positions](user-guide/organization-and-positions.md) | Organization units, locations, cost centers, positions, requirements, assignments, reporting lines, and employment changes |
-| [Documents and workflow](user-guide/documents-and-workflow.md) | Document versions, classification, acknowledgments, approvals, delegations, and audit trail |
-| [Attendance and requests](user-guide/attendance-and-requests.md) | Leave, overtime, undertime, official business, attendance certificates, and request approvals |
-| [Timesheet management](user-guide/timesheet-management.md) | Timesheet routine, device imports, night shifts, absences, locking, and reopening |
-| [Workforce corrections and approvals](user-guide/workforce-corrections.md) | Attendance corrections and the timesheet submit/approve/reject/lock workflow |
-| [Payroll](user-guide/payroll.md) | Payroll groups, compensation catalogue, calculations, processing, approval, and locking |
-| [Reports and payslips](user-guide/reports-and-payslips.md) | Exports, registers, remittances, and employee payslip access |
-| [Workforce analytics](user-guide/workforce-analytics.md) | Headcount, hires, separations, retirement forecasts, completion rates, and compliance exposure |
-| [Performance](user-guide/performance.md) | Cycles, goals, reviews, ratings, finalization, acknowledgment, and development plans |
-| [Learning and certifications](user-guide/learning.md) | Courses, sessions, enrollments, completion, and certifications |
-| [Retirement](user-guide/retirement.md) | Plans, eligibility, cases, calculations, documents, and external claims |
-| [Compliance](user-guide/compliance.md) | Sources, rules, versions, review, approval, and effective-date resolution |
-| [Employee self-service](user-guide/employee-self-service.md) | Portal dashboard, requests, performance, training, documents, and attendance report |
-| [HR, workforce and talent overview](user-guide/hr-and-workforce.md) | Directory of every HR, workforce, and talent guide |
-| [Private-sector HR](user-guide/private-hr.md) | Private menu overview and workflow map |
-| [Private recruitment to hire](user-guide/private-recruitment.md) | Requisitions, vacancies, applications, screening, interviews, assessments, offers, and hire conversion |
-| [Private employment](user-guide/private-employment.md) | Employments, contracts, probation, regularization, onboarding, and private leave policy rules |
-| [Private separation](user-guide/private-separation.md) | Separation cases, clearance, final settlement, and effective separation |
-| [Government-sector HR](user-guide/government-hr.md) | Government menu overview and workflow map |
-| [Government plantilla and qualifications](user-guide/government-plantilla.md) | Plantilla versions and items, occupancy, qualification standards and screening |
-| [Government appointments](user-guide/government-appointments.md) | Appointment records, state machine, documents, CSC actions, assumptions |
-| [Government personnel actions](user-guide/government-personnel-actions.md) | Promotion, transfer, detail, reassignment and separation actions |
-| [Government HRMPSB](user-guide/government-hrmpsb.md) | Committees, members and deliberations |
-| [Government records](user-guide/government-records.md) | Salary grades, NOSA, service records, leave cards and PDS/201 file |
-| [Government separation and retirement](user-guide/government-separation-retirement.md) | Resignation, GSIS retirement, terminal leave, death in service, dropping, dismissal, clearance |
-| [Data import](user-guide/data-import.md) | Bulk upload of offices, departments, payroll groups, positions, schedules, and employees from one workbook |
-| [Settings and access](user-guide/settings-and-access.md) | Offices, departments, holidays, users, groups, and permissions |
-| [Troubleshooting](user-guide/troubleshooting.md) | Common problems and when to contact an administrator |
-
-Start with the [company-to-payslip walkthrough](user-guide/end-to-end-walkthrough.md) if you are setting up a company for the first time, or [Getting started](user-guide/getting-started.md) if you only need to sign in and find your way around.
+Both editions start with the company-to-payslip walkthrough, signing in, and data import, then cover the
+shared modules: employees, organization and positions, documents and workflow, attendance and timesheets,
+payroll, reports and payslips, analytics, performance, learning, retirement, compliance, self-service, and
+settings.
 
 ## I build, extend, or operate OpenHR PH
 
@@ -109,7 +74,6 @@ For developers, integrators, and system administrators.
 
 | Guide | What it covers |
 | --- | --- |
-| [HR platform expansion — November 2026](releases/2026-11-hr-platform.md) | Release notes for the five HR phases, migrations, upgrade steps, validation results, and known limitations |
 | [Open-source release checklist](security/open-source-checklist.md) | Credential rotation, history cleanup, PII review, and publishing |
 | [Security policy](https://github.com/kawayanmedia/openhrph/blob/main/SECURITY.md) | Reporting vulnerabilities and handling secrets |
 | [Philippine payroll compliance audit — 2026 update](payroll-audit/2026-11-payroll-compliance-audit.md) | 2026 statutory basis, end-to-end payroll procedure, advisory checklist, and open findings F-25–F-37 |
@@ -124,4 +88,4 @@ For developers, integrators, and system administrators.
 - **Payroll run** — one processing period for a payroll group.
 - **Payslip** — the employee-level result of a payroll run.
 
-If you are not sure where to start, read [Getting started](user-guide/getting-started.md) or open an issue on GitHub.
+If you are not sure where to start, open one of the two user guide editions above and follow "Start here", or open an issue on GitHub.

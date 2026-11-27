@@ -52,14 +52,6 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
-      label: 'Release notes',
-      collapsed: false,
-      items: [
-        'releases/2026-11-hr-platform',
-      ],
-    },
-    {
-      type: 'category',
       label: 'Security and compliance',
       collapsed: false,
       items: [

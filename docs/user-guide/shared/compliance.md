@@ -23,6 +23,8 @@ Record the authoritative source before creating a rule:
 Use the official URL and issuance number so a future reviewer can trace the rule. Internal company
 policies can also be registered as sources when they are formally approved.
 
+![Create Compliance Source form with the authority, title, issuance number, official URL, and effective dates](../../images/admin-compliance-source-create-light.png)
+
 ## Rules
 
 **Compliance → Rules**
@@ -114,4 +116,3 @@ which rule version should apply.
 - [Retirement](retirement.md)
 - [Payroll](payroll.md)
 - [Workforce analytics](workforce-analytics.md)
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)

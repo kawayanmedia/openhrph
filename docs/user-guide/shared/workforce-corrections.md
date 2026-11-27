@@ -18,6 +18,8 @@ A correction fixes an attendance problem without rewriting the original punch. T
 requested → approved or rejected → applied
 ```
 
+![Create Attendance Correction form with the employee, workday, correction type, and requested values](../../images/admin-attendance-correction-create-light.png)
+
 ### Review a correction
 
 1. Open **Workforce → Attendance Corrections**.

@@ -21,6 +21,8 @@ Create a plan with:
 - benefit formula,
 - optional employer and employee contribution rates.
 
+![Create Retirement Plan form with the plan type, eligibility age, service years, and effective dates](../../images/admin-retirement-plan-create-light.png)
+
 ### Benefit formulas
 
 Formulas are inert JSON. Supported shapes:

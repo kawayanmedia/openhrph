@@ -26,6 +26,8 @@ of workforce and compliance exposure. The report is read-only and refreshes on d
 
 Use **Refresh** after processing payroll, completing retirements, or updating compliance rules.
 
+![Workforce analytics report with headcount, hires, separations, retirement, learning, review, and compliance cards](../../images/admin-workforce-analytics-light.png)
+
 ## How to read the report
 
 - A high **pending corrections** count usually means attendance data is not ready for payroll. Clear the

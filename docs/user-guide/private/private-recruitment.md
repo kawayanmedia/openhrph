@@ -33,6 +33,8 @@ Each step is a separate record so the hiring decision and its evidence remain au
 Statuses: `draft`, `submitted`, `under_review`, `approved`, `rejected`, `on_hold`, `closed`, `cancelled`.
 Invalid transitions are rejected.
 
+![Create Job Requisition form with the position, organization unit, employment type, reason, headcount, and salary range](../../images/admin-requisition-create-light.png)
+
 ## Vacancies
 
 **Recruitment → Vacancies**
@@ -54,6 +56,8 @@ If the requisition is on hold or closed, the vacancy cannot be published.
 Applications progress through `screening`, `shortlisted`, `assessment`, `interview`, `recommended`,
 `offer`, and `hired`. Other outcomes are `rejected`, `withdrawn`, `offer_declined`, `offer_expired`, and
 `talent_pool`.
+
+![Create Applicant form with the applicant's name and contact details](../../images/admin-applicant-create-light.png)
 
 ## Screening
 
@@ -123,4 +127,3 @@ duplicate.
 - [Private-sector HR](private-hr.md)
 - [Private employment](private-employment.md)
 - [Private separation](private-separation.md)
-- [Release notes — November 2026](../../releases/2026-11-hr-platform.md)

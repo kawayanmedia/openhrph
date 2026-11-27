@@ -36,6 +36,14 @@ Use **Payroll Management → Payroll Settings** for payroll defaults that apply 
 
 Use **Leave Management → Leave Settings** for leave-related defaults and **Leave Management → Leave Types** for the leave catalogue. The catalogue is system-wide: a company overrides a shared type or adds its own instead of editing the shared row.
 
+## Sector settings
+
+The installation runs in exactly one sector. Open **Settings → Sector Settings** to see the sector, the
+capabilities it enables, and the statutory bases payroll uses. The sector is fixed for the whole
+installation; only an administrator running `php artisan openhr:install --force` can change it.
+
+![Sector settings page showing the fixed installation sector, enabled capabilities, and statutory contribution bases](../../images/admin-sector-settings-light.png)
+
 ## Reference data
 
 Keep reference data tidy before adding employees and running payroll.

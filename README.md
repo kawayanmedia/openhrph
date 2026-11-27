@@ -101,20 +101,23 @@ The site reads `docs/` directly, so there is nothing to keep in sync. See
 
 ### I use OpenHR PH
 
-- Start here: [Company to payslip walkthrough](docs/user-guide/end-to-end-walkthrough.md), [Getting started](docs/user-guide/getting-started.md), [Data import](docs/user-guide/data-import.md)
-- People and organization: [Employees](docs/user-guide/employees.md), [Organization and positions](docs/user-guide/organization-and-positions.md), [Documents and workflow](docs/user-guide/documents-and-workflow.md)
-- Time and attendance: [Attendance and requests](docs/user-guide/attendance-and-requests.md), [Timesheet management](docs/user-guide/timesheet-management.md), [Workforce corrections and approvals](docs/user-guide/workforce-corrections.md)
-- Payroll and reports: [Payroll](docs/user-guide/payroll.md), [Reports and payslips](docs/user-guide/reports-and-payslips.md), [Workforce analytics](docs/user-guide/workforce-analytics.md)
-- Performance and learning: [Performance](docs/user-guide/performance.md), [Learning and certifications](docs/user-guide/learning.md), [Employee self-service](docs/user-guide/employee-self-service.md)
-- Retirement and compliance: [Retirement](docs/user-guide/retirement.md), [Compliance](docs/user-guide/compliance.md)
-- Private sector: [HR overview](docs/user-guide/private-hr.md), [Recruitment](docs/user-guide/private-recruitment.md), [Employment](docs/user-guide/private-employment.md), [Separation](docs/user-guide/private-separation.md)
-- Government sector: [HR overview](docs/user-guide/government-hr.md), [Plantilla and qualifications](docs/user-guide/government-plantilla.md), [Appointments](docs/user-guide/government-appointments.md), [Personnel actions](docs/user-guide/government-personnel-actions.md), [HRMPSB](docs/user-guide/government-hrmpsb.md), [Records](docs/user-guide/government-records.md), [Separation and retirement](docs/user-guide/government-separation-retirement.md)
-- All HR guides: [HR, workforce and talent overview](docs/user-guide/hr-and-workforce.md)
-- Settings and help: [Settings and access](docs/user-guide/settings-and-access.md), [Troubleshooting](docs/user-guide/troubleshooting.md)
+The user guide is written for one sector at a time. Each edition contains the sector's own modules and its
+own copy of the shared modules:
 
-### Release notes
+- Private sector: [Private-sector user guide](docs/user-guide/private/private-hr.md)
+- Government sector: [Government-sector user guide](docs/user-guide/government/government-hr.md)
 
-- [HR platform expansion — November 2026](docs/releases/2026-11-hr-platform.md)
+Shared modules inside either edition:
+
+- Start here: [Company to payslip walkthrough](docs/user-guide/shared/end-to-end-walkthrough.md), [Getting started](docs/user-guide/shared/getting-started.md), [Data import](docs/user-guide/shared/data-import.md)
+- People and organization: [Employees](docs/user-guide/shared/employees.md), [Organization and positions](docs/user-guide/shared/organization-and-positions.md), [Documents and workflow](docs/user-guide/shared/documents-and-workflow.md)
+- Time and attendance: [Attendance and requests](docs/user-guide/shared/attendance-and-requests.md), [Timesheet management](docs/user-guide/shared/timesheet-management.md), [Workforce corrections and approvals](docs/user-guide/shared/workforce-corrections.md)
+- Payroll and reports: [Payroll](docs/user-guide/shared/payroll.md), [Reports and payslips](docs/user-guide/shared/reports-and-payslips.md), [Workforce analytics](docs/user-guide/shared/workforce-analytics.md)
+- Performance and learning: [Performance](docs/user-guide/shared/performance.md), [Learning and certifications](docs/user-guide/shared/learning.md), [Employee self-service](docs/user-guide/shared/employee-self-service.md)
+- Retirement and compliance: [Retirement](docs/user-guide/shared/retirement.md), [Compliance](docs/user-guide/shared/compliance.md)
+- All HR guides: [HR, workforce and talent overview](docs/user-guide/shared/hr-and-workforce.md)
+- Settings and help: [Settings and access](docs/user-guide/shared/settings-and-access.md), [Troubleshooting](docs/user-guide/shared/troubleshooting.md)
+
 
 ### I build, extend, or operate OpenHR PH
 

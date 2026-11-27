@@ -3,10 +3,11 @@ slug: /developer-guide/hr-platform
 description: "Developer reference for the OpenHR PH HR platform modules: namespaces, data model, services, admin UI, workflow, tenancy, testing and extension points."
 ---
 
+import Link from '@docusaurus/Link';
+
 # HR platform modules
 
-This page is the developer reference for the HR capabilities added in the
-[November 2026 release](../releases/2026-11-hr-platform.md). It covers where the code lives, how the
+This page is the developer reference for the HR capabilities. It covers where the code lives, how the
 modules fit together, and how to extend them without breaking sector or jurisdiction boundaries.
 
 ## Architectural boundaries
@@ -286,11 +287,9 @@ Until then, integration happens through:
 
 ## Related documentation
 
-- [Release notes — November 2026](../releases/2026-11-hr-platform.md)
 - [HR platform modules — developer reference](hr-platform.md)
-- [HR, workforce and talent — user guide](../user-guide/hr-and-workforce.md)
-- [Private-sector HR — user guide](../user-guide/private-hr.md)
-- [Government-sector HR — user guide](../user-guide/government-hr.md)
+- <Link to="/docs/user-guide/private/private-hr">Private-sector user guide</Link>
+- <Link to="/docs/user-guide/government/government-hr">Government-sector user guide</Link>
 - [Architecture](architecture.md)
 - [Admin panel](admin-panel.md)
 - [Multi-tenancy](../tenancy.md)

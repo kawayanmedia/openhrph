@@ -18,6 +18,8 @@ to the employee through the portal.
 
 Statuses: `draft`, `active`, `calibration`, `completed`, `cancelled`. Only a draft cycle can be activated.
 
+![Create Performance Cycle form with the cycle name, sector, period, and template version](../../images/admin-performance-cycle-create-light.png)
+
 ## Goals
 
 **Performance → Goals**
