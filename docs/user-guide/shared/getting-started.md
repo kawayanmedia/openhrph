@@ -13,7 +13,7 @@ in. Delete the `D-000x` sample employees once you add your own; empty workspaces
 from **Getting started → Load sample data**.
 
 All data is stored on that computer. To move an installation, close the app and copy its data folder;
-the path for each operating system is listed in [Desktop app](../deployment/desktop.md).
+the path for each operating system is listed in [Desktop app](../../deployment/desktop.md).
 
 The installed version is shown at the bottom of the sidebar, in the account menu, and on the
 **Software update** page. That page updates the application: select **Check for updates**, wait for
@@ -56,7 +56,7 @@ without affecting other visitors. The demo is not a place for real employee or p
 
 ## Sign in to the admin workspace
 
-![Sign in screen](../images/admin-login-light.png)
+![Sign in screen](../../images/admin-login-light.png)
 
 1. Open `/app/login` in your browser.
 2. Enter your email address.
@@ -104,7 +104,7 @@ company remits GSIS instead of SSS.
 
 ## Find your way around
 
-![Dashboard showing setup progress, employee and office totals, pending requests, and the latest payroll runs](../images/admin-dashboard-light.png)
+![Dashboard showing setup progress, employee and office totals, pending requests, and the latest payroll runs](../../images/admin-dashboard-light.png)
 
 The left sidebar contains the areas your group allows:
 

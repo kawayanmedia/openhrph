@@ -10,6 +10,11 @@ An open-source Human Resource Information System and Philippine payroll platform
 ## What it does
 
 - **People** — employee profiles, documents, certificates, training, schedules, compensation, loans, allowances, bonuses, and commissions.
+- **HR platform** — organization units, locations, cost centers, positions with effective-dated assignments and reporting lines, an immutable document repository, configurable approvals, and an append-only audit trail.
+- **Government HR** — versioned plantilla, qualification screening, appointments, personnel actions, and HRMPSB committees.
+- **Private HR** — recruitment to hire, onboarding, employments and contracts, probation and regularization, separation with clearance and final settlement, and private leave policy rules.
+- **Workforce and talent** — attendance corrections that never overwrite raw punches, timesheet approval and payroll locking, performance cycles and reviews, training, certifications, and employee self-service for performance, training, and documents.
+- **Retirement, compliance and analytics** — retirement plans, cases, reviewed calculations, GSIS/SSS claim tracking, a versioned compliance source/rule register, and a tenant-scoped workforce analytics report.
 - **Time and attendance** — biometric device imports, timesheets, attendance corrections, overtime, undertime, leave, official business, and schedule adjustments.
 - **Payroll** — payroll groups, period previews, review, approval and locking, payslips, registers, and a payroll bank-credit file.
 - **Reports and remittances** — a report centre for statutory working papers, a filing/payment register, and an employee master file with printable 201 files.
@@ -96,18 +101,25 @@ The site reads `docs/` directly, so there is nothing to keep in sync. See
 
 ### I use OpenHR PH
 
-- [Company to payslip walkthrough](docs/user-guide/end-to-end-walkthrough.md)
-- [Getting started](docs/user-guide/getting-started.md)
-- [Employees](docs/user-guide/employees.md)
-- [Attendance and requests](docs/user-guide/attendance-and-requests.md)
-- [Payroll](docs/user-guide/payroll.md)
-- [Reports and payslips](docs/user-guide/reports-and-payslips.md)
-- [Settings and access](docs/user-guide/settings-and-access.md)
-- [Troubleshooting](docs/user-guide/troubleshooting.md)
+- Start here: [Company to payslip walkthrough](docs/user-guide/end-to-end-walkthrough.md), [Getting started](docs/user-guide/getting-started.md), [Data import](docs/user-guide/data-import.md)
+- People and organization: [Employees](docs/user-guide/employees.md), [Organization and positions](docs/user-guide/organization-and-positions.md), [Documents and workflow](docs/user-guide/documents-and-workflow.md)
+- Time and attendance: [Attendance and requests](docs/user-guide/attendance-and-requests.md), [Timesheet management](docs/user-guide/timesheet-management.md), [Workforce corrections and approvals](docs/user-guide/workforce-corrections.md)
+- Payroll and reports: [Payroll](docs/user-guide/payroll.md), [Reports and payslips](docs/user-guide/reports-and-payslips.md), [Workforce analytics](docs/user-guide/workforce-analytics.md)
+- Performance and learning: [Performance](docs/user-guide/performance.md), [Learning and certifications](docs/user-guide/learning.md), [Employee self-service](docs/user-guide/employee-self-service.md)
+- Retirement and compliance: [Retirement](docs/user-guide/retirement.md), [Compliance](docs/user-guide/compliance.md)
+- Private sector: [HR overview](docs/user-guide/private-hr.md), [Recruitment](docs/user-guide/private-recruitment.md), [Employment](docs/user-guide/private-employment.md), [Separation](docs/user-guide/private-separation.md)
+- Government sector: [HR overview](docs/user-guide/government-hr.md), [Plantilla and qualifications](docs/user-guide/government-plantilla.md), [Appointments](docs/user-guide/government-appointments.md), [Personnel actions](docs/user-guide/government-personnel-actions.md), [HRMPSB](docs/user-guide/government-hrmpsb.md), [Records](docs/user-guide/government-records.md), [Separation and retirement](docs/user-guide/government-separation-retirement.md)
+- All HR guides: [HR, workforce and talent overview](docs/user-guide/hr-and-workforce.md)
+- Settings and help: [Settings and access](docs/user-guide/settings-and-access.md), [Troubleshooting](docs/user-guide/troubleshooting.md)
+
+### Release notes
+
+- [HR platform expansion — November 2026](docs/releases/2026-11-hr-platform.md)
 
 ### I build, extend, or operate OpenHR PH
 
 - [Architecture](docs/developer-guide/architecture.md)
+- [HR platform modules](docs/developer-guide/hr-platform.md)
 - [Local development](docs/developer-guide/local-development.md)
 - [Admin panel](docs/developer-guide/admin-panel.md)
 - [Payroll engine](docs/developer-guide/payroll-engine.md)

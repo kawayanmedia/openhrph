@@ -57,5 +57,6 @@ yarn-error.log
 /docs-site/build
 /docs-site/.docusaurus
 /docs-site/.cache-loader
+/docs-site/.generated
 
 TODO.txt

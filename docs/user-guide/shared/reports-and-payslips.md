@@ -38,7 +38,7 @@ The 201 file is a single printable dossier for one employee. It contains:
 - certificates and trainings
 - signature lines for the employee and the HR officer
 
-![201 file showing the company header, government identifiers, employment details, compensation and bank information, and leave balances](../images/admin-201-file-light.png)
+![201 file showing the company header, government identifiers, employment details, compensation and bank information, and leave balances](../../images/admin-201-file-light.png)
 
 Open it from **Employee Master File → Open** or from an employee record's **Documents** section.
 Select **Print / Save PDF** and use the browser's print dialog. Only users in the employee's company
@@ -77,7 +77,7 @@ After a payroll is processed or approved:
 2. Find the employee in the register.
 3. Select the payslip link.
 
-![Payslip with earnings, deductions, net pay, masked statutory numbers, and the Print and Download PDF actions](../images/admin-payslip-light.png)
+![Payslip with earnings, deductions, net pay, masked statutory numbers, and the Print and Download PDF actions](../../images/admin-payslip-light.png)
 
 The payslip page is print-ready. Use your browser's print command to print it or save it as a PDF.
 
@@ -113,7 +113,7 @@ The admin report centre is the day-to-day way to produce remittances and record 
 6. Use **Mark filed** and **Mark paid** to record references and dates. Filed and paid rows survive a
    schedule refresh; use **Void** for rows that should not be remitted.
 
-![Government remittances screen with the agency totals, the remittance register, and the filing and payment actions](../images/admin-remittances-light.png)
+![Government remittances screen with the agency totals, the remittance register, and the filing and payment actions](../../images/admin-remittances-light.png)
 
 The register is a working record, not an agency e-filing submission. The due dates shown are
 editable defaults; confirm them with each agency.

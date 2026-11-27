@@ -16,11 +16,11 @@ This page helps you keep employee records complete and ready for attendance and 
 3. Use the filters to narrow the list.
 4. Select a row to view it, or choose **Edit** to change it.
 
-![Employee list with the search box, employment type and office filters, and the actions for each row](../images/admin-employees-list-light.png)
+![Employee list with the search box, employment type and office filters, and the actions for each row](../../images/admin-employees-list-light.png)
 
 ## Create an employee
 
-![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../images/admin-employee-payroll-light.png)
+![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../../images/admin-employee-payroll-light.png)
 
 1. Select **Create Employee**.
 2. Fill in the required fields. Fields marked with **\*** are required.

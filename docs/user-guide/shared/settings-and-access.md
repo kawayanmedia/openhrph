@@ -4,7 +4,7 @@ This page helps company owners and administrators configure the workspace and co
 
 ## Company settings
 
-![General settings in light mode](../images/admin-settings-light.png)
+![General settings in light mode](../../images/admin-settings-light.png)
 
 Open **Settings** in the sidebar. The available sections depend on your permissions.
 

@@ -108,7 +108,7 @@ Add `--employee=ID` (repeatable) to restrict a run.
 2. Create a payroll for the period, or open an existing one.
 3. Check the payroll group, payroll date, cut-off, and date range.
 
-![Payroll list showing an open run for the current period and the Run payroll action](../images/admin-payroll-list-light.png)
+![Payroll list showing an open run for the current period and the Run payroll action](../../images/admin-payroll-list-light.png)
 
 The payroll run page shows a step indicator and the payroll status.
 
@@ -128,7 +128,7 @@ Use the preview to check:
 
 Preview is a dry run. It is safe to repeat.
 
-![Payroll run preview with the step indicator, headcount, gross pay, deductions, net pay, and the employee register](../images/admin-payroll-run-preview-light.png)
+![Payroll run preview with the step indicator, headcount, gross pay, deductions, net pay, and the employee register](../../images/admin-payroll-run-preview-light.png)
 
 ### 2. Process
 
@@ -151,7 +151,7 @@ When processing finishes, the status becomes **processed**. Review the payroll d
 - employer contributions
 - totals and headcount
 
-![Processed payroll with the review panel and a register that links to each employee's payslip](../images/admin-payroll-run-processed-light.png)
+![Processed payroll with the review panel and a register that links to each employee's payslip](../../images/admin-payroll-run-processed-light.png)
 
 ### 4. Approve and lock
 
@@ -333,4 +333,4 @@ Preview as often as you like. Processing recalculates the run. Approved payrolls
 
 ## See also
 
-- [2026 CPA payroll cycle procedure and advisory checklist](../payroll-audit/2026-11-payroll-compliance-audit.md#12-end-to-end-payroll-cycle--cpa-operating-procedure-2026) — the full step-by-step from timesheets to payslips, remittances and special runs, with the 2026 statutory verification and open findings.
+- [2026 CPA payroll cycle procedure and advisory checklist](../../payroll-audit/2026-11-payroll-compliance-audit.md#12-end-to-end-payroll-cycle--cpa-operating-procedure-2026) — the full step-by-step from timesheets to payslips, remittances and special runs, with the 2026 statutory verification and open findings.

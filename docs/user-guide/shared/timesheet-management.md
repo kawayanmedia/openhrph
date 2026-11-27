@@ -40,7 +40,7 @@ These are the recurring issues HR teams report in large, multi-shift organisatio
 4. Compare **Worked hours** against the schedule. The old 8.8-hour night-shift display is gone; 8 actual hours now read as `8.00`.
 5. Use **Export As CSV** (select rows first) for payroll reconciliation or a dispute.
 
-![Timesheet list filtered to the current cut-off, showing punches, worked hours, and the day type for each employee](../images/admin-timesheet-list-light.png)
+![Timesheet list filtered to the current cut-off, showing punches, worked hours, and the day type for each employee](../../images/admin-timesheet-list-light.png)
 
 ## Generating timesheets
 

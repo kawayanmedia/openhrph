@@ -21,7 +21,7 @@ Open **Requests** in the sidebar. The list includes:
 
 Each request has a status such as pending, approved, or rejected. Use the search and filters to find a request, then open the row to review the details.
 
-![Leave request detail with the employee, dates, leave type, status, and the Approve Leave and Reject Leave actions](../images/admin-leave-request-light.png)
+![Leave request detail with the employee, dates, leave type, status, and the Approve Leave and Reject Leave actions](../../images/admin-leave-request-light.png)
 
 ### Approve or reject a request
 
@@ -38,7 +38,7 @@ If a request is wrong, reject it and ask the employee to submit a corrected requ
 
 Timesheets are the attendance summary used by payroll. Open **Time and Attendance → Timesheet**.
 
-![Timesheet list with the import, generate, absence, and export actions above the day-by-day punches and worked hours](../images/admin-timesheet-list-light.png)
+![Timesheet list with the import, generate, absence, and export actions above the day-by-day punches and worked hours](../../images/admin-timesheet-list-light.png)
 
 Typical actions include:
 
@@ -64,7 +64,7 @@ Employees use `/portal` to submit their own requests:
 
 Employees can view their dashboard, schedules, attendance report, and request history. They can only submit requests for themselves.
 
-![Employee portal dashboard with leave balances, quick actions for each request type, and company announcements](../images/portal-dashboard-light.png)
+![Employee portal dashboard with leave balances, quick actions for each request type, and company announcements](../../images/portal-dashboard-light.png)
 
 ## What happens after approval
 

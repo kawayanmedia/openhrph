@@ -49,7 +49,7 @@ Have the following ready:
 3. Leave **Keep me signed in on this device** ticked only on a computer you trust.
 4. Select **Sign in**.
 
-![Sign in screen](../images/admin-login-light.png)
+![Sign in screen](../../images/admin-login-light.png)
 
 **Expected result:** the **Dashboard** opens and the sidebar shows the areas your account can use.
 
@@ -67,7 +67,7 @@ Every setting and record belongs to the active company. Check the company name b
 
 Your company record exists, but it holds little more than a name. The company profile supplies the details that are printed on payslips and statutory reports, so complete it before you add employees.
 
-![Company profile fields on General Settings](../images/admin-settings-light.png)
+![Company profile fields on General Settings](../../images/admin-settings-light.png)
 
 1. Open **Settings → Company → General Settings**.
 2. Complete the fields:
@@ -172,7 +172,7 @@ Create these records in the order shown. The payroll group and employee forms us
 1. Open **Settings → Company → Office**.
 2. Select **Create Office**.
 
-![Create Office form](../images/admin-form-light.png)
+![Create Office form](../../images/admin-form-light.png)
 
 3. Enter a **Code**, for example `HQ`, and a **Name**, for example `Head Office`. **Name** is required.
 4. Select **Create**.
@@ -282,7 +282,7 @@ OpenHR PH fills suggested dates when you choose the period:
 
 ## Step 7 — Create the employee
 
-![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../images/admin-employee-payroll-light.png)
+![Create Employee form, Payroll section with payment type, monthly basic salary, payroll group, and statutory number fields](../../images/admin-employee-payroll-light.png)
 
 1. Open **Settings → Employee → Employee**.
 2. Select **Create Employee**.
@@ -360,7 +360,7 @@ The employee portal is optional. Use it when employees should submit their own r
 
 **Expected result:** the employee can sign in at `/portal/login` with that email and password.
 
-![Employee portal dashboard with leave balances, quick actions, and announcements](../images/portal-dashboard-light.png)
+![Employee portal dashboard with leave balances, quick actions, and announcements](../../images/portal-dashboard-light.png)
 
 What the employee can do in the portal:
 
@@ -380,7 +380,7 @@ Requests raised in the portal arrive in the admin workspace under **Requests**. 
 
 ## Step 9 — Record attendance before the cut-off
 
-![Timesheet list with the import, generate, and absence actions above the day-by-day punches](../images/admin-timesheet-list-light.png)
+![Timesheet list with the import, generate, and absence actions above the day-by-day punches](../../images/admin-timesheet-list-light.png)
 
 Payroll uses attendance to compute absences, tardiness, overtime, night differential, and holiday pay. For the period you are about to run:
 
@@ -410,7 +410,7 @@ If attendance is missing, the payroll preview still runs, but it may warn that a
 
 ## Step 11 — Preview the payroll
 
-![Payroll run preview with the step indicator, summary cards, and the employee register](../images/admin-payroll-run-preview-light.png)
+![Payroll run preview with the step indicator, summary cards, and the employee register](../../images/admin-payroll-run-preview-light.png)
 
 Preview is a dry run. It calculates the period without saving final payroll details.
 
@@ -466,7 +466,7 @@ If a change is needed after approval, a **company owner** must select **Reopen**
 
 ## Step 15 — Open, print, or download the payslip
 
-![Payslip with earnings, deductions, net pay, and the Print and Download PDF actions](../images/admin-payslip-light.png)
+![Payslip with earnings, deductions, net pay, and the Print and Download PDF actions](../../images/admin-payslip-light.png)
 
 Processing the payroll creates one payslip for each employee in the register.
 

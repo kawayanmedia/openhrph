@@ -4,7 +4,7 @@ This page helps you add or update many records at once from one Excel workbook i
 
 Open **Settings → Company → Data Import**.
 
-![Data import page after a clean preview, showing the upload card and the per-sheet preview in light mode](../images/admin-data-import-light.png)
+![Data import page after a clean preview, showing the upload card and the per-sheet preview in light mode](../../images/admin-data-import-light.png)
 
 You need the admin permission for this area. If the menu entry is missing, ask an administrator to grant it, as described in [Settings and access](settings-and-access.md).
 

@@ -1,5 +1,10 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
+/**
+ * Sidebar for the documentation that is not part of a sector guide. The user
+ * guide is published by the `guide-private` and `guide-government` docs
+ * instances, each with its own sidebar in `sidebars/`.
+ */
 const sidebars: SidebarsConfig = {
   docs: [
     {
@@ -8,26 +13,9 @@ const sidebars: SidebarsConfig = {
       label: 'Documentation hub',
     },
     {
-      type: 'category',
-      label: 'User guide',
-      link: {type: 'doc', id: 'user-guide/README'},
-      collapsed: false,
-      items: [
-        {
-          type: 'doc',
-          id: 'user-guide/end-to-end-walkthrough',
-          label: 'Company to payslip walkthrough',
-        },
-        'user-guide/getting-started',
-        'user-guide/employees',
-        'user-guide/data-import',
-        'user-guide/attendance-and-requests',
-        'user-guide/timesheet-management',
-        'user-guide/payroll',
-        'user-guide/reports-and-payslips',
-        'user-guide/settings-and-access',
-        'user-guide/troubleshooting',
-      ],
+      type: 'doc',
+      id: 'user-guide/README',
+      label: 'User guide: choose your sector',
     },
     {
       type: 'category',
@@ -36,6 +24,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'developer-guide/architecture',
+        'developer-guide/hr-platform',
         'developer-guide/local-development',
         'developer-guide/admin-panel',
         'developer-guide/data-import',
@@ -59,6 +48,14 @@ const sidebars: SidebarsConfig = {
         'deployment/serverless',
         'deployment/desktop',
         'deployment/operations',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'Release notes',
+      collapsed: false,
+      items: [
+        'releases/2026-11-hr-platform',
       ],
     },
     {
