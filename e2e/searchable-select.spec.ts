@@ -12,9 +12,11 @@ test.describe('searchable selects', () => {
         const region = page.getByRole('combobox', { name: 'Region' });
 
         await region.click();
-        await page.getByLabel('Search options').fill('region vii');
 
-        const listbox = page.getByRole('listbox', { name: 'Region' });
+        const dialog = page.getByRole('dialog', { name: 'Region' });
+        const listbox = dialog.getByRole('listbox', { name: 'Region' });
+
+        await dialog.getByLabel('Search options').fill('region vii');
 
         await expect(listbox.getByRole('option')).toHaveCount(2);
         await listbox.getByRole('option', { name: 'Region VII', exact: true }).click();
@@ -28,7 +30,10 @@ test.describe('searchable selects', () => {
 
         await region.focus();
         await page.keyboard.press('ArrowDown');
-        await expect(page.getByLabel('Search options')).toBeFocused();
+
+        const dialog = page.getByRole('dialog', { name: 'Region' });
+
+        await expect(dialog.getByLabel('Search options')).toBeFocused();
 
         await page.keyboard.type('barmm');
         await page.keyboard.press('Enter');
