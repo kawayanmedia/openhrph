@@ -61,7 +61,7 @@ return new class extends Migration
         if (! Schema::hasTable('statutory_component_bands')) {
             Schema::create('statutory_component_bands', function (Blueprint $table): void {
                 $table->id();
-                $table->unsignedBigInteger('statutory_component_id')->index();
+                $table->unsignedBigInteger('statutory_component_id');
                 $table->bigInteger('from_centavos')->default(0);
                 $table->bigInteger('to_centavos')->nullable();
                 $table->bigInteger('base_centavos')->default(0);
@@ -71,7 +71,8 @@ return new class extends Migration
                 $table->bigInteger('employer_amount_centavos')->default(0);
                 $table->integer('sort_order')->default(0);
                 $table->timestamps();
-                $table->index(['statutory_component_id', 'from_centavos']);
+                // Explicit short name: the auto-generated one exceeds MySQL's 64-character identifier limit.
+                $table->index(['statutory_component_id', 'from_centavos'], 'statutory_bands_component_from_index');
             });
         }
     }
