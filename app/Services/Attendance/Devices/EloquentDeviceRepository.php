@@ -57,7 +57,14 @@ final class EloquentDeviceRepository implements DeviceRepository
 
     public function markSeen(int $deviceId): void
     {
-        Device::query()->withoutTenant()->whereKey($deviceId)->first()?->markSeen();
+        Device::query()
+            ->withoutTenant()
+            ->whereKey($deviceId)
+            ->where(function ($query): void {
+                $query->whereNull('last_seen_at')
+                    ->orWhere('last_seen_at', '<', now()->subMinute());
+            })
+            ->update(['last_seen_at' => now()]);
     }
 
     /**

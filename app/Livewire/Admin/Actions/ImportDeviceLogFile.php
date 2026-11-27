@@ -71,7 +71,7 @@ class ImportDeviceLogFile extends Action
     {
         return [
             File::make('Log File', 'log_file')
-                ->rules('required', 'file', 'max:20480', 'mimes:csv,txt,dat,log')
+                ->rules('required', 'file', 'max:20480', 'extensions:csv,txt,dat,log')
                 ->help('ZKTeco .dat exports, CSV reports from Hikvision or Suprema, or any CSV with employee and timestamp columns.'),
         ];
     }

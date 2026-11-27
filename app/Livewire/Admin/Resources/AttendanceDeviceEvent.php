@@ -49,7 +49,7 @@ class AttendanceDeviceEvent extends Resource
 
             DateTime::make('Occurred At', 'occurred_at')->sortable(),
 
-            Text::make('Device', fn () => $this->resource?->device?->name ?? '—'),
+            Text::make('Device', fn () => $this->device?->name ?? '—'),
 
             Text::make('Serial Number', 'serial_number')->nullable()->sortable(),
 

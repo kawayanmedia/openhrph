@@ -172,6 +172,12 @@ class Device extends Model
 
     public function markSeen(): void
     {
+        // ADMS devices poll every few seconds; only touch the row once a minute
+        // so keepalives do not become a write per request.
+        if ($this->last_seen_at !== null && $this->last_seen_at->greaterThan(now()->subMinute())) {
+            return;
+        }
+
         $this->forceFill(['last_seen_at' => now()])->saveQuietly();
     }
 

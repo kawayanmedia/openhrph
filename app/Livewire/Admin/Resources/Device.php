@@ -129,12 +129,12 @@ class Device extends Resource
                 ->help('Driver options such as direction maps or vendor field names. Leave blank for the defaults.'),
 
             Textarea::make('Credentials (JSON)', 'credentials')
-                ->hideFromIndex()
-                ->resolveUsing(fn ($value) => is_array($value) ? $this->encodeJson($value) : $value)
+                ->onlyOnForms()
+                ->resolveUsing(fn () => '')
                 ->fillUsing(fn (DeviceModel $model, string $attribute, mixed $value) => $this->fillJson($model, $attribute, $value, true))
-                ->help('e.g. {"username":"admin","password":"secret"} or {"login_id":"admin","password":"secret"} for BioStar 2. Stored encrypted; blank keeps the current value.'),
+                ->help('e.g. {"username":"admin","password":"secret"} or {"login_id":"admin","password":"secret"} for BioStar 2. Stored encrypted and never shown; leave blank to keep the current value.'),
 
-            Text::make('API Key', fn () => $this->resource?->api_key !== null ? 'Configured — use Rotate API Key to replace it' : 'Not set')
+            Text::make('API Key', fn () => $this->api_key !== null ? 'Configured — use Rotate API Key to replace it' : 'Not set')
                 ->onlyOnDetail(),
         ];
     }

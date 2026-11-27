@@ -34,7 +34,13 @@ class Select extends Field
         $value = parent::resolveForDisplay($model, $attribute);
 
         if ($this->displayUsingLabels && $value !== null) {
-            return $this->options[$value] ?? $value;
+            $key = $value instanceof \BackedEnum ? $value->value : $value;
+
+            if (is_scalar($key)) {
+                return $this->options[$key] ?? $key;
+            }
+
+            return $value;
         }
 
         return $value;
