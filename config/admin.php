@@ -143,6 +143,53 @@ return [
         ],
 
         [
+            'label' => 'Recruitment',
+            'icon' => 'briefcase',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'job-requisition', 'label' => 'Requisitions'],
+                ['type' => 'resource', 'key' => 'job-vacancy', 'label' => 'Vacancies'],
+                ['type' => 'resource', 'key' => 'applicant', 'label' => 'Applicants'],
+                ['type' => 'resource', 'key' => 'application', 'label' => 'Applications'],
+                ['type' => 'resource', 'key' => 'screening-result', 'label' => 'Screening'],
+                ['type' => 'resource', 'key' => 'interview', 'label' => 'Interviews'],
+                ['type' => 'resource', 'key' => 'interview-evaluation', 'label' => 'Evaluations'],
+                ['type' => 'resource', 'key' => 'assessment', 'label' => 'Assessments'],
+                ['type' => 'resource', 'key' => 'job-offer', 'label' => 'Offers'],
+            ],
+        ],
+
+        [
+            'label' => 'Employment',
+            'icon' => 'identification',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'employment', 'label' => 'Employments'],
+                ['type' => 'resource', 'key' => 'employment-contract', 'label' => 'Contracts'],
+                ['type' => 'resource', 'key' => 'probationary-review', 'label' => 'Probation Reviews'],
+                ['type' => 'resource', 'key' => 'regularization-decision', 'label' => 'Regularization'],
+                ['type' => 'resource', 'key' => 'onboarding-checklist', 'label' => 'Onboarding Checklists'],
+                ['type' => 'resource', 'key' => 'onboarding-task', 'label' => 'Onboarding Tasks'],
+                ['type' => 'resource', 'key' => 'leave-policy-rule', 'label' => 'Leave Policy Rules'],
+            ],
+        ],
+
+        [
+            'label' => 'Separation',
+            'icon' => 'arrow-right-on-rectangle',
+            'can' => 'employees',
+            'sector' => 'Private',
+            'items' => [
+                ['type' => 'resource', 'key' => 'separation-case', 'label' => 'Separation Cases'],
+                ['type' => 'resource', 'key' => 'clearance-template', 'label' => 'Clearance Templates'],
+                ['type' => 'resource', 'key' => 'clearance-task', 'label' => 'Clearance Tasks'],
+                ['type' => 'resource', 'key' => 'final-settlement', 'label' => 'Final Settlements'],
+            ],
+        ],
+
+        [
             'label' => 'Reports',
             'icon' => 'document-text',
             'items' => [

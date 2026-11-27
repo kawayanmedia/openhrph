@@ -87,6 +87,9 @@ class Employee extends Model implements HasMedia
         'location_id',
         'cost_center_id',
         'lifecycle_status',
+        'position_id',
+        'employment_type_id',
+        'date_hired',
     ];
 
     protected $appends = ['fullname', 'office_name'];
@@ -198,6 +201,26 @@ class Employee extends Model implements HasMedia
     public function documents()
     {
         return $this->morphMany(Document::class, 'owner');
+    }
+
+    public function employments()
+    {
+        return $this->hasMany(Employment::class);
+    }
+
+    public function activeEmployment()
+    {
+        return $this->hasOne(Employment::class)->where('status', Employment::STATUS_ACTIVE)->latestOfMany('start_date');
+    }
+
+    public function separationCases()
+    {
+        return $this->hasMany(SeparationCase::class);
+    }
+
+    public function onboardingChecklists()
+    {
+        return $this->hasMany(OnboardingChecklist::class);
     }
 
     public function employmentType()
